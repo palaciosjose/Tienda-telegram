@@ -413,4 +413,9 @@ def handle_media_files(message):
 
 if __name__ == '__main__':
     print("🚀 DEBUG: main.py - Iniciando bot.infinity_polling()...")
+    # Eliminar posible webhook activo para evitar conflictos con getUpdates
+    try:
+        bot.remove_webhook()
+    except Exception as e:
+        print(f"DEBUG: Error eliminando webhook: {e}")
     bot.infinity_polling()
