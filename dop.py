@@ -11,6 +11,7 @@ import files, config
 def ensure_database_schema():
     """Agregar columnas faltantes a la tabla goods si es necesario."""
     try:
+        # Abrir conexión y comprobar columnas actuales
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
 
@@ -33,6 +34,9 @@ def ensure_database_schema():
 
         if updated:
             con.commit()
+            print("✓ Esquema de base de datos actualizado")
+        else:
+            print("✓ Esquema de base de datos OK")
     except Exception as e:
         print(f"Error asegurando esquema de base de datos: {e}")
     finally:
@@ -180,7 +184,7 @@ def get_stored(name_good):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT stored FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT stored FROM goods WHERE name = ? COLLATE NOCASE;", (name_good,))
         result = cursor.fetchone()
         con.close()
         if result:
@@ -204,7 +208,7 @@ def get_minimum(name_good):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT minimum FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT minimum FROM goods WHERE name = ? COLLATE NOCASE;", (name_good,))
         result = cursor.fetchone()
         con.close()
         if result:
@@ -217,7 +221,7 @@ def order_sum(name_good, amount):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT price FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT price FROM goods WHERE name = ? COLLATE NOCASE;", (name_good,))
         result = cursor.fetchone()
         con.close()
         if result:
@@ -258,7 +262,7 @@ def get_goodformat(name_good):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT format FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT format FROM goods WHERE name = ? COLLATE NOCASE;", (name_good,))
         result = cursor.fetchone()
         con.close()
         if result:
@@ -377,7 +381,7 @@ def get_description(name_good):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT description, price FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT description, price FROM goods WHERE name = ? COLLATE NOCASE;", (name_good,))
         result = cursor.fetchone()
         con.close()
         
@@ -843,7 +847,7 @@ def get_additional_description(good_name):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (good_name,))
+        cursor.execute("SELECT additional_description FROM goods WHERE name = ? COLLATE NOCASE", (good_name,))
         result = cursor.fetchone()
         con.close()
         
@@ -860,8 +864,10 @@ def set_additional_description(good_name, additional_description):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("UPDATE goods SET additional_description = ? WHERE name = ?", 
-                      (additional_description, good_name))
+        cursor.execute(
+            "UPDATE goods SET additional_description = ? WHERE name = ? COLLATE NOCASE",
+            (additional_description, good_name),
+        )
         con.commit()
         con.close()
         return True
@@ -874,10 +880,13 @@ def get_product_full_info(good_name):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT name, description, additional_description, format, minimum, price 
-            FROM goods WHERE name = ?
-        """, (good_name,))
+        cursor.execute(
+            """
+            SELECT name, description, additional_description, format, minimum, price
+            FROM goods WHERE name = ? COLLATE NOCASE
+        """,
+            (good_name,),
+        )
         result = cursor.fetchone()
         con.close()
         
@@ -954,7 +963,7 @@ def save_product_media(product_name, file_id, media_type, caption=None):
             """
             UPDATE goods
             SET media_file_id = ?, media_type = ?, media_caption = ?
-            WHERE name = ?
+            WHERE name = ? COLLATE NOCASE
             """,
             (file_id, media_type, caption, product_name),
         )
@@ -970,11 +979,14 @@ def get_product_media(product_name):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT media_file_id, media_type, media_caption 
-            FROM goods 
-            WHERE name = ?
-        """, (product_name,))
+        cursor.execute(
+            """
+            SELECT media_file_id, media_type, media_caption
+            FROM goods
+            WHERE name = ? COLLATE NOCASE
+        """,
+            (product_name,),
+        )
         result = cursor.fetchone()
         con.close()
         
@@ -999,11 +1011,14 @@ def remove_product_media(product_name):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("""
-            UPDATE goods 
+        cursor.execute(
+            """
+            UPDATE goods
             SET media_file_id = NULL, media_type = NULL, media_caption = NULL
-            WHERE name = ?
-        """, (product_name,))
+            WHERE name = ? COLLATE NOCASE
+        """,
+            (product_name,),
+        )
         con.commit()
         con.close()
         return True
@@ -1050,11 +1065,14 @@ def format_product_with_media(product_name):
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT name, description, price, media_file_id, media_type, media_caption
-            FROM goods 
-            WHERE name = ?
-        """, (product_name,))
+            FROM goods
+            WHERE name = ? COLLATE NOCASE
+        """,
+            (product_name,),
+        )
         result = cursor.fetchone()
         con.close()
         
