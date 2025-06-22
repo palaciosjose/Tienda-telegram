@@ -120,6 +120,26 @@ def inline(callback):
     print(f"DEBUG: inline - Callback recibido: {callback.data} de {callback.message.chat.id}")
     the_goods = dop.get_goods()
     
+    # NUEVO: Manejar callbacks de aprobación/rechazo de pagos
+    if callback.data.startswith('APROBAR_PAGO_') or callback.data.startswith('RECHAZAR_PAGO_'):
+        # Verificar que quien responde es admin
+        if callback.message.chat.id in dop.get_adminlist():
+            payments.handle_admin_payment_decision(
+                callback.data, 
+                callback.message.chat.id, 
+                callback.id, 
+                callback.message.message_id
+            )
+        else:
+            bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ No tienes permisos')
+        return
+    
+    # NUEVO: Manejar envío de comprobantes
+    elif callback.data == 'Enviar comprobante Binance':
+        bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, 
+                                 text='📱 Envía una captura de pantalla del comprobante de pago como imagen al chat')
+        return
+    
     if callback.message.chat.id in in_admin:
         adminka.ad_inline(callback.data, callback.message.chat.id, callback.message.message_id)
 
