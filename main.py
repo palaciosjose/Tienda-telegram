@@ -91,16 +91,16 @@ def message_send(message):
                     name_good = f.read()
                 if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
                     sum_price = dop.order_sum(name_good, amount)
-                    if dop.check_vklpayments('qiwi') == '✅' and dop.check_vklpayments('btc') == '✅':
-                        b1 = telebot.types.InlineKeyboardButton(text='🥝Qiwi🥝', callback_data='Qiwi')
-                        b2 = telebot.types.InlineKeyboardButton(text='💰btc', callback_data='btc')
+                    if dop.check_vklpayments('paypal') == '✅' and dop.check_vklpayments('binance') == '✅':
+                        b1 = telebot.types.InlineKeyboardButton(text='💳PayPal', callback_data='PayPal')
+                        b2 = telebot.types.InlineKeyboardButton(text='🟡Binance', callback_data='Binance')
                         key.add(b1, b2)
-                    elif dop.check_vklpayments('qiwi') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='🥝Qiwi🥝', callback_data='Qiwi'))
-                    elif dop.check_vklpayments('btc') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='💰btc', callback_data='btc'))
+                    elif dop.check_vklpayments('paypal') == '✅': 
+                        key.add(telebot.types.InlineKeyboardButton(text='💳PayPal', callback_data='PayPal'))
+                    elif dop.check_vklpayments('binance') == '✅': 
+                        key.add(telebot.types.InlineKeyboardButton(text='🟡Binance', callback_data='Binance'))
                     key.add(telebot.types.InlineKeyboardButton(text='Volver al inicio', callback_data='Volver al inicio'))
-                    bot.send_message(message.chat.id,'Has *elegido*: ' + name_good + '\n*Cantidad*: ' + str(amount) + '\n*Total* del pedido: ' + str(sum_price) + ' €\nElige donde deseas pagar', parse_mode='Markdown', reply_markup=key)
+                    bot.send_message(message.chat.id,'Has *elegido*: ' + name_good + '\n*Cantidad*: ' + str(amount) + '\n*Total* del pedido: $' + str(sum_price) + ' USD\nElige donde deseas pagar', parse_mode='Markdown', reply_markup=key)
                     with open('data/Temp/' + str(message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
                         f.write(str(amount) + '\n')
                         f.write(str(sum_price) + '\n')
@@ -187,29 +187,29 @@ def inline(callback):
             with shelve.open(files.sost_bd) as bd: 
                 bd[str(callback.message.chat.id)] = 22
 
-    # Callbacks de pagos...
-    elif callback.data == 'btc' or callback.data == 'Qiwi':
-        if callback.data == 'Qiwi':
+    # Callbacks de pagos nuevos
+    elif callback.data == 'PayPal' or callback.data == 'Binance':
+        if callback.data == 'PayPal':
             with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
                 name_good = f.read()
             amount = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 0)
             sum_price = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 1)
-            payments.creat_bill_qiwi(callback.message.chat.id, callback.id, callback.message.message_id, sum_price, name_good, amount)
-        elif callback.data == 'btc':
+            payments.creat_bill_paypal(callback.message.chat.id, callback.id, callback.message.message_id, sum_price, name_good, amount)
+        elif callback.data == 'Binance':
             sum_price = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 1)
             with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
                 name_good = f.read()
             amount = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 0)
-            if int(sum_price) < 100:
-                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='¡No es posible pagar menos de 100 euros en btc!')
+            if int(sum_price) < 5:
+                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='¡No es posible pagar menos de $5 USD con Binance!')
             else: 
-                payments.creat_bill_btc(callback.message.chat.id, callback.id, callback.message.message_id, sum_price, name_good, amount)
+                payments.creat_bill_binance(callback.message.chat.id, callback.id, callback.message.message_id, sum_price, name_good, amount)
     
-    elif callback.data == 'Verificar pago':
-        payments.check_oplata_qiwi(callback.message.chat.id, callback.from_user.username, callback.id, callback.message.from_user.first_name)
+    elif callback.data == 'Verificar pago PayPal':
+        payments.check_oplata_paypal(callback.message.chat.id, callback.from_user.username, callback.id, callback.from_user.first_name, callback.message.message_id)
     
-    elif callback.data == 'Verificar pago btc':
-        payments.check_oplata_btc(callback.message.chat.id, callback.from_user.username, callback.id, callback.message.from_user.first_name)
+    elif callback.data == 'Verificar pago Binance':
+        payments.check_oplata_binance(callback.message.chat.id, callback.from_user.username, callback.id, callback.from_user.first_name, callback.message.message_id)
 
 
 @bot.message_handler(content_types=['document'])

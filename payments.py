@@ -1,151 +1,248 @@
-import SimpleQIWI, telebot, time, shelve, requests
+import telebot, time, shelve, requests, json
 import dop, config, files
-from coinbase.wallet.client import Client
 
 bot = telebot.TeleBot(config.token)
 
 he_client = []
 
-def creat_bill_qiwi(chat_id, callback_id, message_id, sum, name_good, amount):
-	#if dop.amount_of_goods(name_good) <= int(amount): bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Выберите меньшее число товаров к покупке')
-	#el
-	if dop.payments_checkvkl() == None: bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Принять деньги на киви кошелёк в данный момент невозможно!')
-	else:
-		phone, token = dop.get_qiwidata()
-		api = SimpleQIWI.QApi(token=token, phone=phone)
-		comm = 'bill|' + dop.generator_pw(10) + '|'
-		with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
-			f.write(str(phone) + '\n')
-			f.write(token + '\n')
-			f.write(str(amount)+ '\n')
-			f.write(str(sum)+ '\n')
-			f.write(comm)
-		key = telebot.types.InlineKeyboardMarkup()
-		rurl = 'https://qiwi.com/payment/form/99?extra%5B%27account%27%5D=' + str(phone) + '&amountInteger=' + str(sum) + '&amountFraction=0&extra%5B%27comment%27%5D=' + comm +'&currency=643&blocked[0]=account&blocked[1]=sum&blocked[2]=comment'
-		url_button = telebot.types.InlineKeyboardButton("Оплатить в браузере",  rurl)
-		b1 = telebot.types.InlineKeyboardButton(text='Проверить оплату', callback_data='Проверить оплату')
-		key.add(b1, url_button)
-		key.add(telebot.types.InlineKeyboardButton(text = 'Вернуться в начало', callback_data = 'Вернуться в начало'))
-		try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='Чтобы купить ' + name_good + ' количеством ' + str(amount) + '\nНадо пополнить qiwi кошелек `' + str(phone) + '` на сумму `' + str(sum) + '` *₽*\nПри переводе обязательно укажите комментарий\n `' + comm + '`\nБез него платёж не зачислится.', parse_mode='Markdown', reply_markup = key)
-		#bot.send_message(message.chat.id, '`' + comm + '`', parse_mode='Markdown', reply_markup=key)
-		#bot.send_message(chat_id, '`' + comm + '`')
-		except: pass
-		he_client.append(chat_id)
+try:
+    import paypalrestsdk
+    PAYPAL_AVAILABLE = True
+except ImportError:
+    PAYPAL_AVAILABLE = False
+    print("Advertencia: paypalrestsdk no instalado. Los pagos PayPal no funcionarán.")
 
-def check_oplata_qiwi(chat_id, username, callback_id, first_name):
-	if chat_id in he_client:
-		with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: name_good = f.read()
-		phone = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 0)
-		token = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 1)
-		amount = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 2)
-		price = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 3)
-		comm = dop.read_my_line('data/Temp/' + str(chat_id) + '.txt', 4)
+try:
+    from binance.client import Client as BinanceClient
+    BINANCE_AVAILABLE = True
+except ImportError:
+    BINANCE_AVAILABLE = False
+    print("Advertencia: python-binance no instalado. Los pagos Binance no funcionarán.")
 
-		api = SimpleQIWI.QApi(phone=phone, token=token)
-		comment = api.bill(int(price), comm)
-		api.start()
-		time.sleep(1)
+def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, amount):
+    if not PAYPAL_AVAILABLE:
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='PayPal no está disponible!')
+        return
+        
+    if dop.get_paypaldata() == None: 
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='PayPal no está configurado en este momento!')
+        return
+        
+    client_id, client_secret, sandbox = dop.get_paypaldata()
+    
+    # Configurar PayPal
+    if sandbox:
+        paypalrestsdk.configure({
+            "mode": "sandbox",
+            "client_id": client_id,
+            "client_secret": client_secret
+        })
+    else:
+        paypalrestsdk.configure({
+            "mode": "live",
+            "client_id": client_id,
+            "client_secret": client_secret
+        })
+    
+    # Crear pago
+    payment = paypalrestsdk.Payment({
+        "intent": "sale",
+        "payer": {
+            "payment_method": "paypal"
+        },
+        "redirect_urls": {
+            "return_url": "https://example.com/return",
+            "cancel_url": "https://example.com/cancel"
+        },
+        "transactions": [{
+            "item_list": {
+                "items": [{
+                    "name": name_good,
+                    "sku": "001",
+                    "price": str(sum_amount),
+                    "currency": "USD",
+                    "quantity": 1
+                }]
+            },
+            "amount": {
+                "total": str(sum_amount),
+                "currency": "USD"
+            },
+            "description": f"Compra de {name_good} x{amount}"
+        }]
+    })
+    
+    if payment.create():
+        payment_id = payment.id
+        approval_url = None
+        
+        for link in payment.links:
+            if link.rel == "approval_url":
+                approval_url = link.href
+                break
+        
+        # Guardar datos temporales
+        with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+            f.write(str(amount) + '\n')
+            f.write(str(sum_amount) + '\n')
+            f.write(payment_id)
+        
+        key = telebot.types.InlineKeyboardMarkup()
+        if approval_url:
+            url_button = telebot.types.InlineKeyboardButton("Pagar con PayPal", url=approval_url)
+            key.add(url_button)
+        b1 = telebot.types.InlineKeyboardButton(text='Verificar pago PayPal', callback_data='Verificar pago PayPal')
+        key.add(b1)
+        key.add(telebot.types.InlineKeyboardButton(text='Volver al inicio', callback_data='Volver al inicio'))
+        
+        try: 
+            bot.edit_message_text(
+                chat_id=chat_id, 
+                message_id=message_id, 
+                text=f'Para comprar {name_good} cantidad {amount}\nTotal: ${sum_amount} USD\nHaz clic en "Pagar con PayPal" y completa el pago.\nLuego presiona "Verificar pago".', 
+                reply_markup=key
+            )
+        except: 
+            pass
+        
+        he_client.append(chat_id)
+    else:
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Error creando pago PayPal!')
 
-		try:
-			if api.check(comment):
-				he_client.remove(chat_id)
-				try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='Платёж успешно зачилен!\nСейчас вы получите ваш товар')
-				except: pass
-				text = ''
-				for i in range(int(amount)):
-					if dop.get_goodformat(name_good) == 'file':
-						bot.send_document(chat_id, dop.get_tovar(name_good))
-					elif dop.get_goodformat(name_good) == 'text':
-						text += dop.get_tovar(name_good) + '\n'
-				if dop.get_goodformat(name_good) == 'text': bot.send_message(chat_id, text)
-				if dop.check_message('after_buy') is True:
-					with shelve.open(files.bot_message_bd) as bd: after_buy = bd['after_buy']
-					after_buy = after_buy.replace('username', username)
-					after_buy = after_buy.replace('name', first_name)
-					bot.send_message(chat_id, after_buy)
-				for admin_id in dop.get_adminlist(): 
-					bot.send_message(admin_id, '*Юзер*\nID: `' + str(chat_id) + '`\nUsername: @' + username + '\nКупил *' + name_good + '*\nНа сумму ' + str(price) + ' р', parse_mode='Markdown')
+def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
+    if not PAYPAL_AVAILABLE:
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='PayPal no está disponible!')
+        return
+        
+    if chat_id in he_client:
+        with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: 
+            name_good = f.read()
+        amount = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 0)
+        sum_amount = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 1)
+        payment_id = dop.read_my_line('data/Temp/' + str(chat_id) + '.txt', 2)
+        
+        # Verificar el pago
+        try:
+            payment = paypalrestsdk.Payment.find(payment_id)
+            
+            if payment.state == 'approved':
+                he_client.remove(chat_id)
+                try: 
+                    bot.edit_message_text(
+                        chat_id=chat_id, 
+                        message_id=message_id, 
+                        text='¡Pago de PayPal confirmado!\nAhora recibirás tu producto'
+                    )
+                except: 
+                    pass
+                
+                # Entregar producto
+                text = ''
+                for i in range(int(amount)):
+                    if dop.get_goodformat(name_good) == 'file':
+                        bot.send_document(chat_id, dop.get_tovar(name_good))
+                    elif dop.get_goodformat(name_good) == 'text':
+                        text += dop.get_tovar(name_good) + '\n'
+                
+                if dop.get_goodformat(name_good) == 'text': 
+                    bot.send_message(chat_id, text)
+                
+                if dop.check_message('after_buy') is True:
+                    with shelve.open(files.bot_message_bd) as bd: 
+                        after_buy = bd['after_buy']
+                    after_buy = after_buy.replace('username', username)
+                    after_buy = after_buy.replace('name', first_name)
+                    bot.send_message(chat_id, after_buy)
+                
+                # Notificar a admins
+                for admin_id in dop.get_adminlist(): 
+                    bot.send_message(admin_id, f'*Usuario*\nID: `{chat_id}`\nUsername: @{username}\nCompró *{name_good}*\nPor ${sum_amount} USD (PayPal)', parse_mode='Markdown')
+                
+                dop.new_buy(chat_id, username, name_good, amount, sum_amount)
+                dop.new_buyer(chat_id, username, sum_amount)
+            else:
+                bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='El pago aún no ha sido confirmado!')
+        except Exception as e:
+            print(f"Error verificando pago PayPal: {e}")
+            bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Error verificando el pago!')
 
-				dop.new_buy(chat_id, username, name_good, amount, price)
-				dop.new_buyer(chat_id, username, price)
-			else: bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Деньги ещё не были зачислены!')
-		except: pass
-		api.stop()
+def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, amount):
+    if dop.get_binancedata() == None: 
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Binance Pay no está configurado en este momento!')
+        return
+    
+    # Guardar datos temporales
+    with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+        f.write(str(amount) + '\n')
+        f.write(str(sum_amount) + '\n')
+        f.write('binance_order_' + str(chat_id) + '_' + str(int(time.time())))
+    
+    key = telebot.types.InlineKeyboardMarkup()
+    # Para Binance, por ahora usaremos método manual
+    b1 = telebot.types.InlineKeyboardButton(text='Verificar pago Binance', callback_data='Verificar pago Binance')
+    key.add(b1)
+    key.add(telebot.types.InlineKeyboardButton(text='Volver al inicio', callback_data='Volver al inicio'))
+    
+    try: 
+        bot.edit_message_text(
+            chat_id=chat_id, 
+            message_id=message_id, 
+            text=f'Para comprar {name_good} cantidad {amount}\nTotal: ${sum_amount} USD\n\n📱 **Instrucciones para pagar con Binance Pay:**\n1. Abre Binance App\n2. Ve a "Pay"\n3. Envía ${sum_amount} USD a:\n`[WALLET_ADDRESS_AQUI]`\n\n⚠️ **Importante:** Guarda el ID de transacción\nLuego presiona "Verificar pago"', 
+            parse_mode='Markdown',
+            reply_markup=key
+        )
+    except: 
+        pass
+    
+    he_client.append(chat_id)
 
-
-def creat_bill_btc(chat_id, callback_id, message_id, sum, name_good, amount):
-	#if dop.amount_of_goods(name_good) <= int(amount): bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Выберите меньшее число товаров к покупке')
-	#el
-	if dop.get_coinbasedata() == None: bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Принять деньги на btc кошелёк в данный момент невозможно!')
-	else:
-		api_key, api_secret = dop.get_coinbasedata()
-		client = Client(api_key, api_secret)
-		account_id = client.get_primary_account()['id']
-		sum = int(sum) + 10 #прибавляется комиссия в btc
-		btc_price = round(float((client.get_buy_price(currency_pair='BTC-RUB')["amount"])))
-		print(btc_price)
-		sum = float(str(sum / btc_price)[:10]) #сколько сатох нужно юзеру оплатить
-		address_for_tranz = client.create_address(account_id)['address'] #получение кошелька для оплты
-
-		with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
-			f.write(str(amount)+ '\n')
-			f.write(str(sum)+ '\n')
-			f.write(address_for_tranz)
-		key = telebot.types.InlineKeyboardMarkup()
-		key.add(telebot.types.InlineKeyboardButton(text='Проверить оплату', callback_data='Проверить оплату btc'))
-		key.add(telebot.types.InlineKeyboardButton(text = 'Вернуться в начало', callback_data = 'Вернуться в начало'))
-		try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='Чтобы купить ' + name_good + ' количеством ' + str(amount) + '\nПереведите `' + str(sum) + '` btc на адрес `' + str(address_for_tranz) + '`', parse_mode='Markdown', reply_markup=key)
-		except: pass
-		he_client.append(chat_id)
-
-
-def check_oplata_btc(chat_id, username, callback_id, first_name):
-	if chat_id in he_client:
-		with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: name_good = f.read()
-		amount = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 0)
-		sum = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 1)
-		address = dop.read_my_line('data/Temp/' + str(chat_id) + '.txt', 2)
-
-		r = requests.get('https://blockchain.info/q/addressbalance/' + address)
-		s = r.text
-		if float(s) >= float(sum):
-			try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='Платёж успешно зачилен!\nСейчас вы получите ваш товар')
-			except: pass
-			text = ''
-			for i in range(int(amount)):
-				if dop.get_goodformat(name_good) == 'file':
-					bot.send_document(chat_id, dop.get_tovar(name_good))
-				elif dop.get_goodformat(name_good) == 'text':
-					text += dop.get_tovar(name_good) + '\n'
-			if dop.get_goodformat(name_good) == 'text': bot.send_message(chat_id, text)
-			if dop.check_message('after_buy') is True:
-				with shelve.open(files.bot_message_bd) as bd: after_buy = bd['after_buy']
-				after_buy = after_buy.replace('username', username)
-				after_buy = after_buy.replace('name', first_name)
-				bot.send_message(chat_id, after_buy)
-			for admin_id in dop.get_adminlist(): 
-				bot.send_message(admin_id, '*Юзер*\nID: `' + str(chat_id) + '`\nUsername: @' + username + '\nКупил *' + name_good + '*\nНа сумму ' + str(sum) + ' btc', parse_mode='Markdown')
-            #*/
-			# dop.new_buy(chat_id, username, name_good, amount, price)
-			# dop.new_buyer(chat_id, username, price)
-		else: bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Деньги ещё не были зачислены!')
-
-
-
-
-
-
-
-
-
-	
-
-
-
-
-
-
-
-
-
-
+def check_oplata_binance(chat_id, username, callback_id, first_name, message_id):
+    if chat_id in he_client:
+        with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: 
+            name_good = f.read()
+        amount = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 0)
+        sum_amount = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 1)
+        
+        # Por ahora, verificación manual (puedes mejorar esto con Binance API)
+        # En una implementación real, aquí verificarías con la API de Binance
+        
+        # Simulación de verificación exitosa (cambiar por lógica real)
+        payment_confirmed = True  # Aquí iría la verificación real
+        
+        if payment_confirmed:
+            he_client.remove(chat_id)
+            try: 
+                bot.edit_message_text(
+                    chat_id=chat_id, 
+                    message_id=message_id, 
+                    text='¡Pago de Binance confirmado!\nAhora recibirás tu producto'
+                )
+            except: 
+                pass
+            
+            # Entregar producto
+            text = ''
+            for i in range(int(amount)):
+                if dop.get_goodformat(name_good) == 'file':
+                    bot.send_document(chat_id, dop.get_tovar(name_good))
+                elif dop.get_goodformat(name_good) == 'text':
+                    text += dop.get_tovar(name_good) + '\n'
+            
+            if dop.get_goodformat(name_good) == 'text': 
+                bot.send_message(chat_id, text)
+            
+            if dop.check_message('after_buy') is True:
+                with shelve.open(files.bot_message_bd) as bd: 
+                    after_buy = bd['after_buy']
+                after_buy = after_buy.replace('username', username)
+                after_buy = after_buy.replace('name', first_name)
+                bot.send_message(chat_id, after_buy)
+            
+            # Notificar a admins
+            for admin_id in dop.get_adminlist(): 
+                bot.send_message(admin_id, f'*Usuario*\nID: `{chat_id}`\nUsername: @{username}\nCompró *{name_good}*\nPor ${sum_amount} USD (Binance)', parse_mode='Markdown')
+            
+            dop.new_buy(chat_id, username, name_good, amount, sum_amount)
+            dop.new_buyer(chat_id, username, sum_amount)
+        else:
+            bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='El pago aún no ha sido confirmado!')

@@ -3,20 +3,6 @@ import files, config
 
 bot = telebot.TeleBot(config.token)
 
-try:
-    import SimpleQIWI
-    QIWI_AVAILABLE = True
-except ImportError:
-    QIWI_AVAILABLE = False
-    print("Advertencia: SimpleQIWI no instalado. Los pagos QIWI no funcionarán.")
-
-try:
-    from coinbase.wallet.client import Client
-    COINBASE_AVAILABLE = True
-except ImportError:
-    COINBASE_AVAILABLE = False
-    print("Advertencia: coinbase no instalado. Los pagos BTC no funcionarán.")
-
 def it_first(chat_id):
     try:
         with open(files.working_log, encoding='utf-8') as f: 
@@ -35,7 +21,7 @@ def main(chat_id):
     bot.send_message(chat_id, """*¡Hola!*
 Este es el primer arranque y ahora estás en el *panel de administración.*
 Para que el bot esté listo *para trabajar* con clientes en poco tiempo, necesitas agregar métodos de pago.
-Puedes elegir entre pagos con criptomoneda *bitcoin* y *rublos* en QIWI.
+Puedes elegir entre pagos con *PayPal* y *Binance*.
 
 En este *momento* estás en el panel de administración del bot. La próxima vez, para acceder escribe /adm
 Para salir, presiona /start
@@ -45,8 +31,8 @@ Para salir, presiona /start
     # Inicializar shelve para pagos si no existe
     try:
         with shelve.open(files.payments_bd) as bd:
-            bd['qiwi'] = '❌'
-            bd['btc'] = '❌'
+            bd['paypal'] = '❌'
+            bd['binance'] = '❌'
     except:
         pass
 
@@ -115,11 +101,11 @@ def get_productcatalog():
         a = 0
         for name, description, price, stored in cursor.fetchall():
             a += 1
-            lasstprice = str(int(price*1.5))+' €'
+            lasstprice = str(int(price*1.5))+' USD'
             array = list(lasstprice)
             lastprice = "̶" + "̶".join(array) + "̶"
             good_amount = amount_of_goods(name)
-            product_list += '*' + name + '*' + ' `-`' + '  ' + lastprice + '  ' + ' *' + str(price) + '*' + ' € ' + '(Quedan ' + str(good_amount) +')\n'
+            product_list += '*' + name + '*' + ' `-`' + '  ' + lastprice + '  ' + ' *$' + str(price) + '*' + ' USD ' + '(Quedan ' + str(good_amount) +')\n'
         con.close()
         if a == 0: 
             return None
@@ -206,44 +192,6 @@ def normal_read_line(filename, linenumber):
     line = read_my_line(filename, linenumber)
     return line.rstrip('\n')
 
-def get_qiwidata():
-    if not QIWI_AVAILABLE:
-        return None
-        
-    try:
-        con = sqlite3.connect(files.main_db)
-        cursor = con.cursor()
-        cursor.execute("SELECT number, token FROM qiwi_data;")
-        
-        for number, token in cursor.fetchall():
-            if check_qiwi_valid(number, token):
-                con.close()
-                return number, token
-            else:
-                # Notificar a admins sobre monedero bloqueado
-                for admin_id in get_adminlist(): 
-                    try:
-                        bot.send_message(admin_id, f'Monedero QIWI bloqueado 💢\nNúmero: {number}\nToken: {token}\nEste monedero ha sido eliminado de la base de datos!')
-                    except:
-                        pass
-                cursor.execute("DELETE FROM qiwi_data WHERE number = ?;", (number,))
-                con.commit()
-        
-        con.close()
-        return None
-    except:
-        return None
-
-def check_qiwi_valid(phone, token):
-    if not QIWI_AVAILABLE:
-        return False
-    try:
-        api = SimpleQIWI.QApi(token=token, phone=phone)
-        balance = api.balance
-        return True
-    except: 
-        return False
-
 def get_sost(chat_id):
     try:
         with shelve.open(files.sost_bd) as bd:
@@ -270,17 +218,6 @@ def get_goodformat(name_good):
         return 'text'
     except:
         return 'text'
-
-def check_coinbase_valid(api_key, api_secret):
-    if not COINBASE_AVAILABLE:
-        return False
-    try:
-        client = Client(api_key, api_secret)
-        account_id = client.get_primary_account()['id']
-        client.create_address(account_id)['address']
-        return True
-    except: 
-        return False
 
 def get_profit():
     try:
@@ -400,49 +337,100 @@ def get_description(name_good):
     except:
         return "Descripción no encontrada"
 
-def get_coinbasedata():
-    if not COINBASE_AVAILABLE:
-        return None
+def get_paypaldata():
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT api_key, private_key FROM coinbase_data;")
+        cursor.execute("SELECT client_id, client_secret, sandbox FROM paypal_data;")
         result = cursor.fetchone()
         con.close()
         if result:
-            return result[0], result[1]
+            return result[0], result[1], bool(result[2])
         return None
     except:
         return None
 
+def get_binancedata():
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("SELECT api_key, api_secret, merchant_id FROM binance_data;")
+        result = cursor.fetchone()
+        con.close()
+        if result:
+            return result[0], result[1], result[2]
+        return None
+    except:
+        return None
+
+def check_paypal_valid(client_id, client_secret, sandbox=True):
+    try:
+        import paypalrestsdk
+        if sandbox:
+            paypalrestsdk.configure({
+                "mode": "sandbox",
+                "client_id": client_id,
+                "client_secret": client_secret
+            })
+        else:
+            paypalrestsdk.configure({
+                "mode": "live", 
+                "client_id": client_id,
+                "client_secret": client_secret
+            })
+        
+        # Crear un pago de prueba para verificar credenciales
+        payment = paypalrestsdk.Payment({
+            "intent": "sale",
+            "payer": {"payment_method": "paypal"},
+            "transactions": [{
+                "amount": {"total": "1.00", "currency": "USD"},
+                "description": "Test payment"
+            }]
+        })
+        return True
+    except:
+        return False
+
+def check_binance_valid(api_key, api_secret):
+    try:
+        from binance.client import Client
+        client = Client(api_key, api_secret, testnet=True)
+        client.get_account()
+        return True
+    except:
+        return False
+
 def payments_checkvkl():
     active_payment = []
     
-    if check_vklpayments('qiwi') == '✅' and get_qiwidata() != None: 
-        active_payment.append('qiwi')
-    elif check_vklpayments('qiwi') == '✅' and get_qiwidata() == None:
+    # Verificar PayPal
+    if check_vklpayments('paypal') == '✅' and get_paypaldata() != None: 
+        active_payment.append('paypal')
+    elif check_vklpayments('paypal') == '✅' and get_paypaldata() == None:
         for admin_id in get_adminlist(): 
             try:
-                bot.send_message(admin_id, '¡Faltan datos de QIWI en la base de datos! Se desactivó automáticamente para recibir pagos.')
+                bot.send_message(admin_id, '¡Faltan datos de PayPal en la base de datos! Se desactivó automáticamente para recibir pagos.')
             except:
                 pass
         try:
             with shelve.open(files.payments_bd) as bd: 
-                bd['qiwi'] = '❌'
+                bd['paypal'] = '❌'
         except:
             pass
 
-    if check_vklpayments('btc') == '✅' and get_coinbasedata() != None: 
-        active_payment.append('btc')
-    elif check_vklpayments('btc') == '✅' and get_coinbasedata() == None:
+    # Verificar Binance
+    if check_vklpayments('binance') == '✅' and get_binancedata() != None: 
+        active_payment.append('binance')
+    elif check_vklpayments('binance') == '✅' and get_binancedata() == None:
         for admin_id in get_adminlist(): 
             try:
-                bot.send_message(admin_id, '¡Faltan datos de Coinbase en la base de datos! Se desactivó automáticamente para recibir pagos.')
+                bot.send_message(admin_id, '¡Faltan datos de Binance en la base de datos! Se desactivó automáticamente para recibir pagos.')
             except:
                 pass
         try:
             with shelve.open(files.payments_bd) as bd: 
-                bd['btc'] = '❌'
+                bd['binance'] = '❌'
         except:
             pass
 

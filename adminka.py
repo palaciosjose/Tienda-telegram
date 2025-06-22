@@ -10,7 +10,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Personalizar las respuestas del bot')
-            user_markup.row('Configuración de surtido', 'Subir un nuevo producto')
+            user_markup.row('Configuración de surtido', 'Cargar nuevo producto')
             user_markup.row('Configuración de pago')
             user_markup.row('Estadísticas', 'Boletín informativo')
             user_markup.row('Otras configuraciones')
@@ -64,7 +64,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             for name, description, format, minimum, price, stored in cursor.fetchall():
                 a += 1
                 amount = dop.amount_of_goods(name)
-                goodz += '*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + str(minimum) + '\n*Precio por unidad:* ' + str(price) + ' rub' + '\n*Unidades restantes:* ' + str(amount) + '\n\n'
+                goodz += '*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + str(minimum) + '\n*Precio por unidad:* $' + str(price) + ' USD' + '\n*Unidades restantes:* ' + str(amount) + '\n\n'
             con.close()
             if a == 0: goodz = '¡No se han creado posiciones todavía!'	
             else: pass
@@ -163,93 +163,106 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif 'Configuración de pago' == message_text:
             with shelve.open(files.payments_bd) as bd:
-                da_qiwi = bd['qiwi']
-                da_btc = bd['btc']
-            if da_qiwi == '❌' and da_btc == '❌': 
+                da_paypal = bd.get('paypal', '❌')
+                da_binance = bd.get('binance', '❌')
+            
+            if da_paypal == '❌' and da_binance == '❌': 
                 da_all = ''
-            elif da_qiwi == '✅' and da_btc == '✅':
-                da_qiwi = '' 
-                da_btc = ''
+            elif da_paypal == '✅' and da_binance == '✅':
+                da_paypal = '' 
+                da_binance = ''
                 da_all = '✅'
-            else: da_all = ''
+            else: 
+                da_all = ''
 
             key = telebot.types.InlineKeyboardMarkup()
-            b1 = telebot.types.InlineKeyboardButton(text='Pago a través de Qiwi ' + da_qiwi, callback_data='Pago a través de qiwi')
-            b2 = telebot.types.InlineKeyboardButton(text='Pago a través de Coinbase ' + da_btc, callback_data='Pago a través de coinbase')
-            b3 = telebot.types.InlineKeyboardButton(text='Pago con rublos y bitcoins ' + da_all, callback_data='Pago con rublos y bitcoins')
+            b1 = telebot.types.InlineKeyboardButton(text='Pago a través de PayPal ' + da_paypal, callback_data='Pago a través de PayPal')
+            b2 = telebot.types.InlineKeyboardButton(text='Pago a través de Binance ' + da_binance, callback_data='Pago a través de Binance')
+            b3 = telebot.types.InlineKeyboardButton(text='Pago con PayPal y Binance ' + da_all, callback_data='Pago con PayPal y Binance')
             key.add(b1, b2)
             key.add(b3)
             bot.send_message(chat_id, 'Configuración de aceptación de pagos', reply_markup=key)
 
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Añadir nueva billetera Qiwi', 'Eliminar billetera Qiwi', 'Mostrar billeteras Qiwi añadidas')
-            user_markup.row('Añadir/Reemplazar datos de intercambio', 'Eliminar datos de intercambio', 'Mostrar claves de intercambio añadidas')
+            user_markup.row('Añadir credenciales PayPal', 'Eliminar credenciales PayPal', 'Mostrar credenciales PayPal')
+            user_markup.row('Añadir credenciales Binance', 'Eliminar credenciales Binance', 'Mostrar credenciales Binance')
             user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, """*Puedes añadir un número ilimitado de billeteras QIWI*.
-Si la billetera utilizada es bloqueada de repente, recibirás una notificación al respecto y el dinero se aceptará en otra billetera.
+            bot.send_message(chat_id, """*Puedes configurar PayPal y Binance para recibir pagos*.
 
-Los bitcoins se pueden aceptar en el intercambio solo en una cuenta.
+**PayPal**: Necesitas Client ID y Client Secret de tu aplicación PayPal.
+**Binance**: Necesitas API Key y API Secret de tu cuenta Binance.
 
-Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al añadir el sistema de pago correspondiente""", reply_markup=user_markup, parse_mode='Markdown')
+Hay guías de configuración para ambos sistemas de pago disponibles al configurar cada método.""", reply_markup=user_markup, parse_mode='Markdown')
 
-        elif 'Añadir nueva billetera Qiwi' == message_text:
+        elif 'Añadir credenciales PayPal' == message_text:
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Envíe el *número* de la billetera Qiwi. Ingrese *sin el signo más*. Por ejemplo, 7946 o 3756\n\nNo es posible verificar la validez del número, ¡así que ingréselo sin errores! De lo contrario, el dinero no se acreditará en su billetera', reply_markup=key, parse_mode='Markdown')
+            bot.send_message(chat_id, 'Envíe el *Client ID* de PayPal.\n\nGuía para obtenerlo: https://developer.paypal.com/', reply_markup=key, parse_mode='Markdown')
             with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 14
 
-        elif 'Eliminar billetera Qiwi' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Envíe el número de la billetera Qiwi que desea eliminar de la base de datos', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 16
-
-        elif 'Mostrar billeteras Qiwi añadidas' == message_text:
+        elif 'Eliminar credenciales PayPal' == message_text:
             con = sqlite3.connect(files.main_db)
             cursor = con.cursor()
-            cursor.execute("SELECT number, token FROM qiwi_data;")
-            msg = ''
-            for number, token in cursor.fetchall():
-                msg += '*Número:* ' + str(number) + '\n*Token:* ' + str(token) + '\n\n'
-            bot.send_message(chat_id, 'Lista de billeteras en la base:\n' + msg, parse_mode='MarkDown')
-            con.close()
-
-        elif 'Añadir/Reemplazar datos de intercambio' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Ingrese *API Key* del intercambio *coinbase*\n\nGuía para obtenerlo: https://telegra.ph/Token-coinbase-08-31', reply_markup=key, parse_mode='Markdown')
-            with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 17
-
-        elif 'Eliminar datos de intercambio' == message_text:
-            con = sqlite3.connect(files.main_db)
-            cursor = con.cursor()
-            cursor.execute("SELECT api_key, private_key FROM coinbase_data;")
+            cursor.execute("SELECT client_id FROM paypal_data;")
             a = 0
             for i in cursor.fetchall(): a += 1
-            if a == 0: bot.send_message(chat_id, '¡No se han añadido claves de intercambio! No hay nada que eliminar')
+            if a == 0: bot.send_message(chat_id, '¡No se han añadido credenciales de PayPal! No hay nada que eliminar')
             elif a > 0:
                 key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='Eliminar', callback_data = 'Eliminar claves de la base de datos'))
+                key.add(telebot.types.InlineKeyboardButton(text='Eliminar', callback_data = 'Eliminar credenciales PayPal'))
                 key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
                 bot.send_message(chat_id, 'Confirme o cancele la eliminación', reply_markup=key)
             con.close()
 
-        elif 'Mostrar claves de intercambio añadidas' == message_text:
+        elif 'Mostrar credenciales PayPal' == message_text:
             con = sqlite3.connect(files.main_db)
             cursor = con.cursor()
-            cursor.execute("SELECT api_key, private_key FROM coinbase_data;")
+            cursor.execute("SELECT client_id, client_secret, sandbox FROM paypal_data;")
             msg = ''
-            for api_key, private_key in cursor.fetchall():
-                msg += '*API Key:* ' + str(api_key) + '\n*Secret Key:* ' + str(private_key)
+            for client_id, client_secret, sandbox in cursor.fetchall():
+                mode = "Sandbox (Pruebas)" if sandbox else "Live (Producción)"
+                msg += '*Client ID:* ' + str(client_id) + '\n*Client Secret:* ' + str(client_secret[:10]) + '...\n*Modo:* ' + mode + '\n\n'
             con.close()
-            bot.send_message(chat_id, 'Lista de claves:\n' + msg, parse_mode='Markdown')
+            if msg: bot.send_message(chat_id, 'Credenciales PayPal:\n' + msg, parse_mode='Markdown')
+            else: bot.send_message(chat_id, 'No hay credenciales PayPal configuradas')
+
+        elif 'Añadir credenciales Binance' == message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Ingrese *API Key* de Binance\n\nGuía para obtenerlo: https://www.binance.com/en/support/faq/360002502072', reply_markup=key, parse_mode='Markdown')
+            with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 17
+
+        elif 'Eliminar credenciales Binance' == message_text:
+            con = sqlite3.connect(files.main_db)
+            cursor = con.cursor()
+            cursor.execute("SELECT api_key FROM binance_data;")
+            a = 0
+            for i in cursor.fetchall(): a += 1
+            if a == 0: bot.send_message(chat_id, '¡No se han añadido credenciales de Binance! No hay nada que eliminar')
+            elif a > 0:
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Eliminar', callback_data = 'Eliminar credenciales Binance'))
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
+                bot.send_message(chat_id, 'Confirme o cancele la eliminación', reply_markup=key)
+            con.close()
+
+        elif 'Mostrar credenciales Binance' == message_text:
+            con = sqlite3.connect(files.main_db)
+            cursor = con.cursor()
+            cursor.execute("SELECT api_key, api_secret, merchant_id FROM binance_data;")
+            msg = ''
+            for api_key, api_secret, merchant_id in cursor.fetchall():
+                msg += '*API Key:* ' + str(api_key[:10]) + '...\n*Secret Key:* ' + str(api_secret[:10]) + '...\n*Merchant ID:* ' + str(merchant_id) + '\n\n'
+            con.close()
+            if msg: bot.send_message(chat_id, 'Credenciales Binance:\n' + msg, parse_mode='Markdown')
+            else: bot.send_message(chat_id, 'No hay credenciales Binance configuradas')
 
         elif 'Estadísticas' == message_text:
-            amount_users = dop.user_loger() #obtener el número de usuarios
-            profit = dop.get_profit() #obtener los ingresos
-            buyers = dop.get_amountsbayers() #obtener el número de compradores
-            lock = dop.get_amountblock() #obtener el número de usuarios que bloquearon el bot
-            bot.send_message(chat_id, '*Estadísticas*\n\n*Número de usuarios que ingresaron al bot:* ' + str(amount_users) + '\n*Usuarios que bloquearon el bot:* ' + str(lock) + '\n*Ingresos por ventas:* ' + str(profit) + ' ₽\n*Número de compradores:* ' + str(buyers), parse_mode='MarkDown')
+            amount_users = dop.user_loger()
+            profit = dop.get_profit()
+            buyers = dop.get_amountsbayers()
+            lock = dop.get_amountblock()
+            bot.send_message(chat_id, '*Estadísticas*\n\n*Número de usuarios que ingresaron al bot:* ' + str(amount_users) + '\n*Usuarios que bloquearon el bot:* ' + str(lock) + '\n*Ingresos por ventas:* $' + str(profit) + ' USD\n*Número de compradores:* ' + str(buyers), parse_mode='MarkDown')
             
         elif 'Boletín informativo' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
@@ -260,10 +273,10 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
         elif 'A todos los usuarios' == message_text or 'Solo a los compradores' == message_text:
             if 'A todos los usuarios' == message_text: 
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  f.write('all\n')
-                amount = dop.user_loger() #obtener el número de usuarios
+                amount = dop.user_loger()
             elif 'Solo a los compradores' == message_text: 
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  f.write('buyers\n')
-                amount = dop.get_amountsbayers() #obtener el número de compradores
+                amount = dop.get_amountsbayers()
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, '¿A cuántos usuarios desea enviar el boletín? Ingrese un número. Máximo posible ' + str(amount))
@@ -295,20 +308,21 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
 
         elif dop.get_sost(chat_id) is True:
             with shelve.open(files.sost_bd) as bd: sost_num = bd[str(chat_id)]
+            
             if sost_num == 1:
-                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:  what_message = f.read()#se obtiene el mensaje cuya respuesta debe ser cambiada
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:  what_message = f.read()
                 if what_message == 'start':
                     bot.send_message(chat_id, 'Nuevo mensaje de bienvenida añadido')
-                    shelve.open(files.bot_message_bd)['start'] = message_text
+                    with shelve.open(files.bot_message_bd) as bd: bd['start'] = message_text
                 elif what_message == 'after_buy':
                     bot.send_message(chat_id, 'Nuevo mensaje después de la compra añadido')
-                    shelve.open(files.bot_message_bd)['after_buy'] = message_text
+                    with shelve.open(files.bot_message_bd) as bd: bd['after_buy'] = message_text
                 elif what_message == 'help':
                     bot.send_message(chat_id, 'Nuevo mensaje de ayuda añadido')
-                    shelve.open(files.bot_message_bd)['help'] = message_text
+                    with shelve.open(files.bot_message_bd) as bd: bd['help'] = message_text
                 elif what_message == 'userfalse':
                     bot.send_message(chat_id, '¡Nuevo mensaje si no hay nombre de usuario añadido!')
-                    shelve.open(files.bot_message_bd)['userfalse'] = message_text
+                    with shelve.open(files.bot_message_bd) as bd: bd['userfalse'] = message_text
 
                 if 'start' in shelve.open(files.bot_message_bd): start = 'Cambiar'
                 else: start = 'Añadir'
@@ -348,7 +362,7 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
                         with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', 'w', encoding='utf-8') as f: f.write(str(message_text))
                         key = telebot.types.InlineKeyboardMarkup()
                         key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                        bot.send_message(chat_id, 'Cantidad mínima para comprar - ' + str(message_text) + '\nAhora ingrese el precio por unidad del producto en rublos.\nSi decide aceptar pagos en BTC, la cantidad se convertirá automáticamente a satoshis', reply_markup=key)
+                        bot.send_message(chat_id, 'Cantidad mínima para comprar - ' + str(message_text) + '\nAhora ingrese el precio por unidad del producto en dólares USD.', reply_markup=key)
                         with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 5
                     else: bot.send_message(chat_id, '¡No se puede elegir un número negativo! Ingrese de nuevo.')
                 except: bot.send_message(chat_id, '¡La cantidad mínima debe ingresarse estrictamente en números! Ingrese de nuevo.')
@@ -367,7 +381,7 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
                     with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f: minimum = f.read()
                     with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f: price = f.read()
         
-                    bot.send_message(chat_id, 'Ha decidido añadir el siguiente producto:\n*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + minimum + '\n*Precio por unidad:* ' + price + ' rub', reply_markup=key, parse_mode='MarkDown')
+                    bot.send_message(chat_id, 'Ha decidido añadir el siguiente producto:\n*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + minimum + '\n*Precio por unidad:* $' + price + ' USD', reply_markup=key, parse_mode='MarkDown')
                     with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
                 except: bot.send_message(chat_id, '¡El precio por unidad debe ingresarse estrictamente en números! Ingrese de nuevo.')
 
@@ -432,7 +446,7 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
                     key.add(telebot.types.InlineKeyboardButton(text = 'Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
                     bot.send_message(chat_id, 'Ahora escriba el nuevo precio', reply_markup=key)
                     with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 10
-                else: bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!', reply_markup=user_markup)
+                else: bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!')
                 con.close()
 
             elif sost_num == 10:
@@ -473,108 +487,66 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
                 with open(stored, 'a', encoding ='utf-8') as f: f.write(message_text + '\n')
 
             elif sost_num == 14:
-                try:
-                    message = int(message_text)
-                    con = sqlite3.connect(files.main_db)
-                    cursor = con.cursor()
-                    cursor.execute("SELECT number, token FROM qiwi_data WHERE number = " + str(message_text) + ";")
-                    if len(cursor.fetchall()) > 0: bot.send_message(chat_id,'¡Ese número ya existe en la base de datos!')
-                    elif 15 >= len(message_text) >= 10:
-                        with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: f.write(message_text)
-                        bot.send_message(chat_id, 'Ahora ingrese el token\n\n*Guía para obtener el token - *https://telegra.ph/Kak-poluchit-token-ot-kivi-koshelka-08-31', parse_mode='Markdown')
-                        with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 15
-                    else: bot.send_message(chat_id, '¡Ha ingresado un número incorrecto!')
-                    con.close()
-                except:
-                    bot.send_message(chat_id, '¡El número no debe contener letras!\n\nEnvíe el *número* de la billetera Qiwi. Ingrese *sin el signo más*. Por ejemplo, 7904 o 3757', parse_mode='Markdown')
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: f.write(message_text)
+                bot.send_message(chat_id, 'Ahora ingrese el *Client Secret* de PayPal\n\nGuía para obtenerlo: https://developer.paypal.com/', parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 15
 
             elif sost_num == 15:
-                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: phone = f.read()
-                if dop.check_qiwi_valid(phone, message_text) is False:
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text = 'Volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
-                    bot.send_message(chat_id, '¡Los datos ingresados no son válidos! O no ha otorgado los privilegios necesarios.\n\nIngrese el número de Qiwi de nuevo, o regrese al menú principal', reply_markup=key)
-                    with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 14
-
-                elif dop.check_qiwi_valid(phone, message_text) is True:
-                    con = sqlite3.connect(files.main_db)
-                    cursor = con.cursor()
-                    cursor.execute("INSERT INTO qiwi_data VALUES(?, ?)", (phone, message_text))
-                    con.commit()
-                    cursor.close()
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('Añadir nueva billetera Qiwi', 'Eliminar billetera Qiwi', 'Mostrar billeteras Qiwi añadidas')
-                    user_markup.row('Añadir/Reemplazar datos de intercambio', 'Eliminar datos de intercambio', 'Mostrar claves de intercambio añadidas')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, '*Token* válido\n¡Los datos se han añadido a la base de datos! El dinero se acreditará a la cuenta de esta billetera', parse_mode='Markdown', reply_markup=user_markup)
-                    with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: client_id = f.read()
+                bot.send_message(chat_id, '¿Desea usar modo Sandbox (pruebas) o Live (producción)?\nEnvíe: "sandbox" para pruebas o "live" para producción')
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: 
+                    f.write(client_id + '\n' + message_text)
+                with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 16
 
             elif sost_num == 16:
-                con = sqlite3.connect(files.main_db)
-                cursor = con.cursor()
-                cursor.execute("SELECT number, token FROM qiwi_data WHERE number = " + str(message_text) + ";")
-                a = 0
-                for i in cursor.fetchall(): a += 1
-                if a == 0:
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text='Volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                    bot.send_message(chat_id, '¡Número `' + message_text + '` no encontrado en la base de datos!', reply_markup=key, parse_mode='Markdown')
-                elif a > 0:
-                    cursor.execute("DELETE FROM qiwi_data WHERE number = '" + str(message_text) + "';")
+                if message_text.lower() in ['sandbox', 'live']:
+                    lines = []
+                    with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
+                        lines = f.readlines()
+                    client_id = lines[0].strip()
+                    client_secret = lines[1].strip()
+                    sandbox = 1 if message_text.lower() == 'sandbox' else 0
+                    
+                    con = sqlite3.connect(files.main_db)
+                    cursor = con.cursor()
+                    cursor.execute("DELETE FROM paypal_data")
                     con.commit()
-                    bot.send_message(chat_id, '¡Billetera Qiwi eliminada con éxito de la base de datos!')
-                con.close()
+                    cursor.execute("INSERT INTO paypal_data VALUES(?, ?, ?)", (client_id, client_secret, sandbox))
+                    con.commit()
+                    con.close()
+                    bot.send_message(chat_id, '¡Credenciales PayPal añadidas exitosamente!')
+                    with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
+                else:
+                    bot.send_message(chat_id, 'Envíe "sandbox" o "live"')
 
             elif sost_num == 17:
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: f.write(message_text)
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text = 'Volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
-                bot.send_message(chat_id, 'Ingrese *API Secret*\n\nGuía para obtenerlo: https://telegra.ph/Token-coinbase-08-31', reply_markup=key, parse_mode='Markdown')
+                bot.send_message(chat_id, 'Ingrese *API Secret* de Binance\n\nGuía para obtenerlo: https://www.binance.com/en/support/faq/360002502072', parse_mode='Markdown')
                 with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 18
 
             elif sost_num == 18:
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: api_key = f.read()
-                if dop.check_coinbase_valid(api_key, message_text) is True:
-                    con = sqlite3.connect(files.main_db)
-                    cursor = con.cursor()
-                    cursor.execute("DELETE FROM coinbase_data")
-                    con.commit()
-                    cursor.execute("INSERT INTO coinbase_data VALUES(?, ?)", (api_key, message_text))
-                    con.commit()
-                    con.close()
-                    bot.send_message(chat_id, '¡Datos *válidos* y añadidos a la base de datos!', parse_mode='Markdown')
-                    with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
-                elif dop.check_coinbase_valid(api_key, message_text) is False:
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text = 'Volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
-                    bot.send_message(chat_id, '¡Datos no válidos!\n\nIngrese *API key* del intercambio *coinbase* o regrese al menú principal\n\nGuía para obtenerlo: https://telegra.ph/Token-coinbase-08-31', reply_markup=key, parse_mode='MarkDown')
-                    with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 17
+                bot.send_message(chat_id, 'Ingrese su *Merchant ID* de Binance (opcional, puede escribir "ninguno")')
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: 
+                    f.write(api_key + '\n' + message_text)
+                with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 19
 
             elif sost_num == 19:
-                try:
-                    if int(message_text) > 0:
-                        with open('data/Temp/' + str(chat_id) + '.txt', 'a', encoding='utf-8') as f: f.write(message_text)
-                        key = telebot.types.InlineKeyboardMarkup()
-                        key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                        group = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 0)
-                        if group == 'all': group = 'a todos'
-                        elif group == 'buyers': group = 'solo a compradores'
-                        bot.send_message(chat_id, 'Ha seleccionado el boletín ' + group + '\nA ' + message_text + ' usuarios\nAhora ingrese el texto del boletín. Se enviará exactamente como lo envíe.')
-                        with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 20
-                    elif int(message_text) < 1:
-                        bot.send_message(chat_id, '¡Para el boletín, seleccione solo un número positivo! Ingrese de nuevo.')
-                        with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 19
-                except: bot.send_message(chat_id, '¡La cantidad de usuarios para el boletín debe ingresarse como un número! Ingrese de nuevo.')
-
-            elif sost_num == 20:
-                group = dop.normal_read_line('data/Temp/' + str(chat_id) + '.txt', 0)
-                amount_users = dop.read_my_line('data/Temp/' + str(chat_id) + '.txt', 1)
-                message_text = dop.rasl(group, amount_users, message_text) #se obtienen los resultados del boletín
-
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('A todos los usuarios', 'Solo a los compradores')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, message_text, reply_markup=user_markup)
+                lines = []
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
+                    lines = f.readlines()
+                api_key = lines[0].strip()
+                api_secret = lines[1].strip()
+                merchant_id = message_text if message_text.lower() != 'ninguno' else ''
+                
+                con = sqlite3.connect(files.main_db)
+                cursor = con.cursor()
+                cursor.execute("DELETE FROM binance_data")
+                con.commit()
+                cursor.execute("INSERT INTO binance_data VALUES(?, ?, ?)", (api_key, api_secret, merchant_id))
+                con.commit()
+                con.close()
+                bot.send_message(chat_id, '¡Credenciales Binance añadidas exitosamente!')
                 with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
 
             elif sost_num == 21:
@@ -588,7 +560,7 @@ Hay guías de configuración para ambos sistemas de pago, puedes obtenerlas al a
             elif sost_num == 22:
                 with open(files.admins_list, encoding='utf-8') as f:
                     if str(message_text) in f.read():
-                        dop. del_id(files.admins_list, message_text)
+                        dop.del_id(files.admins_list, message_text)
                         bot.send_message(chat_id, 'Admin eliminado con éxito de la lista')
                         with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
                     else: 
@@ -601,11 +573,11 @@ def ad_inline(callback_data, chat_id, message_id):
             with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('Personalizar las respuestas del bot')
-        user_markup.row('Configuración de surtido', 'Subir un nuevo producto')
+        user_markup.row('Configuración de surtido', 'Cargar nuevo producto')
         user_markup.row('Configuración de pago')
         user_markup.row('Estadísticas', 'Boletín informativo')
         user_markup.row('Otras configuraciones')
-        bot.delete_message(chat_id, message_id) #el mensaje antiguo es eliminado
+        bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
     elif callback_data == 'Añadir producto a la tienda':
@@ -624,14 +596,14 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
         user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
         user_markup.row('Volver al menú principal')
-        bot.delete_message(chat_id, message_id) #el mensaje antiguo es eliminado
+        bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Producto añadido con éxito!', reply_markup=user_markup)
         
-        with open('data/goods/' + name + '.txt', 'w', encoding ='utf-8') as f: pass #se crea el archivo para el producto
+        with open('data/goods/' + name + '.txt', 'w', encoding ='utf-8') as f: pass
 
     elif callback_data == 'Detener carga':
         good_name = open('data/Temp/' + str(chat_id) + '.txt', encoding ='utf-8').read()
-        bot.delete_message(chat_id, message_id) #el mensaje antiguo es eliminado
+        bot.delete_message(chat_id, message_id)
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
         cursor.execute("SELECT name, price FROM goods;")
@@ -640,46 +612,56 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup.row('Volver al menú principal')
         bot.send_message(chat_id, '¡Productos cargados con éxito! Ahora la cantidad de ' + good_name + ' es ' + str(dop.amount_of_goods(good_name)) + '\nPara volver al menú principal de administración presiona /adm', reply_markup=user_markup)
         
-    elif callback_data == 'Pago a través de qiwi' or callback_data == 'Pago a través de coinbase' or callback_data == 'Pago con rublos y bitcoins':
+    elif callback_data == 'Pago a través de PayPal' or callback_data == 'Pago a través de Binance' or callback_data == 'Pago con PayPal y Binance':
         with shelve.open(files.payments_bd) as bd:
-            if callback_data =='Pago con rublos y bitcoins':
-                bd['qiwi'] = '✅'
-                bd['btc'] = '✅'
-            elif callback_data == 'Pago a través de qiwi':
-                bd['qiwi'] = '✅'
-                bd['btc'] = '❌'
-            elif callback_data == 'Pago a través de coinbase':
-                bd['qiwi'] = '❌'
-                bd['btc'] = '✅'
-            da_qiwi = bd['qiwi']
-            da_btc = bd['btc']
+            if callback_data == 'Pago con PayPal y Binance':
+                bd['paypal'] = '✅'
+                bd['binance'] = '✅'
+            elif callback_data == 'Pago a través de PayPal':
+                bd['paypal'] = '✅'
+                bd['binance'] = '❌'
+            elif callback_data == 'Pago a través de Binance':
+                bd['paypal'] = '❌'
+                bd['binance'] = '✅'
             
-            if da_qiwi == '❌' and da_btc == '❌':
-                da_qiwi = '❌' 
-                da_btc = '❌'
+            da_paypal = bd['paypal']
+            da_binance = bd['binance']
+            
+            if da_paypal == '❌' and da_binance == '❌':
+                da_paypal = '❌' 
+                da_binance = '❌'
                 da_all = ''
-            elif da_qiwi == '✅' and da_btc == '✅':
-                da_qiwi = '' 
-                da_btc = ''
+            elif da_paypal == '✅' and da_binance == '✅':
+                da_paypal = '' 
+                da_binance = ''
                 da_all = '✅'
             else: da_all = ''
 
         key = telebot.types.InlineKeyboardMarkup()
-        b1 = telebot.types.InlineKeyboardButton(text='Pago a través de qiwi ' + da_qiwi, callback_data = 'Pago a través de qiwi')
-        b2 = telebot.types.InlineKeyboardButton(text='Pago a través de coinbase' + da_btc, callback_data = 'Pago a través de coinbase')
-        b3 = telebot.types.InlineKeyboardButton(text='Pago con rublos y bitcoins' + da_all, callback_data = 'Pago con rublos y bitcoins')
+        b1 = telebot.types.InlineKeyboardButton(text='Pago a través de PayPal ' + da_paypal, callback_data = 'Pago a través de PayPal')
+        b2 = telebot.types.InlineKeyboardButton(text='Pago a través de Binance ' + da_binance, callback_data = 'Pago a través de Binance')
+        b3 = telebot.types.InlineKeyboardButton(text='Pago con PayPal y Binance ' + da_all, callback_data = 'Pago con PayPal y Binance')
         key.add(b1, b2)
         key.add(b3)
-        try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='Configurar', reply_markup=key)
+        try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='Configuración de pagos actualizada', reply_markup=key)
         except: pass
 
-    elif callback_data == 'Eliminar claves de la base de datos':
+    elif callback_data == 'Eliminar credenciales PayPal':
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("DELETE FROM coinbase_data")
+        cursor.execute("DELETE FROM paypal_data")
         con.commit()
         con.close()
-        try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='¡Claves eliminadas con éxito de la base de datos!')
+        try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='¡Credenciales PayPal eliminadas con éxito!')
+        except: pass
+
+    elif callback_data == 'Eliminar credenciales Binance':
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM binance_data")
+        con.commit()
+        con.close()
+        try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='¡Credenciales Binance eliminadas con éxito!')
         except: pass
 
 def new_files(document_id, chat_id):
