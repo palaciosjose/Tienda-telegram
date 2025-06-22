@@ -1,13 +1,14 @@
 import telebot, sqlite3, shelve
 import config, dop, files
 import purchase_validator
+import os
 
 bot = telebot.TeleBot(config.token)
 
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
         if message_text == 'Volver al menú principal' or message_text == '/adm':
-            if dop.get_sost(chat_id) is True: 
+            if dop.get_sost(chat_id) is True:
                 with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Personalizar las respuestas del bot')
@@ -37,13 +38,13 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif ' bienvenida al usuario' in message_text or ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text:
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            if ' bienvenida al usuario' in message_text: 
+            if ' bienvenida al usuario' in message_text:
                 message = 'start'
                 bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de bienvenida! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-            elif ' mensaje después de pagar el producto' in message_text: 
+            elif ' mensaje después de pagar el producto' in message_text:
                 message = 'after_buy'
                 bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que el bot enviará al usuario después de la compra! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-            elif ' respuesta al comando help' in message_text: 
+            elif ' respuesta al comando help' in message_text:
                 bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de ayuda! En principio, puede poner cualquier cosa allí. En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
                 message = 'help'
             elif ' mensaje si no hay nombre de usuario' in message_text:
@@ -56,19 +57,20 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
             user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+            user_markup.row('📝 Descripción adicional')
             user_markup.row('Volver al menú principal')
 
             con = sqlite3.connect(files.main_db)
             cursor = con.cursor()
             goodz = 'Productos creados:\n\n'
             a = 0
-            cursor.execute("SELECT name, description, format, minimum, price, stored FROM goods;") 
+            cursor.execute("SELECT name, description, format, minimum, price, stored FROM goods;")
             for name, description, format, minimum, price, stored in cursor.fetchall():
                 a += 1
                 amount = dop.amount_of_goods(name)
                 goodz += '*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + str(minimum) + '\n*Precio por unidad:* $' + str(price) + ' USD' + '\n*Unidades restantes:* ' + str(amount) + '\n\n'
             con.close()
-            if a == 0: goodz = '¡No se han creado posiciones todavía!'	
+            if a == 0: goodz = '¡No se han creado posiciones todavía!'
             else: pass
             bot.send_message(chat_id, goodz, reply_markup=user_markup, parse_mode='Markdown')
 
@@ -79,10 +81,10 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 2
 
         elif 'En formato de archivo' == message_text or 'En formato de texto' == message_text:
-            if 'En formato de archivo' == message_text: 
+            if 'En formato de archivo' == message_text:
                 with open('data/Temp/' + str(chat_id) + 'good_format.txt', 'w', encoding='utf-8') as f: f.write('file')
                 bot.send_message(chat_id, 'Ha seleccionado un producto en formato de archivo.\nAhora ingrese la cantidad mínima de producto que se puede comprar (es decir, no se puede comprar menos de este número)')
-            elif 'En formato de texto' == message_text: 
+            elif 'En formato de texto' == message_text:
                 with open('data/Temp/' + str(chat_id) + 'good_format.txt', 'w', encoding='utf-8') as f: f.write('text')
                 bot.send_message(chat_id, '¡Ha seleccionado un producto en formato de texto!\nAhora ingrese la cantidad mínima de producto que se puede comprar (es decir, no se puede comprar menos de este número)')
             with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 4
@@ -91,14 +93,15 @@ def in_adminka(chat_id, message_text, username, name_user):
             con = sqlite3.connect(files.main_db)
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             a = 0
             for name, price in cursor.fetchall():
                 a += 1
                 user_markup.row(name)
-            if a == 0: 
+            if a == 0:
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('📝 Descripción adicional')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
             else:
@@ -114,7 +117,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
             a = 0
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             for name, price in cursor.fetchall():
                 a += 1
                 user_markup.row(name)
@@ -130,19 +133,41 @@ def in_adminka(chat_id, message_text, username, name_user):
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
             a = 0
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             for name, price in cursor.fetchall():
                 a += 1
                 user_markup.row(name)
             if a == 0:
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('📝 Descripción adicional')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
             else:
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¿Para qué posición desea cambiar el precio?', parse_mode='Markdown', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 9
+            con.close()
+
+        elif 'Descripción adicional' == message_text:
+            con = sqlite3.connect(files.main_db)
+            cursor = con.cursor()
+            cursor.execute("SELECT name FROM goods;")
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            a = 0
+            for name in cursor.fetchall():
+                a += 1
+                user_markup.row(name[0])
+            if a == 0:
+                user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
+                user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('📝 Descripción adicional')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
+            else:
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '¿Para qué producto desea editar la descripción adicional?', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 8
             con.close()
 
         elif 'Cargar nuevo producto' == message_text:
@@ -152,7 +177,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
             a = 0
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             for name, price in cursor.fetchall():
                 a += 1
                 user_markup.row(name)
@@ -167,14 +192,14 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.payments_bd) as bd:
                 da_paypal = bd.get('paypal', '❌')
                 da_binance = bd.get('binance', '❌')
-            
-            if da_paypal == '❌' and da_binance == '❌': 
+
+            if da_paypal == '❌' and da_binance == '❌':
                 da_all = ''
             elif da_paypal == '✅' and da_binance == '✅':
-                da_paypal = '' 
+                da_paypal = ''
                 da_binance = ''
                 da_all = '✅'
-            else: 
+            else:
                 da_all = ''
 
             key = telebot.types.InlineKeyboardMarkup()
@@ -199,10 +224,10 @@ Hay guías de configuración para ambos sistemas de pago disponibles al configur
         # SECCIÓN DE CONFIGURACIÓN DE DESCUENTOS - CORREGIDA
         elif 'Configurar descuentos' == message_text:
             discount_config = dop.get_discount_config()
-            
+
             status = "✅ Activados" if discount_config['enabled'] else "❌ Desactivados"
             fake_price_status = "✅ Sí" if discount_config['show_fake_price'] else "❌ No"
-            
+
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Activar/Desactivar descuentos')
             user_markup.row('Cambiar texto descuento')
@@ -210,7 +235,7 @@ Hay guías de configuración para ambos sistemas de pago disponibles al configur
             user_markup.row('Mostrar/Ocultar precios tachados')
             user_markup.row('Vista previa catálogo')
             user_markup.row('Volver al menú principal')
-            
+
             bot.send_message(chat_id, f"""🎯 **Configuración de Descuentos**
 
 📊 **Estado actual:**
@@ -229,7 +254,7 @@ Selecciona qué deseas cambiar:""", reply_markup=user_markup, parse_mode='Markdo
         elif 'Activar/Desactivar descuentos' == message_text:
             discount_config = dop.get_discount_config()
             new_status = not discount_config['enabled']
-            
+
             if dop.update_discount_config(enabled=new_status):
                 status_text = "✅ activados" if new_status else "❌ desactivados"
                 bot.send_message(chat_id, f'Descuentos {status_text} exitosamente')
@@ -273,7 +298,7 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
         elif 'Mostrar/Ocultar precios tachados' == message_text:
             discount_config = dop.get_discount_config()
             new_status = not discount_config['show_fake_price']
-            
+
             if dop.update_discount_config(show_fake_price=new_status):
                 if new_status:
                     bot.send_message(chat_id, '✅ Los precios tachados se mostrarán en los productos')
@@ -359,7 +384,7 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
             buyers = dop.get_amountsbayers()
             lock = dop.get_amountblock()
             bot.send_message(chat_id, '*Estadísticas*\n\n*Número de usuarios que ingresaron al bot:* ' + str(amount_users) + '\n*Usuarios que bloquearon el bot:* ' + str(lock) + '\n*Ingresos por ventas:* $' + str(profit) + ' USD\n*Número de compradores:* ' + str(buyers), parse_mode='MarkDown')
-            
+
         elif 'Boletín informativo' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('A todos los usuarios', 'Solo a los compradores')
@@ -367,10 +392,10 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
             bot.send_message(chat_id, 'Seleccione a qué grupo de usuarios desea enviar el boletín', reply_markup=user_markup)
 
         elif 'A todos los usuarios' == message_text or 'Solo a los compradores' == message_text:
-            if 'A todos los usuarios' == message_text: 
+            if 'A todos los usuarios' == message_text:
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  f.write('all\n')
                 amount = dop.user_loger()
-            elif 'Solo a los compradores' == message_text: 
+            elif 'Solo a los compradores' == message_text:
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  f.write('buyers\n')
                 amount = dop.get_amountsbayers()
             key = telebot.types.InlineKeyboardMarkup()
@@ -389,9 +414,9 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, '**Buscar Compras**\n\nEnvía el ID de Telegram o username del usuario:', reply_markup=key, parse_mode='Markdown')
             with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 50
-        
+
         elif 'Otras configuraciones' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nuevo admin', 'Eliminar admin')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione qué desea hacer', reply_markup=user_markup)
@@ -403,9 +428,9 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
             with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 21
 
         elif 'Eliminar admin' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             a = 0
-            for admin_id in dop.get_adminlist(): 
+            for admin_id in dop.get_adminlist():
                 a += 1
                 if int(admin_id) != config.admin_id: user_markup.row(str(admin_id))
             if a == 1: bot.send_message(chat_id, '¡Todavía no ha añadido admins!')
@@ -416,7 +441,7 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
 
         elif dop.get_sost(chat_id) is True:
             with shelve.open(files.sost_bd) as bd: sost_num = bd[str(chat_id)]
-            
+
             if sost_num == 1:
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:  what_message = f.read()
                 if what_message == 'start':
@@ -482,13 +507,13 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                     key = telebot.types.InlineKeyboardMarkup()
                     key.add(telebot.types.InlineKeyboardButton(text='Añadir producto a la tienda', callback_data='Añadir producto a la tienda'))
                     key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                    
+
                     with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: name = f.read()
                     with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f: description = f.read()
                     with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f: format = f.read()
                     with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f: minimum = f.read()
                     with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f: price = f.read()
-        
+
                     bot.send_message(chat_id, 'Ha decidido añadir el siguiente producto:\n*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + minimum + '\n*Precio por unidad:* $' + price + ' USD', reply_markup=key, parse_mode='MarkDown')
                     with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
                 except: bot.send_message(chat_id, '¡El precio por unidad debe ingresarse estrictamente en números! Ingrese de nuevo.')
@@ -507,6 +532,7 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                     user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                    user_markup.row('📝 Descripción adicional')
                     user_markup.row('Volver al menú principal')
                     bot.send_message(chat_id, '¡Posición eliminada con éxito!', reply_markup=user_markup)
                     with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
@@ -518,9 +544,9 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                 a = 0
                 cursor.execute("SELECT description FROM goods WHERE name = " + "'" + message_text + "';")
                 for i in cursor.fetchall(): a += 1
-            
+
                 if a == 0: bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!')
-                else: 
+                else:
                     key = telebot.types.InlineKeyboardMarkup()
                     key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
                     with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: f.write(message_text)
@@ -528,34 +554,86 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                     with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 8
                 con.close()
 
-            elif sost_num == 8:	
-                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: name = f.read()
-                con = sqlite3.connect(files.main_db)
-                cursor = con.cursor()
-                cursor.execute("UPDATE goods SET description = '" + message_text + "' WHERE name = '" + name + "';")
-                con.commit()
-                con.close()
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
-                user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡Descripción cambiada con éxito!', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
-
-            elif sost_num == 9:
+            elif sost_num == 8:
+                # Estado para seleccionar producto para editar descripción adicional
                 con = sqlite3.connect(files.main_db)
                 cursor = con.cursor()
                 a = 0
-                cursor.execute("SELECT description FROM goods WHERE name = " + "'" + message_text + "';")
-                for i in cursor.fetchall(): a += 1
-                if a >= 1:
-                    with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: f.write(message_text)
+                cursor.execute("SELECT name FROM goods WHERE name = ?", (message_text,))
+                for i in cursor.fetchall():
+                    a += 1
+                if a == 0:
+                    bot.send_message(chat_id, '¡La posición seleccionada no se encontró! Selecciónela haciendo clic en el botón correspondiente.')
+                else:
+                    # Mostrar descripción adicional actual
+                    cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (message_text,))
+                    current_desc = cursor.fetchone()
+                    current_additional = current_desc[0] if current_desc and current_desc[0] else "Sin descripción adicional"
+
+                    with open('data/Temp/' + str(chat_id) + 'edit_additional_desc.txt', 'w', encoding='utf-8') as f:
+                        f.write(message_text)
+
                     key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text = 'Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
-                    bot.send_message(chat_id, 'Ahora escriba el nuevo precio', reply_markup=key)
-                    with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 10
-                else: bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!')
+                    key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+
+                    bot.send_message(chat_id,
+                                     f'📝 **Editar descripción adicional para:** {message_text}\n\n'
+                                     f'**Descripción adicional actual:**\n{current_additional}\n\n'
+                                     f'**Ingrese la nueva descripción adicional** (o escriba "ELIMINAR" para quitar la descripción adicional):',
+                                     reply_markup=key, parse_mode='Markdown')
+
+                    with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 9
                 con.close()
+
+            elif sost_num == 9:
+                # Verificar si es para cambiar precio o para descripción adicional
+                try:
+                    # Intentar leer el archivo de descripción adicional
+                    with open('data/Temp/' + str(chat_id) + 'edit_additional_desc.txt', encoding='utf-8') as f:
+                        product_name = f.read()
+                    
+                    # Es para descripción adicional
+                    if message_text.upper() == "ELIMINAR":
+                        new_additional_desc = ""
+                        success_message = "La descripción adicional ha sido eliminada."
+                    else:
+                        new_additional_desc = message_text
+                        success_message = "La descripción adicional ha sido actualizada."
+
+                    # Actualizar en la base de datos
+                    if dop.set_additional_description(product_name, new_additional_desc):
+                        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                        user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
+                        user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                        user_markup.row('📝 Descripción adicional')
+                        user_markup.row('Volver al menú principal')
+                        bot.send_message(chat_id, f'✅ {success_message}\n\nProducto: {product_name}', reply_markup=user_markup)
+                    else:
+                        bot.send_message(chat_id, '❌ Error al actualizar la descripción adicional. Inténtelo de nuevo.')
+
+                    # Limpiar archivo temporal
+                    try:
+                        os.remove('data/Temp/' + str(chat_id) + 'edit_additional_desc.txt')
+                    except:
+                        pass
+
+                    with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
+                    
+                except FileNotFoundError:
+                    # Es para cambiar precio (comportamiento original)
+                    con = sqlite3.connect(files.main_db)
+                    cursor = con.cursor()
+                    a = 0
+                    cursor.execute("SELECT description FROM goods WHERE name = " + "'" + message_text + "';")
+                    for i in cursor.fetchall(): a += 1
+                    if a >= 1:
+                        with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: f.write(message_text)
+                        key = telebot.types.InlineKeyboardMarkup()
+                        key.add(telebot.types.InlineKeyboardButton(text = 'Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
+                        bot.send_message(chat_id, 'Ahora escriba el nuevo precio', reply_markup=key)
+                        with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 10
+                    else: bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!')
+                    con.close()
 
             elif sost_num == 10:
                 try:
@@ -569,6 +647,7 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                     user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                    user_markup.row('📝 Descripción adicional')
                     user_markup.row('Volver al menú principal')
                     bot.send_message(chat_id, '¡Precio cambiado con éxito!')
                     with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
@@ -581,10 +660,10 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                     key.add(telebot.types.InlineKeyboardButton(text = 'Detener carga', callback_data = 'Detener carga'))
                     key.add(telebot.types.InlineKeyboardButton(text = 'Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
                     type = dop.get_goodformat(message_text)
-                    if type == 'file': 
+                    if type == 'file':
                         bot.send_message(chat_id, '¡Cargue los archivos al bot!\n¡Cuando todos los archivos estén cargados, haga clic en detener carga!', reply_markup=key)
                         with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 12
-                    elif type == 'text': 
+                    elif type == 'text':
                         bot.send_message(chat_id, '¡Cargue los datos necesarios en formato de texto!\nCada línea = un producto.\nDespués de enviar todo el texto al bot, haga clic en detener carga',reply_markup=key)
                         with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 13
                 else: bot.send_message(chat_id, '¡Esa posición no está creada en el bot!')
@@ -602,19 +681,19 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
             elif sost_num == 15:
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: client_id = f.read()
                 bot.send_message(chat_id, '¿Desea usar modo Sandbox (pruebas) o Live (producción)?\nEnvíe: "sandbox" para pruebas o "live" para producción')
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
                     f.write(client_id + '\n' + message_text)
                 with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 16
 
             elif sost_num == 16:
                 if message_text.lower() in ['sandbox', 'live']:
                     lines = []
-                    with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
+                    with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                         lines = f.readlines()
                     client_id = lines[0].strip()
                     client_secret = lines[1].strip()
                     sandbox = 1 if message_text.lower() == 'sandbox' else 0
-                    
+
                     con = sqlite3.connect(files.main_db)
                     cursor = con.cursor()
                     cursor.execute("DELETE FROM paypal_data")
@@ -635,18 +714,18 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
             elif sost_num == 18:
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: api_key = f.read()
                 bot.send_message(chat_id, 'Ingrese su *Merchant ID* de Binance (opcional, puede escribir "ninguno")')
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
                     f.write(api_key + '\n' + message_text)
                 with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 19
 
             elif sost_num == 19:
                 lines = []
-                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                     lines = f.readlines()
                 api_key = lines[0].strip()
                 api_secret = lines[1].strip()
                 merchant_id = message_text if message_text.lower() != 'ninguno' else ''
-                
+
                 con = sqlite3.connect(files.main_db)
                 cursor = con.cursor()
                 cursor.execute("DELETE FROM binance_data")
@@ -659,7 +738,7 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
 
             elif sost_num == 21:
                 dop.new_admin(message_text)
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('Añadir nuevo admin', 'Eliminar admin')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, 'Nuevo admin añadido con éxito', reply_markup=user_markup)
@@ -671,10 +750,10 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                         dop.del_id(files.admins_list, message_text)
                         bot.send_message(chat_id, 'Admin eliminado con éxito de la lista')
                         with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
-                    else: 
+                    else:
                         bot.send_message(chat_id, '¡La ID no se encontró en la lista de administradores! Seleccione la ID correcta.')
                         with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 22
-                        
+
             elif sost_num == 50:  # Buscar compras
                 # Intentar buscar por ID primero, luego por username
                 try:
@@ -682,17 +761,17 @@ Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
                         result = purchase_validator.validate_purchase_by_user(user_id=int(message_text))
                     else:
                         result = purchase_validator.validate_purchase_by_user(username=message_text)
-        
+
                     bot.send_message(chat_id, result, parse_mode='Markdown')
                 except Exception as e:
                     bot.send_message(chat_id, f'❌ Error en la búsqueda: {e}')
-    
+
                 # Volver al menú
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('Buscar compras')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¿Buscar más compras?', reply_markup=user_markup)
-    
+
                 with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
 
             # ESTADOS DE DESCUENTOS - CORREGIDOS
@@ -741,16 +820,18 @@ def ad_inline(callback_data, chat_id, message_id):
 
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("INSERT INTO goods VALUES(?, ?, ?, ? , ?, ?, ?)", (name, description, format, minimum, price, 'data/goods/' + name + '.txt', ''))
+        # CORREGIDO: Agregar campo additional_description con valor vacío
+        cursor.execute("INSERT INTO goods VALUES(?, ?, ?, ?, ?, ?, ?)", (name, description, format, minimum, price, 'data/goods/' + name + '.txt', ''))
         con.commit()
         con.close()
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
         user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+        user_markup.row('📝 Descripción adicional')
         user_markup.row('Volver al menú principal')
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Producto añadido con éxito!', reply_markup=user_markup)
-        
+
         with open('data/goods/' + name + '.txt', 'w', encoding ='utf-8') as f: pass
 
     elif callback_data == 'Detener carga':
@@ -759,11 +840,11 @@ def ad_inline(callback_data, chat_id, message_id):
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
         cursor.execute("SELECT name, price FROM goods;")
-        user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
         for name, price in cursor.fetchall(): user_markup.row(name)
         user_markup.row('Volver al menú principal')
         bot.send_message(chat_id, '¡Productos cargados con éxito! Ahora la cantidad de ' + good_name + ' es ' + str(dop.amount_of_goods(good_name)) + '\nPara volver al menú principal de administración presiona /adm', reply_markup=user_markup)
-        
+
     elif callback_data == 'Pago a través de PayPal' or callback_data == 'Pago a través de Binance' or callback_data == 'Pago con PayPal y Binance':
         with shelve.open(files.payments_bd) as bd:
             if callback_data == 'Pago con PayPal y Binance':
@@ -775,16 +856,16 @@ def ad_inline(callback_data, chat_id, message_id):
             elif callback_data == 'Pago a través de Binance':
                 bd['paypal'] = '❌'
                 bd['binance'] = '✅'
-            
+
             da_paypal = bd['paypal']
             da_binance = bd['binance']
-            
+
             if da_paypal == '❌' and da_binance == '❌':
-                da_paypal = '❌' 
+                da_paypal = '❌'
                 da_binance = '❌'
                 da_all = ''
             elif da_paypal == '✅' and da_binance == '✅':
-                da_paypal = '' 
+                da_paypal = ''
                 da_binance = ''
                 da_all = '✅'
             else: da_all = ''
@@ -815,6 +896,11 @@ def ad_inline(callback_data, chat_id, message_id):
         con.close()
         try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='¡Credenciales Binance eliminadas con éxito!')
         except: pass
+
+    elif callback_data == 'Ver descripción adicional':
+        # Este callback se puede usar si quieres mostrar la descripción adicional en el panel admin
+        # Por ahora solo confirma la acción
+        bot.answer_callback_query(callback_query_id=message_id, show_alert=False, text='Funcionalidad disponible')
 
 
 def new_files(document_id, chat_id):
