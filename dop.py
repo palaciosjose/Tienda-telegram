@@ -901,3 +901,142 @@ def has_additional_description(good_name):
         return additional_desc and additional_desc.strip() != "" and additional_desc != "No hay información adicional disponible para este producto."
     except:
         return False
+
+def save_product_media(product_name, file_id, media_type, caption=None):
+    """Guardar información multimedia de un producto"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("""
+            UPDATE goods 
+            SET media_file_id = ?, media_type = ?, media_caption = ?
+            WHERE name = ?
+        """, (file_id, media_type, caption, product_name))
+        con.commit()
+        con.close()
+        return True
+    except Exception as e:
+        print(f"Error guardando multimedia: {e}")
+        return False
+
+def get_product_media(product_name):
+    """Obtener información multimedia de un producto"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("""
+            SELECT media_file_id, media_type, media_caption 
+            FROM goods 
+            WHERE name = ?
+        """, (product_name,))
+        result = cursor.fetchone()
+        con.close()
+        
+        if result and result[0]:
+            return {
+                'file_id': result[0],
+                'type': result[1],
+                'caption': result[2]
+            }
+        return None
+    except Exception as e:
+        print(f"Error obteniendo multimedia: {e}")
+        return None
+
+def has_product_media(product_name):
+    """Verificar si un producto tiene multimedia"""
+    media_info = get_product_media(product_name)
+    return media_info is not None
+
+def remove_product_media(product_name):
+    """Eliminar multimedia de un producto"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("""
+            UPDATE goods 
+            SET media_file_id = NULL, media_type = NULL, media_caption = NULL
+            WHERE name = ?
+        """, (product_name,))
+        con.commit()
+        con.close()
+        return True
+    except Exception as e:
+        print(f"Error eliminando multimedia: {e}")
+        return False
+
+def get_products_with_media():
+    """Obtener lista de productos que tienen multimedia"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("""
+            SELECT name, media_type 
+            FROM goods 
+            WHERE media_file_id IS NOT NULL
+        """)
+        results = cursor.fetchall()
+        con.close()
+        return results
+    except Exception as e:
+        print(f"Error obteniendo productos con multimedia: {e}")
+        return []
+
+def get_products_without_media():
+    """Obtener lista de productos que NO tienen multimedia"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("""
+            SELECT name 
+            FROM goods 
+            WHERE media_file_id IS NULL
+        """)
+        results = cursor.fetchall()
+        con.close()
+        return [row[0] for row in results]
+    except Exception as e:
+        print(f"Error obteniendo productos sin multimedia: {e}")
+        return []
+
+def format_product_with_media(product_name):
+    """Formatear información del producto incluyendo multimedia"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("""
+            SELECT name, description, price, media_file_id, media_type, media_caption
+            FROM goods 
+            WHERE name = ?
+        """, (product_name,))
+        result = cursor.fetchone()
+        con.close()
+        
+        if not result:
+            return None
+            
+        name, description, price, file_id, media_type, caption = result
+        
+        info = f"🎯 **{name}**\n"
+        info += f"💰 **Precio:** ${price} USD\n"
+        info += f"📝 **Descripción:** {description}\n"
+        
+        if file_id:
+            media_types = {
+                'photo': '📸 Imagen',
+                'video': '🎥 Video', 
+                'document': '📄 Documento',
+                'audio': '🎵 Audio',
+                'animation': '🎬 GIF'
+            }
+            media_name = media_types.get(media_type, '📎 Archivo')
+            info += f"\n{media_name} disponible"
+            
+            if caption:
+                info += f"\n*{caption}*"
+        
+        return info
+        
+    except Exception as e:
+        print(f"Error formateando producto: {e}")
+        return None

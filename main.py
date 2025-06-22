@@ -68,6 +68,14 @@ def message_send(message):
         if not message.chat.id in in_admin:  
             in_admin.append(message.chat.id)
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
+        
+    elif message.chat.id in in_admin:
+        print(f"🔧 DEBUG: Usuario en admin panel, procesando: {message.text}")
+        adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
+    
+    elif dop.get_sost(message.chat.id) is True:
+        print(f"🔧 DEBUG: Usuario en estado especial, procesando: {message.text}")
+        adminka.text_analytics(message.text, message.chat.id)
 
     elif message.chat.id in in_admin:
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)

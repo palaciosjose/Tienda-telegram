@@ -1,0 +1,168 @@
+# ===========================================
+# INSTRUCCIONES PARA ACTUALIZAR adminka.py
+# ===========================================
+
+# 1. AGREGAR nueva opción al menú "Configuración de surtido":
+# Buscar donde dice:
+#     user_markup.row('📝 Descripción adicional')
+# Y agregar DESPUÉS:
+#     user_markup.row('🎬 Multimedia productos')
+
+# 2. AGREGAR nueva condición en la función in_adminka:
+
+elif '🎬 Multimedia productos' == message_text:
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+    user_markup.row('📤 Agregar multimedia', '🗑️ Eliminar multimedia')
+    user_markup.row('📋 Ver productos con multimedia')
+    user_markup.row('Volver al menú principal')
+    bot.send_message(chat_id, '🎬 **Gestión de Multimedia**\n\nSelecciona una opción:', reply_markup=user_markup, parse_mode='Markdown')
+
+elif '📤 Agregar multimedia' == message_text:
+    products_without_media = dop.get_products_without_media()
+    if not products_without_media:
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+        user_markup.row('🎬 Multimedia productos')
+        user_markup.row('Volver al menú principal')
+        bot.send_message(chat_id, '✅ Todos los productos ya tienen multimedia asignada', reply_markup=user_markup)
+    else:
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+        for product in products_without_media:
+            user_markup.row(product)
+        user_markup.row('Volver al menú principal')
+        bot.send_message(chat_id, '📤 **Agregar Multimedia**\n\n¿A qué producto deseas agregar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
+        with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 30
+
+elif '🗑️ Eliminar multimedia' == message_text:
+    products_with_media = dop.get_products_with_media()
+    if not products_with_media:
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+        user_markup.row('🎬 Multimedia productos')
+        user_markup.row('Volver al menú principal')
+        bot.send_message(chat_id, 'ℹ️ No hay productos con multimedia asignada', reply_markup=user_markup)
+    else:
+        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+        for product, media_type in products_with_media:
+            media_emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵'}.get(media_type, '📎')
+            user_markup.row(f"{media_emoji} {product}")
+        user_markup.row('Volver al menú principal')
+        bot.send_message(chat_id, '🗑️ **Eliminar Multimedia**\n\n¿De qué producto deseas eliminar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
+        with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 31
+
+elif '📋 Ver productos con multimedia' == message_text:
+    products_with_media = dop.get_products_with_media()
+    if not products_with_media:
+        response = 'ℹ️ No hay productos con multimedia asignada'
+    else:
+        response = '📋 **Productos con Multimedia:**\n\n'
+        for product, media_type in products_with_media:
+            media_emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵'}.get(media_type, '📎')
+            response += f"{media_emoji} **{product}** - {media_type}\n"
+    
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+    user_markup.row('🎬 Multimedia productos')
+    user_markup.row('Volver al menú principal')
+    bot.send_message(chat_id, response, reply_markup=user_markup, parse_mode='Markdown')
+
+# 3. AGREGAR nuevos estados al final de la función text_analytics:
+
+elif sost_num == 30:  # Seleccionar producto para agregar multimedia
+    # Verificar que el producto existe y no tiene multimedia
+    if message_text in dop.get_products_without_media():
+        with open('data/Temp/' + str(chat_id) + 'media_product.txt', 'w', encoding='utf-8') as f:
+            f.write(message_text)
+        
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+        
+        bot.send_message(chat_id, 
+                        f'📤 **Agregar multimedia a:** {message_text}\n\n'
+                        f'Envía el archivo multimedia (foto, video, documento, audio, GIF)\n'
+                        f'💡 Tip: También puedes agregar un texto descriptivo junto al archivo',
+                        reply_markup=key, parse_mode='Markdown')
+        
+        with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 32
+    else:
+        bot.send_message(chat_id, '❌ Producto no válido o ya tiene multimedia asignada')
+
+elif sost_num == 31:  # Seleccionar producto para eliminar multimedia
+    # Extraer nombre del producto (remover emoji)
+    clean_name = message_text
+    for emoji in ['📸 ', '🎥 ', '📄 ', '🎵 ', '📎 ']:
+        clean_name = clean_name.replace(emoji, '')
+    
+    if dop.has_product_media(clean_name):
+        if dop.remove_product_media(clean_name):
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('🎬 Multimedia productos')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, f'✅ Multimedia eliminada del producto: {clean_name}', reply_markup=user_markup)
+        else:
+            bot.send_message(chat_id, '❌ Error eliminando multimedia')
+    else:
+        bot.send_message(chat_id, '❌ El producto no tiene multimedia asignada')
+    
+    with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
+
+# 4. AGREGAR función para manejar archivos multimedia:
+def handle_multimedia(message):
+    """Manejar archivos multimedia enviados por admin"""
+    chat_id = message.chat.id
+    
+    # Verificar si está en estado de recibir multimedia
+    try:
+        with shelve.open(files.sost_bd) as bd:
+            if str(chat_id) in bd and bd[str(chat_id)] == 32:
+                # Obtener producto
+                with open('data/Temp/' + str(chat_id) + 'media_product.txt', 'r', encoding='utf-8') as f:
+                    product_name = f.read()
+                
+                # Determinar tipo de archivo y obtener file_id
+                file_id = None
+                media_type = None
+                caption = message.caption if message.caption else None
+                
+                if message.photo:
+                    file_id = message.photo[-1].file_id  # Mejor calidad
+                    media_type = 'photo'
+                elif message.video:
+                    file_id = message.video.file_id
+                    media_type = 'video'
+                elif message.document:
+                    file_id = message.document.file_id
+                    media_type = 'document'
+                elif message.audio:
+                    file_id = message.audio.file_id
+                    media_type = 'audio'
+                elif message.animation:
+                    file_id = message.animation.file_id
+                    media_type = 'animation'
+                
+                if file_id and media_type:
+                    if dop.save_product_media(product_name, file_id, media_type, caption):
+                        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                        user_markup.row('🎬 Multimedia productos')
+                        user_markup.row('Volver al menú principal')
+                        
+                        media_names = {
+                            'photo': '📸 Imagen',
+                            'video': '🎥 Video',
+                            'document': '📄 Documento', 
+                            'audio': '🎵 Audio',
+                            'animation': '🎬 GIF'
+                        }
+                        
+                        bot.send_message(chat_id, 
+                                       f'✅ {media_names.get(media_type, "Archivo")} agregado al producto: {product_name}',
+                                       reply_markup=user_markup)
+                        
+                        del bd[str(chat_id)]
+                    else:
+                        bot.send_message(chat_id, '❌ Error guardando multimedia')
+                else:
+                    bot.send_message(chat_id, '❌ Tipo de archivo no soportado. Envía: foto, video, documento, audio o GIF')
+    except:
+        pass
+
+# 5. EN LA FUNCIÓN PRINCIPAL, AGREGAR LLAMADA A handle_multimedia:
+# Al inicio de la función message_send, después de las verificaciones iniciales, agregar:
+# adminka.handle_multimedia(message)
