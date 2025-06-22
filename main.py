@@ -43,7 +43,7 @@ def message_send(message):
                 bot.send_message(message.chat.id, '🚧 **¡El bot aún no está listo para funcionar!**\n\n🔧 Si eres el administrador, entra con la cuenta cuyo ID especificaste al iniciar el bot y prepáralo para funcionar!', parse_mode='Markdown')
             elif dop.check_message('start') is True:
                 key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='🛍️ Ir al catálogo de productos', callback_data='Ir al catálogo de productos'))
+                key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
                 with shelve.open(files.bot_message_bd) as bd: 
                     start_message = bd['start']
                 start_message = start_message.replace('username', message.chat.username)
@@ -107,7 +107,7 @@ def message_send(message):
                         key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
                     elif dop.check_vklpayments('binance') == '✅': 
                         key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance'))
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al inicio', callback_data='Volver al inicio'))
+                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
                     
                     bot.send_message(message.chat.id,f'✅ **Has elegido:** {name_good}\n🔢 **Cantidad:** {str(amount)}\n💰 **Total del pedido:** ${str(sum_price)} USD\n\n💳 **Elige tu método de pago:**', parse_mode='Markdown', reply_markup=key)
                     
@@ -115,13 +115,13 @@ def message_send(message):
                         f.write(str(amount) + '\n')
                         f.write(str(sum_price) + '\n')
                 elif dop.get_minimum(name_good) > amount: 
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al inicio', callback_data='Volver al inicio'))
+                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
                     bot.send_message(message.chat.id, f'⚠️ **¡Elige una cantidad mayor!**\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades', parse_mode='Markdown', reply_markup=key)
                 elif amount > dop.amount_of_goods(name_good): 
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al inicio', callback_data='Volver al inicio'))
+                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
                     bot.send_message(message.chat.id, f'⚠️ **¡Elige una cantidad menor!**\n\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades', parse_mode='Markdown', reply_markup=key)
             except Exception as e: 
-                key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al inicio', callback_data='Volver al inicio'))
+                key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
                 bot.send_message(message.chat.id, '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)', parse_mode='Markdown', reply_markup=key)
 
 
@@ -163,7 +163,7 @@ def inline(callback):
         for name, price in cursor.fetchall():
             key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
         
-        key.add(telebot.types.InlineKeyboardButton(text='🏠 Volver al inicio', callback_data='Volver al inicio'))
+        key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
         con.close()
 
         if dop.get_productcatalog() == None:
@@ -188,8 +188,8 @@ def inline(callback):
             key.add(telebot.types.InlineKeyboardButton(text='ℹ️ Más información', callback_data=f'MAS_INFO_{callback.data}'))
         
         key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar ahora', callback_data='Comprar'))
-        key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al catálogo', callback_data='Ir al catálogo de productos'))
-        key.add(telebot.types.InlineKeyboardButton(text='🏠 Ir al inicio', callback_data='Volver al inicio'))
+        key.add(telebot.types.InlineKeyboardButton(text='🔙 Catálogo', callback_data='Ir al catálogo de productos'))
+        key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
         
         try: 
             # Usar la nueva función para mostrar información básica del producto
@@ -216,8 +216,8 @@ def inline(callback):
         key = telebot.types.InlineKeyboardMarkup()
         key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=product_name))
         key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar ahora', callback_data='Comprar'))
-        key.add(telebot.types.InlineKeyboardButton(text='🛍️ Ver catálogo', callback_data='Ir al catálogo de productos'))
-        key.add(telebot.types.InlineKeyboardButton(text='🏠 Ir al inicio', callback_data='Volver al inicio'))
+        key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
+        key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
         
         try:
             # Mostrar información adicional
@@ -248,7 +248,7 @@ def inline(callback):
                     if str(callback.message.chat.id) in bd:
                         del bd[str(callback.message.chat.id)]
             key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='🛍️ Ir al catálogo de productos', callback_data='Ir al catálogo de productos'))
+            key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
             if dop.check_message('start'):
                 with shelve.open(files.bot_message_bd) as bd: 
                     start_message = bd['start']
@@ -269,7 +269,7 @@ def inline(callback):
         else:
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=name_good))
-            key.add(telebot.types.InlineKeyboardButton(text='🏠 Volver al inicio', callback_data='Volver al inicio'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
             
             try: 
                 purchase_text = f"""🛒 **REALIZAR COMPRA**

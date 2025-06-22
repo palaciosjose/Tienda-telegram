@@ -10,14 +10,14 @@ def in_adminka(chat_id, message_text, username, name_user):
                 with shelve.open(files.sost_bd) as bd: 
                     del bd[str(chat_id)]
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Personalizar las respuestas del bot')
-            user_markup.row('Configuración de surtido', 'Cargar nuevo producto')
-            user_markup.row('Configuración de pago')
-            user_markup.row('Estadísticas', 'Boletín informativo')
-            user_markup.row('Otras configuraciones')
+            user_markup.row('💬 Respuestas')
+            user_markup.row('📦 Surtido', '➕ Producto')
+            user_markup.row('💰 Pagos')
+            user_markup.row('📊 Stats', '📣 Difusión')
+            user_markup.row('⚙️ Otros')
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
-        elif message_text == 'Personalizar las respuestas del bot':
+        elif message_text == '💬 Respuestas':
             if dop.check_message('start') is True: 
                 start = 'Cambiar'
             else: 
@@ -61,7 +61,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.sost_bd) as bd : 
                 bd[str(chat_id)] = 1
 
-        elif 'Configuración de surtido' == message_text:
+        elif '📦 Surtido' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
             user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -237,7 +237,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, response, reply_markup=user_markup, parse_mode='Markdown')
 
-        elif 'Cargar nuevo producto' == message_text:
+        elif '➕ Producto' == message_text:
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
             con = sqlite3.connect(files.main_db)
@@ -257,7 +257,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 10
             con.close()
 
-        elif 'Configuración de pago' == message_text:
+        elif '💰 Pagos' == message_text:
             with shelve.open(files.payments_bd) as bd:
                 paypal = bd.get('paypal', '❌')
                 binance = bd.get('binance', '❌')
@@ -281,11 +281,11 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.sost_bd) as bd: 
                 bd[str(chat_id)] = 19
 
-        elif 'Estadísticas' == message_text:
+        elif '📊 Stats' == message_text:
             result = dop.get_daily_sales()
             bot.send_message(chat_id, result, parse_mode='Markdown')
 
-        elif 'Boletín informativo' == message_text:
+        elif '📣 Difusión' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('A todos los usuarios', 'Solo a los compradores')
             user_markup.row('Volver al menú principal')
@@ -306,7 +306,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.sost_bd) as bd: 
                 bd[str(chat_id)] = 19
 
-        elif 'Otras configuraciones' == message_text:
+        elif '⚙️ Otros' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
             user_markup.row('Añadir nuevo admin', 'Eliminar admin')
             user_markup.row('Volver al menú principal')
@@ -344,11 +344,11 @@ def text_analytics(message_text, chat_id):
                 message = f.read()
             if dop.save_message(message, message_text):
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-                user_markup.row('Personalizar las respuestas del bot')
-                user_markup.row('Configuración de surtido', 'Cargar nuevo producto')
-                user_markup.row('Configuración de pago')
-                user_markup.row('Estadísticas', 'Boletín informativo')
-                user_markup.row('Otras configuraciones')
+                user_markup.row('💬 Respuestas')
+                user_markup.row('📦 Surtido', '➕ Producto')
+                user_markup.row('💰 Pagos')
+                user_markup.row('📊 Stats', '📣 Difusión')
+                user_markup.row('⚙️ Otros')
                 bot.send_message(chat_id, 'Mensaje guardado exitosamente!', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
                     del bd[str(chat_id)]
@@ -733,11 +733,11 @@ def ad_inline(callback_data, chat_id, message_id):
             with shelve.open(files.sost_bd) as bd: 
                 del bd[str(chat_id)]
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-        user_markup.row('Personalizar las respuestas del bot')
-        user_markup.row('Configuración de surtido', 'Cargar nuevo producto')
-        user_markup.row('Configuración de pago')
-        user_markup.row('Estadísticas', 'Boletín informativo')
-        user_markup.row('Otras configuraciones')
+        user_markup.row('💬 Respuestas')
+        user_markup.row('📦 Surtido', '➕ Producto')
+        user_markup.row('💰 Pagos')
+        user_markup.row('📊 Stats', '📣 Difusión')
+        user_markup.row('⚙️ Otros')
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
