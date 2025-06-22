@@ -1,4 +1,4 @@
-﻿import SimpleQIWI, telebot, time, shelve, requests
+import SimpleQIWI, telebot, time, shelve, requests
 import dop, config, files
 from coinbase.wallet.client import Client
 
