@@ -933,6 +933,9 @@ def format_product_basic_info(good_name):
         
         amount = amount_of_goods(good_name)  # Usar función existente
         
+        format_map = {'text': 'Texto', 'file': 'Archivo'}
+        format_display = format_map.get(product_info['format'], product_info['format'])
+
         info_text = f"""🛍️ **{product_info['name']}**
 
 📝 **Descripción:**
@@ -940,7 +943,7 @@ def format_product_basic_info(good_name):
 
 💰 **Precio:** ${product_info['price']} USD
 📦 **Cantidad mínima:** {product_info['minimum']}
-📋 **Formato:** {product_info['format']}
+📋 **Formato:** {format_display}
 📊 **Disponibles:** {amount}"""
         
         return info_text

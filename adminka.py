@@ -429,15 +429,20 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'good_description.txt', 'w', encoding='utf-8') as f: 
                 f.write(message_text)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('En formato de texto')
+            user_markup.row('En formato de texto', 'En formato de archivo')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Ahora seleccione el formato del producto', reply_markup=user_markup)
-            with shelve.open(files.sost_bd) as bd: 
+            with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 4
 
         elif sost_num == 4:
-            with open('data/Temp/' + str(chat_id) + 'good_format.txt', 'w', encoding='utf-8') as f: 
-                f.write(message_text)
+            format_map = {
+                'En formato de texto': 'text',
+                'En formato de archivo': 'file'
+            }
+            format_value = format_map.get(message_text, message_text)
+            with open('data/Temp/' + str(chat_id) + 'good_format.txt', 'w', encoding='utf-8') as f:
+                f.write(format_value)
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, 'Ahora ingrese la cantidad mínima para comprar', reply_markup=key)
@@ -465,12 +470,13 @@ def text_analytics(message_text, chat_id):
                 name = f.read()
             with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f: 
                 description = f.read()
-            with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f: 
+            with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
                 format_type = f.read()
+            format_display = 'Texto' if format_type == 'text' else 'Archivo'
             with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f: 
                 minimum = f.read()
             
-            bot.send_message(chat_id, f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}\n*Formato:* {format_type}\n*Cantidad mínima:* {minimum}\n*Precio:* ${message_text} USD', parse_mode='MarkDown', reply_markup=key)
+            bot.send_message(chat_id, f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${message_text} USD', parse_mode='MarkDown', reply_markup=key)
             with shelve.open(files.sost_bd) as bd: 
                 del bd[str(chat_id)]
 
