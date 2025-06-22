@@ -4,6 +4,8 @@ Tienda Telegram es un bot de Telegram para gestionar un pequeño catálogo de pr
 
 ## Instalación
 
+### Método manual
+
 1. Clona este repositorio y entra en la carpeta del proyecto.
 2. (Opcional) Crea un entorno virtual de Python con `python -m venv venv` y actívalo.
 3. Instala las dependencias:
@@ -12,7 +14,15 @@ Tienda Telegram es un bot de Telegram para gestionar un pequeño catálogo de pr
 pip install -r requirements.txt
 ```
 
-4. Copia el archivo `.env.example` a `.env` (o crea uno nuevo) e incluye tu `TELEGRAM_BOT_TOKEN` y el `TELEGRAM_ADMIN_ID` que se usarán en `config.py`.
+4. Crea un archivo `.env` con tu `TELEGRAM_BOT_TOKEN` y `TELEGRAM_ADMIN_ID`.
+
+### Instalación rápida en VPS (Contabo)
+
+Ejecuta el script `install.sh` para instalar todas las dependencias y preparar la base de datos de forma automática:
+
+```bash
+bash install.sh
+```
 
 ## Uso
 
@@ -31,6 +41,14 @@ python main.py
 ```
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.
+
+### Actualizar el sistema
+
+Para aplicar futuras mejoras puedes usar el script `update.sh`:
+
+```bash
+bash update.sh
+```
 
 ## Suscripciones
 
