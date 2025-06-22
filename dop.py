@@ -674,3 +674,118 @@ def search_user_purchases(search_term):
         
     except Exception as e:
         return f"❌ Error buscando compras: {e}"
+
+
+def get_discount_config():
+    """Obtiene la configuración de descuentos"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        cursor.execute("SELECT discount_enabled, discount_text, discount_multiplier, show_fake_price FROM discount_config WHERE id = 1;")
+        result = cursor.fetchone()
+        con.close()
+        
+        if result:
+            return {
+                'enabled': bool(result[0]),
+                'text': result[1],
+                'multiplier': result[2],
+                'show_fake_price': bool(result[3])
+            }
+        else:
+            # Configuración por defecto si no existe
+            return {
+                'enabled': True,
+                'text': '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
+                'multiplier': 1.5,
+                'show_fake_price': True
+            }
+    except:
+        # Configuración por defecto en caso de error
+        return {
+            'enabled': True,
+            'text': '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
+            'multiplier': 1.5,
+            'show_fake_price': True
+        }
+
+def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_price=None):
+    """Actualiza la configuración de descuentos"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        
+        # Crear tabla si no existe
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS discount_config (
+                id INTEGER PRIMARY KEY,
+                discount_enabled INTEGER DEFAULT 1,
+                discount_text TEXT DEFAULT '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
+                discount_multiplier REAL DEFAULT 1.5,
+                show_fake_price INTEGER DEFAULT 1
+            )
+        ''')
+        
+        # Verificar si existe configuración
+        cursor.execute("SELECT COUNT(*) FROM discount_config WHERE id = 1;")
+        exists = cursor.fetchone()[0] > 0
+        
+        if not exists:
+            # Crear configuración inicial
+            cursor.execute("""
+                INSERT INTO discount_config (id, discount_enabled, discount_text, discount_multiplier, show_fake_price)
+                VALUES (1, 1, '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥', 1.5, 1)
+            """)
+        
+        # Actualizar campos especificados
+        if enabled is not None:
+            cursor.execute("UPDATE discount_config SET discount_enabled = ? WHERE id = 1;", (int(enabled),))
+        
+        if text is not None:
+            cursor.execute("UPDATE discount_config SET discount_text = ? WHERE id = 1;", (text,))
+            
+        if multiplier is not None:
+            cursor.execute("UPDATE discount_config SET discount_multiplier = ? WHERE id = 1;", (multiplier,))
+            
+        if show_fake_price is not None:
+            cursor.execute("UPDATE discount_config SET show_fake_price = ? WHERE id = 1;", (int(show_fake_price),))
+        
+        con.commit()
+        con.close()
+        return True
+        
+    except Exception as e:
+        print(f"Error actualizando configuración de descuentos: {e}")
+        return False
+
+def setup_discount_system():
+    """Configura el sistema de descuentos por primera vez"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        
+        cursor.execute('''
+            CREATE TABLE IF NOT EXISTS discount_config (
+                id INTEGER PRIMARY KEY,
+                discount_enabled INTEGER DEFAULT 1,
+                discount_text TEXT DEFAULT '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
+                discount_multiplier REAL DEFAULT 1.5,
+                show_fake_price INTEGER DEFAULT 1
+            )
+        ''')
+        
+        cursor.execute("SELECT COUNT(*) FROM discount_config")
+        if cursor.fetchone()[0] == 0:
+            cursor.execute("""
+                INSERT INTO discount_config 
+                VALUES (1, 1, '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥', 1.5, 1)
+            """)
+        
+        con.commit()
+        con.close()
+        print("✅ Sistema de descuentos configurado")
+        return True
+        
+    except Exception as e:
+        print(f"Error configurando sistema de descuentos: {e}")
+        return False
