@@ -377,16 +377,18 @@ def inline(callback):
 
 @bot.message_handler(content_types=['document'])
 def handle_docs_log(message):
+    """Manejar documentos enviados al bot"""
+    adminka.handle_multimedia(message)
+
     if message.chat.id in in_admin:
         if dop.get_sost(message.chat.id) and shelve.open(files.sost_bd)[str(message.chat.id)] == 12:
             adminka.new_files(message.document.file_id, message.chat.id)
 
-@bot.message_handler(content_types=['photo'])
-def handle_photo_receipt(message):
-    """Manejar imágenes de comprobantes de pago"""
-    print(f"📸 DEBUG: Imagen recibida de {message.chat.id}")
-    # Aquí puedes agregar lógica para manejar comprobantes de pago si es necesario
-    # Por ejemplo, reenviar a admins para verificación manual
+@bot.message_handler(content_types=['photo', 'video', 'audio', 'animation'])
+def handle_media_files(message):
+    """Manejar archivos multimedia (fotos, videos, audio, GIF)"""
+    print(f"📸 DEBUG: Multimedia recibida de {message.chat.id}")
+    adminka.handle_multimedia(message)
 
 if __name__ == '__main__':
     print("🚀 DEBUG: main.py - Iniciando bot.infinity_polling()...")
