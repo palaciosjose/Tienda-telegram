@@ -31,7 +31,11 @@ def create_database():
             format TEXT,
             minimum INTEGER,
             price INTEGER,
-            stored TEXT
+            stored TEXT,
+            additional_description TEXT DEFAULT '',
+            media_file_id TEXT,
+            media_type TEXT,
+            media_caption TEXT
         )
     ''')
     print("✓ Tabla 'goods' creada")
