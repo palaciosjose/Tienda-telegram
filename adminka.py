@@ -633,14 +633,14 @@ def text_analytics(message_text, chat_id):
             con = sqlite3.connect(files.main_db)
             cursor = con.cursor()
             a = 0
-            cursor.execute("SELECT name FROM goods WHERE name = ?", (message_text,))
+            cursor.execute("SELECT name FROM goods WHERE name = ? COLLATE NOCASE", (message_text,))
             for i in cursor.fetchall():
                 a += 1
             if a == 0:
                 bot.send_message(chat_id, '¡La posición seleccionada no se encontró! Selecciónela haciendo clic en el botón correspondiente.')
             else:
                 # Mostrar descripción adicional actual
-                cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (message_text,))
+                cursor.execute("SELECT additional_description FROM goods WHERE name = ? COLLATE NOCASE", (message_text,))
                 current_desc = cursor.fetchone()
                 current_additional = current_desc[0] if current_desc and current_desc[0] else "Sin descripción adicional"
 

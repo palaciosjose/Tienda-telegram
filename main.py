@@ -8,14 +8,38 @@ if not os.path.exists('data/db/main_data.db'):
     print("❌ ERROR: Base de datos no encontrada. Ejecuta init_db.py primero.")
     exit(1)
 
+# Asegurar que la tabla de productos incluya las columnas necesarias
+dop.ensure_database_schema()
+
 bot = telebot.TeleBot(config.token)
 in_admin = []
+
+# Utilidad para modificar mensajes sin importar si son de texto o tienen
+# subtítulos (caption). Algunos mensajes con multimedia no contienen texto, por
+# lo que `edit_message_text` falla con "no text". Esta función intenta editar el
+# texto y, si no es posible, intenta modificar la caption.
+def safe_edit_message(chat_id, message_id, text, reply_markup=None, parse_mode=None):
+    """Editar texto o caption de un mensaje existente"""
+    try:
+        bot.edit_message_text(chat_id=chat_id, message_id=message_id,
+                              text=text, reply_markup=reply_markup,
+                              parse_mode=parse_mode)
+    except Exception as e:
+        try:
+            bot.edit_message_caption(chat_id=chat_id, message_id=message_id,
+                                     caption=text, reply_markup=reply_markup,
+                                     parse_mode=parse_mode)
+        except Exception as ex:
+            print(f"DEBUG: Error editando mensaje o caption: {ex}")
 
 print("✅ DEBUG: main.py - Bot inicializado.")
 
 @bot.message_handler(content_types=["text"])
 def message_send(message):
     print(f"📨 DEBUG: message_send - Mensaje recibido: {message.text} de {message.chat.id}")
+
+    # Permitir que adminka.py procese archivos multimedia cuando corresponde
+    adminka.handle_multimedia(message)
     
     if '/start' == message.text:
         print(f"🎯 DEBUG: /start handler - Procesando comando /start.")
@@ -65,64 +89,69 @@ def message_send(message):
             dop.user_loger(chat_id=message.chat.id)
 			
     elif '/adm' == message.text:
-        if not message.chat.id in in_admin:  
+        if message.chat.id not in in_admin:
             in_admin.append(message.chat.id)
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
-        
-    elif message.chat.id in in_admin:
-        print(f"🔧 DEBUG: Usuario en admin panel, procesando: {message.text}")
-        adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
-    
+
     elif dop.get_sost(message.chat.id) is True:
-        print(f"🔧 DEBUG: Usuario en estado especial, procesando: {message.text}")
-        adminka.text_analytics(message.text, message.chat.id)
+        if message.chat.id in in_admin:
+            print(f"🔧 DEBUG: Usuario en estado especial, procesando: {message.text}")
+            adminka.text_analytics(message.text, message.chat.id)
+        else:
+            with shelve.open(files.sost_bd) as bd:
+                sost_num = bd[str(message.chat.id)]
+            if sost_num == 22:
+                key = telebot.types.InlineKeyboardMarkup()
+                try:
+                    amount = int(message.text)
+                    with open('data/Temp/' + str(message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
+                        name_good = f.read()
+                    if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
+                        sum_price = dop.order_sum(name_good, amount)
+                        if dop.check_vklpayments('paypal') == '✅' and dop.check_vklpayments('binance') == '✅':
+                            b1 = telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal')
+                            b2 = telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance')
+                            key.add(b1, b2)
+                        elif dop.check_vklpayments('paypal') == '✅':
+                            key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
+                        elif dop.check_vklpayments('binance') == '✅':
+                            key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance'))
+                        key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+
+                        bot.send_message(message.chat.id,
+                                         f'✅ **Has elegido:** {name_good}\n🔢 **Cantidad:** {str(amount)}\n💰 **Total del pedido:** ${str(sum_price)} USD\n\n💳 **Elige tu método de pago:**',
+                                         parse_mode='Markdown', reply_markup=key)
+
+                        with open('data/Temp/' + str(message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
+                            f.write(str(amount) + '\n')
+                            f.write(str(sum_price) + '\n')
+                    elif dop.get_minimum(name_good) > amount:
+                        key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                        bot.send_message(message.chat.id,
+                                         f'⚠️ **¡Elige una cantidad mayor!**\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades',
+                                         parse_mode='Markdown', reply_markup=key)
+                    elif amount > dop.amount_of_goods(name_good):
+                        key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                        bot.send_message(message.chat.id,
+                                         f'⚠️ **¡Elige una cantidad menor!**\n\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades',
+                                         parse_mode='Markdown', reply_markup=key)
+                except Exception as e:
+                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                    bot.send_message(message.chat.id,
+                                     '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)',
+                                     parse_mode='Markdown', reply_markup=key)
 
     elif message.chat.id in in_admin:
+        print(f"🔧 DEBUG: Usuario en admin panel, procesando: {message.text}")
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
 
     elif '/help' == message.text:
         if dop.check_message('help') is True:
-            with shelve.open(files.bot_message_bd) as bd: 
+            with shelve.open(files.bot_message_bd) as bd:
                 help_message = bd['help']
             bot.send_message(message.chat.id, help_message)
         elif dop.check_message('help') is False and message.chat.id in dop.get_adminlist():
             bot.send_message(message.chat.id, '❓ **¡El mensaje de ayuda aún no ha sido agregado!**\n\nPara agregarlo, ve al panel de administración con el comando `/adm` y **configura las respuestas del bot**', parse_mode='Markdown')
-
-    elif dop.get_sost(message.chat.id) is True:
-        with shelve.open(files.sost_bd) as bd: 
-            sost_num = bd[str(message.chat.id)]
-        if sost_num == 22:
-            key = telebot.types.InlineKeyboardMarkup()
-            try:
-                amount = int(message.text)
-                with open('data/Temp/' + str(message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
-                    name_good = f.read()
-                if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
-                    sum_price = dop.order_sum(name_good, amount)
-                    if dop.check_vklpayments('paypal') == '✅' and dop.check_vklpayments('binance') == '✅':
-                        b1 = telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal')
-                        b2 = telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance')
-                        key.add(b1, b2)
-                    elif dop.check_vklpayments('paypal') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
-                    elif dop.check_vklpayments('binance') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance'))
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                    
-                    bot.send_message(message.chat.id,f'✅ **Has elegido:** {name_good}\n🔢 **Cantidad:** {str(amount)}\n💰 **Total del pedido:** ${str(sum_price)} USD\n\n💳 **Elige tu método de pago:**', parse_mode='Markdown', reply_markup=key)
-                    
-                    with open('data/Temp/' + str(message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
-                        f.write(str(amount) + '\n')
-                        f.write(str(sum_price) + '\n')
-                elif dop.get_minimum(name_good) > amount: 
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                    bot.send_message(message.chat.id, f'⚠️ **¡Elige una cantidad mayor!**\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades', parse_mode='Markdown', reply_markup=key)
-                elif amount > dop.amount_of_goods(name_good): 
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                    bot.send_message(message.chat.id, f'⚠️ **¡Elige una cantidad menor!**\n\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades', parse_mode='Markdown', reply_markup=key)
-            except Exception as e: 
-                key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                bot.send_message(message.chat.id, '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)', parse_mode='Markdown', reply_markup=key)
 
 
 @bot.callback_query_handler(func=lambda c:True)
@@ -171,7 +200,8 @@ def inline(callback):
         else:
             try:
                 catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog()}"
-                bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=catalog_text, reply_markup=key, parse_mode='Markdown')
+                safe_edit_message(callback.message.chat.id, callback.message.message_id,
+                                  catalog_text, reply_markup=key, parse_mode='Markdown')
             except Exception as e:
                 print(f"DEBUG: Error editando mensaje: {e}")
 
@@ -191,22 +221,64 @@ def inline(callback):
         key.add(telebot.types.InlineKeyboardButton(text='🔙 Catálogo', callback_data='Ir al catálogo de productos'))
         key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
         
-        try: 
-            # Usar la nueva función para mostrar información básica del producto
-            product_info = dop.format_product_basic_info(callback.data)
-            
-            # Agregar header con emoji
-            enhanced_info = f"🎯 **INFORMACIÓN DEL PRODUCTO**\n{'-'*35}\n\n{product_info}"
-            
-            bot.edit_message_text(
-                chat_id=callback.message.chat.id, 
-                message_id=callback.message.message_id, 
-                text=enhanced_info, 
-                reply_markup=key,
-                parse_mode='Markdown'
-            )
+        try:
+            media_info = dop.get_product_media(callback.data)
+            formatted_info = dop.format_product_with_media(callback.data)
+
+            if media_info:
+                if media_info['type'] == 'photo':
+                    bot.edit_message_media(
+                        chat_id=callback.message.chat.id,
+                        message_id=callback.message.message_id,
+                        media=telebot.types.InputMediaPhoto(
+                            media=media_info['file_id'],
+                            caption=formatted_info,
+                            parse_mode='Markdown'
+                        ),
+                        reply_markup=key
+                    )
+                elif media_info['type'] == 'video':
+                    bot.edit_message_media(
+                        chat_id=callback.message.chat.id,
+                        message_id=callback.message.message_id,
+                        media=telebot.types.InputMediaVideo(
+                            media=media_info['file_id'],
+                            caption=formatted_info,
+                            parse_mode='Markdown'
+                        ),
+                        reply_markup=key
+                    )
+                else:
+                    bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                    if media_info['type'] == 'document':
+                        bot.send_document(
+                            chat_id=callback.message.chat.id,
+                            document=media_info['file_id'],
+                            caption=formatted_info,
+                            reply_markup=key,
+                            parse_mode='Markdown'
+                        )
+                    elif media_info['type'] == 'audio':
+                        bot.send_audio(
+                            chat_id=callback.message.chat.id,
+                            audio=media_info['file_id'],
+                            caption=formatted_info,
+                            reply_markup=key,
+                            parse_mode='Markdown'
+                        )
+            else:
+                safe_edit_message(callback.message.chat.id,
+                                  callback.message.message_id,
+                                  formatted_info,
+                                  reply_markup=key,
+                                  parse_mode='Markdown')
         except Exception as e:
-            print(f"DEBUG: Error editando mensaje: {e}")
+            print(f"DEBUG: Error editando mensaje con multimedia: {e}")
+            safe_edit_message(callback.message.chat.id,
+                              callback.message.message_id,
+                              dop.format_product_with_media(callback.data),
+                              reply_markup=key,
+                              parse_mode='Markdown')
     
     # Mostrar información adicional del producto
     elif callback.data.startswith('MAS_INFO_'):
@@ -226,10 +298,10 @@ def inline(callback):
             # Agregar header con emoji
             enhanced_additional = f"📋 **INFORMACIÓN ADICIONAL**\n{'-'*30}\n\n{additional_info}"
             
-            bot.edit_message_text(
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=enhanced_additional,
+            safe_edit_message(
+                callback.message.chat.id,
+                callback.message.message_id,
+                enhanced_additional,
                 reply_markup=key,
                 parse_mode='Markdown'
             )
@@ -254,8 +326,11 @@ def inline(callback):
                     start_message = bd['start']
                 start_message = start_message.replace('username', callback.message.chat.username)
                 start_message = start_message.replace('name', callback.message.from_user.first_name)
-                try: 
-                    bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=start_message, reply_markup=key)
+                try:
+                    safe_edit_message(callback.message.chat.id,
+                                     callback.message.message_id,
+                                     start_message,
+                                     reply_markup=key)
                 except Exception as e:
                     print(f"DEBUG: Error editando mensaje: {e}")
 
@@ -284,11 +359,11 @@ def inline(callback):
 
 💡 **Tip:** Envía solo el número (ej: 5)"""
 
-                bot.edit_message_text(
-                    chat_id=callback.message.chat.id, 
-                    message_id=callback.message.message_id, 
-                    text=purchase_text, 
-                    reply_markup=key, 
+                safe_edit_message(
+                    callback.message.chat.id,
+                    callback.message.message_id,
+                    purchase_text,
+                    reply_markup=key,
                     parse_mode='Markdown'
                 )
             except Exception as e:
@@ -323,17 +398,24 @@ def inline(callback):
 
 @bot.message_handler(content_types=['document'])
 def handle_docs_log(message):
+    """Manejar documentos enviados al bot"""
+    adminka.handle_multimedia(message)
+
     if message.chat.id in in_admin:
         if dop.get_sost(message.chat.id) and shelve.open(files.sost_bd)[str(message.chat.id)] == 12:
             adminka.new_files(message.document.file_id, message.chat.id)
 
-@bot.message_handler(content_types=['photo'])
-def handle_photo_receipt(message):
-    """Manejar imágenes de comprobantes de pago"""
-    print(f"📸 DEBUG: Imagen recibida de {message.chat.id}")
-    # Aquí puedes agregar lógica para manejar comprobantes de pago si es necesario
-    # Por ejemplo, reenviar a admins para verificación manual
+@bot.message_handler(content_types=['photo', 'video', 'audio', 'animation'])
+def handle_media_files(message):
+    """Manejar archivos multimedia (fotos, videos, audio, GIF)"""
+    print(f"📸 DEBUG: Multimedia recibida de {message.chat.id}")
+    adminka.handle_multimedia(message)
 
 if __name__ == '__main__':
     print("🚀 DEBUG: main.py - Iniciando bot.infinity_polling()...")
+    # Eliminar posible webhook activo para evitar conflictos con getUpdates
+    try:
+        bot.remove_webhook()
+    except Exception as e:
+        print(f"DEBUG: Error eliminando webhook: {e}")
     bot.infinity_polling()
