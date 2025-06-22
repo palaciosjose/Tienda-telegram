@@ -79,6 +79,40 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'coinbase_data' creada")
+
+    # Tablas para sistema de suscripciones
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS subscription_products (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE,
+            description TEXT,
+            price INTEGER,
+            currency TEXT DEFAULT 'USD',
+            duration INTEGER,
+            duration_unit TEXT DEFAULT 'days',
+            service_type TEXT,
+            status TEXT DEFAULT 'active',
+            grace_period INTEGER DEFAULT 0,
+            auto_renew INTEGER DEFAULT 1,
+            early_discount INTEGER DEFAULT 0,
+            notification_days TEXT DEFAULT '30,7,1'
+        )
+    ''')
+    print("✓ Tabla 'subscription_products' creada")
+
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_subscriptions (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            product_id INTEGER,
+            start_date TEXT,
+            end_date TEXT,
+            status TEXT DEFAULT 'active',
+            payment_method TEXT,
+            renewal_history TEXT
+        )
+    ''')
+    print("✓ Tabla 'user_subscriptions' creada")
     
     conn.commit()
     conn.close()
