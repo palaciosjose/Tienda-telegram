@@ -95,7 +95,7 @@ def create_database():
             grace_period INTEGER DEFAULT 0,
             auto_renew INTEGER DEFAULT 1,
             early_discount INTEGER DEFAULT 0,
-            notification_days TEXT DEFAULT '30,7,1'
+            notification_days TEXT DEFAULT '30,15,7,1'
         )
     ''')
     print("✓ Tabla 'subscription_products' creada")
@@ -113,6 +113,10 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'user_subscriptions' creada")
+
+    cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_subscriptions_end_date '
+                   'ON user_subscriptions(end_date)')
+    print("✓ Índice en 'user_subscriptions.end_date' creado")
     
     conn.commit()
     conn.close()

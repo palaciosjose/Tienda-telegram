@@ -36,7 +36,9 @@ El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start
 
 El proyecto incluye un sistema básico de **productos por suscripción**. Las tablas
 `subscription_products` y `user_subscriptions` se crean automáticamente al
-ejecutar `init_db.py`.
+ejecutar `init_db.py`. A partir de esta versión se añaden índices en la fecha de
+vencimiento para consultas más rápidas y se amplían los niveles de notificación
+por defecto a `30,15,7,1` días.
 
 Con el módulo `subscriptions.py` puedes:
 
@@ -45,7 +47,10 @@ Con el módulo `subscriptions.py` puedes:
 2. Crear suscripciones para los usuarios con `create_user_subscription()` una
    vez que se complete un pago.
 3. Ejecutar `check_subscriptions()` de forma diaria (por ejemplo mediante cron)
-   para enviar recordatorios y suspender accesos vencidos.
+   para enviar recordatorios, marcar suscripciones vencidas y suspender las que
+   superen el periodo de gracia.
+4. Consultar vencimientos próximos con `get_upcoming_subscriptions()` para
+   mostrar un dashboard o generar reportes.
 
 ## Licencia
 
