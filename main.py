@@ -68,64 +68,69 @@ def message_send(message):
             dop.user_loger(chat_id=message.chat.id)
 			
     elif '/adm' == message.text:
-        if not message.chat.id in in_admin:  
+        if message.chat.id not in in_admin:
             in_admin.append(message.chat.id)
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
-        
-    elif message.chat.id in in_admin:
-        print(f"🔧 DEBUG: Usuario en admin panel, procesando: {message.text}")
-        adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
-    
+
     elif dop.get_sost(message.chat.id) is True:
-        print(f"🔧 DEBUG: Usuario en estado especial, procesando: {message.text}")
-        adminka.text_analytics(message.text, message.chat.id)
+        if message.chat.id in in_admin:
+            print(f"🔧 DEBUG: Usuario en estado especial, procesando: {message.text}")
+            adminka.text_analytics(message.text, message.chat.id)
+        else:
+            with shelve.open(files.sost_bd) as bd:
+                sost_num = bd[str(message.chat.id)]
+            if sost_num == 22:
+                key = telebot.types.InlineKeyboardMarkup()
+                try:
+                    amount = int(message.text)
+                    with open('data/Temp/' + str(message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
+                        name_good = f.read()
+                    if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
+                        sum_price = dop.order_sum(name_good, amount)
+                        if dop.check_vklpayments('paypal') == '✅' and dop.check_vklpayments('binance') == '✅':
+                            b1 = telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal')
+                            b2 = telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance')
+                            key.add(b1, b2)
+                        elif dop.check_vklpayments('paypal') == '✅':
+                            key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
+                        elif dop.check_vklpayments('binance') == '✅':
+                            key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance'))
+                        key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+
+                        bot.send_message(message.chat.id,
+                                         f'✅ **Has elegido:** {name_good}\n🔢 **Cantidad:** {str(amount)}\n💰 **Total del pedido:** ${str(sum_price)} USD\n\n💳 **Elige tu método de pago:**',
+                                         parse_mode='Markdown', reply_markup=key)
+
+                        with open('data/Temp/' + str(message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
+                            f.write(str(amount) + '\n')
+                            f.write(str(sum_price) + '\n')
+                    elif dop.get_minimum(name_good) > amount:
+                        key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                        bot.send_message(message.chat.id,
+                                         f'⚠️ **¡Elige una cantidad mayor!**\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades',
+                                         parse_mode='Markdown', reply_markup=key)
+                    elif amount > dop.amount_of_goods(name_good):
+                        key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                        bot.send_message(message.chat.id,
+                                         f'⚠️ **¡Elige una cantidad menor!**\n\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades',
+                                         parse_mode='Markdown', reply_markup=key)
+                except Exception as e:
+                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                    bot.send_message(message.chat.id,
+                                     '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)',
+                                     parse_mode='Markdown', reply_markup=key)
 
     elif message.chat.id in in_admin:
+        print(f"🔧 DEBUG: Usuario en admin panel, procesando: {message.text}")
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
 
     elif '/help' == message.text:
         if dop.check_message('help') is True:
-            with shelve.open(files.bot_message_bd) as bd: 
+            with shelve.open(files.bot_message_bd) as bd:
                 help_message = bd['help']
             bot.send_message(message.chat.id, help_message)
         elif dop.check_message('help') is False and message.chat.id in dop.get_adminlist():
             bot.send_message(message.chat.id, '❓ **¡El mensaje de ayuda aún no ha sido agregado!**\n\nPara agregarlo, ve al panel de administración con el comando `/adm` y **configura las respuestas del bot**', parse_mode='Markdown')
-
-    elif dop.get_sost(message.chat.id) is True:
-        with shelve.open(files.sost_bd) as bd: 
-            sost_num = bd[str(message.chat.id)]
-        if sost_num == 22:
-            key = telebot.types.InlineKeyboardMarkup()
-            try:
-                amount = int(message.text)
-                with open('data/Temp/' + str(message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
-                    name_good = f.read()
-                if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
-                    sum_price = dop.order_sum(name_good, amount)
-                    if dop.check_vklpayments('paypal') == '✅' and dop.check_vklpayments('binance') == '✅':
-                        b1 = telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal')
-                        b2 = telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance')
-                        key.add(b1, b2)
-                    elif dop.check_vklpayments('paypal') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
-                    elif dop.check_vklpayments('binance') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance'))
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                    
-                    bot.send_message(message.chat.id,f'✅ **Has elegido:** {name_good}\n🔢 **Cantidad:** {str(amount)}\n💰 **Total del pedido:** ${str(sum_price)} USD\n\n💳 **Elige tu método de pago:**', parse_mode='Markdown', reply_markup=key)
-                    
-                    with open('data/Temp/' + str(message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
-                        f.write(str(amount) + '\n')
-                        f.write(str(sum_price) + '\n')
-                elif dop.get_minimum(name_good) > amount: 
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                    bot.send_message(message.chat.id, f'⚠️ **¡Elige una cantidad mayor!**\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades', parse_mode='Markdown', reply_markup=key)
-                elif amount > dop.amount_of_goods(name_good): 
-                    key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                    bot.send_message(message.chat.id, f'⚠️ **¡Elige una cantidad menor!**\n\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades', parse_mode='Markdown', reply_markup=key)
-            except Exception as e: 
-                key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
-                bot.send_message(message.chat.id, '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)', parse_mode='Markdown', reply_markup=key)
 
 
 @bot.callback_query_handler(func=lambda c:True)
