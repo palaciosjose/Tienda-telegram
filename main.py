@@ -92,13 +92,13 @@ def message_send(message):
                 if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
                     sum_price = dop.order_sum(name_good, amount)
                     if dop.check_vklpayments('paypal') == '✅' and dop.check_vklpayments('binance') == '✅':
-                        b1 = telebot.types.InlineKeyboardButton(text='💳PayPal', callback_data='PayPal')
-                        b2 = telebot.types.InlineKeyboardButton(text='🟡Binance', callback_data='Binance')
+                        b1 = telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal')
+                        b2 = telebot.types.InlineKeyboardButton(text='🟡 Binance', callback_data='Binance')
                         key.add(b1, b2)
                     elif dop.check_vklpayments('paypal') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='💳PayPal', callback_data='PayPal'))
+                        key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
                     elif dop.check_vklpayments('binance') == '✅': 
-                        key.add(telebot.types.InlineKeyboardButton(text='🟡Binance', callback_data='Binance'))
+                        key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance', callback_data='Binance'))
                     key.add(telebot.types.InlineKeyboardButton(text='Volver al inicio', callback_data='Volver al inicio'))
                     bot.send_message(message.chat.id,'Has *elegido*: ' + name_good + '\n*Cantidad*: ' + str(amount) + '\n*Total* del pedido: $' + str(sum_price) + ' USD\nElige donde deseas pagar', parse_mode='Markdown', reply_markup=key)
                     with open('data/Temp/' + str(message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
@@ -161,16 +161,61 @@ def inline(callback):
             except Exception as e:
                 print(f"DEBUG: Error editando mensaje: {e}")
 
+    # ===== SECCIÓN MODIFICADA =====
     elif callback.data in the_goods:
         with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', 'w', encoding='utf-8') as f: 
             f.write(callback.data)
+        
+        # Crear teclado con botón "Más información" si existe descripción adicional
         key = telebot.types.InlineKeyboardMarkup()
-        key.add(telebot.types.InlineKeyboardButton(text='Comprar', callback_data='Comprar'))
-        key.add(telebot.types.InlineKeyboardButton(text='Volver al inicio', callback_data='Volver al inicio'))
+        
+        # Verificar si el producto tiene información adicional
+        if dop.has_additional_description(callback.data):
+            key.add(telebot.types.InlineKeyboardButton(text='ℹ️ Más información', callback_data=f'MAS_INFO_{callback.data}'))
+        
+        key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar', callback_data='Comprar'))
+        key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al inicio', callback_data='Volver al inicio'))
+        
         try: 
-            bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=dop.get_description(callback.data), reply_markup=key)
+            # Usar la nueva función para mostrar información básica del producto
+            product_info = dop.format_product_basic_info(callback.data)
+            bot.edit_message_text(
+                chat_id=callback.message.chat.id, 
+                message_id=callback.message.message_id, 
+                text=product_info, 
+                reply_markup=key,
+                parse_mode='Markdown'
+            )
         except Exception as e:
             print(f"DEBUG: Error editando mensaje: {e}")
+    
+    # ===== NUEVO CALLBACK =====
+    elif callback.data.startswith('MAS_INFO_'):
+        product_name = callback.data.replace('MAS_INFO_', '')
+        
+        # Crear teclado para volver a la vista del producto
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=product_name))
+        key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar', callback_data='Comprar'))
+        key.add(telebot.types.InlineKeyboardButton(text='🏠 Ir al inicio', callback_data='Volver al inicio'))
+        
+        try:
+            # Mostrar información adicional
+            additional_info = dop.format_product_additional_info(product_name)
+            bot.edit_message_text(
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=additional_info,
+                reply_markup=key,
+                parse_mode='Markdown'
+            )
+            
+            # Confirmar la acción al usuario
+            bot.answer_callback_query(callback_query_id=callback.id, show_alert=False, text='ℹ️ Información adicional mostrada')
+            
+        except Exception as e:
+            print(f"DEBUG: Error mostrando información adicional: {e}")
+            bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Error cargando información')
 
     elif callback.data == 'Volver al inicio':
         if callback.message.chat.username:
@@ -231,6 +276,32 @@ def inline(callback):
     elif callback.data == 'Verificar pago Binance':
         payments.check_oplata_binance(callback.message.chat.id, callback.from_user.username, callback.id, callback.from_user.first_name, callback.message.message_id)
 
+    elif callback.data.startswith('MAS_INFO_'):
+        product_name = callback.data.replace('MAS_INFO_', '')
+    
+    # Crear teclado para volver a la vista del producto
+    key = telebot.types.InlineKeyboardMarkup()
+    key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=product_name))
+    key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar', callback_data='Comprar'))
+    key.add(telebot.types.InlineKeyboardButton(text='🏠 Ir al inicio', callback_data='Volver al inicio'))
+    
+    try:
+        # Mostrar información adicional
+        additional_info = dop.format_product_additional_info(product_name)
+        bot.edit_message_text(
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            text=additional_info,
+            reply_markup=key,
+            parse_mode='Markdown'
+        )
+        
+        # Confirmar la acción al usuario
+        bot.answer_callback_query(callback_query_id=callback.id, show_alert=False, text='ℹ️ Información adicional mostrada')
+        
+    except Exception as e:
+        print(f"DEBUG: Error mostrando información adicional: {e}")
+        bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Error cargando información')
 
 @bot.message_handler(content_types=['document'])
 def handle_docs_log(message):

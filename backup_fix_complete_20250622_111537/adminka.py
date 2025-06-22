@@ -741,7 +741,7 @@ def ad_inline(callback_data, chat_id, message_id):
 
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("INSERT INTO goods VALUES(?, ?, ?, ? , ?, ?, ?)", (name, description, format, minimum, price, 'data/goods/' + name + '.txt', ''))
+        cursor.execute("INSERT INTO goods VALUES(?, ?, ?, ? , ?, ?)", (name, description, format, minimum, price, 'data/goods/' + name + '.txt'))
         con.commit()
         con.close()
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
