@@ -46,6 +46,33 @@ ensure_database_schema()
 
 bot = telebot.TeleBot(config.token)
 
+# -------------------------------------------------
+# Utilidad para editar mensajes con o sin multimedia
+# -------------------------------------------------
+def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
+    """Edita texto o caption según el tipo de mensaje"""
+    try:
+        if getattr(message, 'content_type', 'text') == 'text':
+            bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        else:
+            bot.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        return True
+    except Exception as e:
+        print(f"Error editando mensaje de forma segura: {e}")
+        return False
+
 def it_first(chat_id):
     try:
         with open(files.working_log, encoding='utf-8') as f: 
@@ -906,6 +933,9 @@ def format_product_basic_info(good_name):
         
         amount = amount_of_goods(good_name)  # Usar función existente
         
+        format_map = {'text': 'Texto', 'file': 'Archivo'}
+        format_display = format_map.get(product_info['format'], product_info['format'])
+
         info_text = f"""🛍️ **{product_info['name']}**
 
 📝 **Descripción:**
@@ -913,7 +943,7 @@ def format_product_basic_info(good_name):
 
 💰 **Precio:** ${product_info['price']} USD
 📦 **Cantidad mínima:** {product_info['minimum']}
-📋 **Formato:** {product_info['format']}
+📋 **Formato:** {format_display}
 📊 **Disponibles:** {amount}"""
         
         return info_text
