@@ -1,6 +1,5 @@
 import telebot, sqlite3, shelve
 import config, dop, files
-import purchase_validator
 
 bot = telebot.TeleBot(config.token)
 
@@ -13,9 +12,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Personalizar las respuestas del bot')
             user_markup.row('Configuración de surtido', 'Cargar nuevo producto')
             user_markup.row('Configuración de pago')
-            user_markup.row('Configurar descuentos')
             user_markup.row('Estadísticas', 'Boletín informativo')
-            user_markup.row('Validar Compras', 'Otras configuraciones')
+            user_markup.row('Otras configuraciones')
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
         elif message_text == 'Personalizar las respuestas del bot':
@@ -284,18 +282,6 @@ Hay guías de configuración para ambos sistemas de pago disponibles al configur
             bot.send_message(chat_id, '¿A cuántos usuarios desea enviar el boletín? Ingrese un número. Máximo posible ' + str(amount))
             with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 19
 
-        elif 'Validar Compras' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Buscar compras')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, '**Panel de Validación**\n\nPara buscar compras de un usuario, selecciona la opción:', reply_markup=user_markup, parse_mode='Markdown')
-
-        elif 'Buscar compras' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, '**Buscar Compras**\n\nEnvía el ID de Telegram o username del usuario:', reply_markup=key, parse_mode='Markdown')
-            with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 50
-        
         elif 'Otras configuraciones' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
             user_markup.row('Añadir nuevo admin', 'Eliminar admin')
@@ -580,26 +566,6 @@ Hay guías de configuración para ambos sistemas de pago disponibles al configur
                     else: 
                         bot.send_message(chat_id, '¡La ID no se encontró en la lista de administradores! Seleccione la ID correcta.')
                         with shelve.open(files.sost_bd) as bd : bd[str(chat_id)] = 22
-                        
-            elif sost_num == 50:  # Buscar compras
-                # Intentar buscar por ID primero, luego por username
-                try:
-                    if message_text.isdigit():
-                        result = purchase_validator.validate_purchase_by_user(user_id=int(message_text))
-                    else:
-                        result = purchase_validator.validate_purchase_by_user(username=message_text)
-        
-                    bot.send_message(chat_id, result, parse_mode='Markdown')
-                except Exception as e:
-                    bot.send_message(chat_id, f'❌ Error en la búsqueda: {e}')
-    
-                # Volver al menú
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('Buscar compras')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¿Buscar más compras?', reply_markup=user_markup)
-    
-                with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]            
 
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
@@ -697,123 +663,8 @@ def ad_inline(callback_data, chat_id, message_id):
         con.close()
         try: bot.edit_message_text(chat_id=chat_id, message_id=message_id, text='¡Credenciales Binance eliminadas con éxito!')
         except: pass
-    
-    elif 'Configurar descuentos' == message_text:
-        discount_config = dop.get_discount_config()
-    
-        status = "✅ Activados" if discount_config['enabled'] else "❌ Desactivados"
-        fake_price_status = "✅ Sí" if discount_config['show_fake_price'] else "❌ No"
-    
-        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-        user_markup.row('Activar/Desactivar descuentos')
-        user_markup.row('Cambiar texto descuento')
-        user_markup.row('Cambiar multiplicador precio')
-        user_markup.row('Mostrar/Ocultar precios tachados')
-        user_markup.row('Vista previa catálogo')
-        user_markup.row('Volver al menú principal')
-    
-        bot.send_message(chat_id, f"""🎯 **Configuración de Descuentos**
 
-    📊 **Estado actual:**
-    • Descuentos: {status}
-    • Texto: "{discount_config['text']}"
-    • Multiplicador: {discount_config['multiplier']}x
-    • Precios tachados: {fake_price_status}
-
-    **Cómo funciona:**
-    • El catálogo solo muestra el texto de descuento
-    • Los precios con descuento se ven al seleccionar cada producto
-    • El multiplicador controla qué tan alto es el precio "anterior"
-
-    Selecciona qué deseas cambiar:""", reply_markup=user_markup, parse_mode='Markdown')
-
-    elif 'Activar/Desactivar descuentos' == message_text:
-        discount_config = dop.get_discount_config()
-        new_status = not discount_config['enabled']
-    
-        if dop.update_discount_config(enabled=new_status):
-            status_text = "✅ activados" if new_status else "❌ desactivados"
-            bot.send_message(chat_id, f'Descuentos {status_text} exitosamente')
-        else:
-            bot.send_message(chat_id, '❌ Error actualizando configuración')
-
-    elif 'Cambiar texto descuento' == message_text:
-        key = telebot.types.InlineKeyboardMarkup()
-        key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-        bot.send_message(chat_id, """✏️ **Cambiar Texto de Descuento**
-
-    Este texto aparecerá en el catálogo principal.
-
-    **Ejemplos:**
-    • 🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥
-    • 💥 MEGA OFERTA 50% OFF 💥
-    • ⚡ PRECIOS ESPECIALES HOY ⚡
-    • 🎉 PROMOCIÓN LIMITADA 🎉
-
-    Envía el nuevo texto:""", reply_markup=key, parse_mode='Markdown')
-        with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 60
-
-    elif 'Cambiar multiplicador precio' == message_text:
-        key = telebot.types.InlineKeyboardMarkup()
-        key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-        bot.send_message(chat_id, """🔢 **Cambiar Multiplicador de Precio**
-
-    Controla qué tan alto será el precio "anterior" tachado.
-
-    **Ejemplos:**
-    • 1.5 = precio anterior 50% más alto
-    • 2.0 = precio anterior 100% más alto (doble)
-    • 1.3 = precio anterior 30% más alto
-    • 2.5 = precio anterior 150% más alto
-
-    **Recomendado:** 1.5 a 2.0
-
-    Envía el nuevo multiplicador:""", reply_markup=key, parse_mode='Markdown')
-        with shelve.open(files.sost_bd) as bd: bd[str(chat_id)] = 61
-
-    elif 'Mostrar/Ocultar precios tachados' == message_text:
-        discount_config = dop.get_discount_config()
-        new_status = not discount_config['show_fake_price']
-    
-        if dop.update_discount_config(show_fake_price=new_status):
-            if new_status:
-                bot.send_message(chat_id, '✅ Los precios tachados se mostrarán en los productos')
-            else:
-                bot.send_message(chat_id, '❌ Los precios tachados se ocultarán (solo precio real)')
-        else:
-            bot.send_message(chat_id, '❌ Error actualizando configuración')
-
-    elif 'Vista previa catálogo' == message_text:
-        # Mostrar cómo se ve el catálogo actual
-        catalog_preview = dop.get_productcatalog()
-        if catalog_preview:
-        bot.send_message(chat_id, f"👀 **Vista previa del catálogo:**\n\n{catalog_preview}", parse_mode='Markdown')
-        else:
-            bot.send_message(chat_id, "❌ No hay productos en el catálogo")
-
-
-    elif sost_num == 60:  # Cambiar texto descuento
-        if dop.update_discount_config(text=message_text):
-            bot.send_message(chat_id, f'✅ Texto de descuento cambiado a:\n"{message_text}"')
-        else:
-            bot.send_message(chat_id, '❌ Error actualizando texto')
-        with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
-
-    elif sost_num == 61:  # Cambiar multiplicador
-        try:
-            multiplier = float(message_text)
-            if 1.0 <= multiplier <= 5.0:
-                if dop.update_discount_config(multiplier=multiplier):
-                    bot.send_message(chat_id, f'✅ Multiplicador cambiado a: {multiplier}x\n\nAhora el precio "anterior" será {int((multiplier-1)*100)}% más alto que el precio real.')
-                else:
-                    bot.send_message(chat_id, '❌ Error actualizando multiplicador')
-            else:
-                bot.send_message(chat_id, '❌ El multiplicador debe estar entre 1.0 y 5.0')
-        except:
-            bot.send_message(chat_id, '❌ El multiplicador debe ser un número válido')
-        with shelve.open(files.sost_bd) as bd: del bd[str(chat_id)]
-
-    def new_files(document_id, chat_id):
-        with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: good_name = f.read()
+def new_files(document_id, chat_id):
+    with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: good_name = f.read()
     stored = dop.get_stored(good_name)
     with open(stored, 'a', encoding='utf-8') as f: f.write(document_id + '\n')

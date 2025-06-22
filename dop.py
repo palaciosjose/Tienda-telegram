@@ -91,28 +91,33 @@ def user_loger(chat_id=0):
         return 0
 
 def get_productcatalog():
-    product_list = '*Catálogo actual de productos:*\n'
-    product_list += '*DESCUENTOS 25% EN TODO\n*'
-    
+    """Catálogo limpio - solo muestra texto de descuento"""
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT name, description, price, stored FROM goods;")
-        a = 0
-        for name, description, price, stored in cursor.fetchall():
-            a += 1
-            lasstprice = str(int(price*1.5))+' USD'
-            array = list(lasstprice)
-            lastprice = "̶" + "̶".join(array) + "̶"
-            good_amount = amount_of_goods(name)
-            product_list += '*' + name + '*' + ' `-`' + '  ' + lastprice + '  ' + ' *$' + str(price) + '*' + ' USD ' + '(Quedan ' + str(good_amount) +')\n'
+        cursor.execute("SELECT COUNT(*) FROM goods;")
+        product_count = cursor.fetchone()[0]
         con.close()
-        if a == 0: 
+        
+        if product_count == 0:
             return None
-        else: 
-            return product_list
+        
+        # Obtener configuración de descuentos
+        discount_config = get_discount_config()
+        
+        # Mensaje del catálogo limpio
+        catalog_text = '*Catálogo de productos disponibles:*\n\n'
+        
+        # Agregar texto de descuento si está habilitado
+        if discount_config['enabled']:
+            catalog_text += f"*{discount_config['text']}*\n\n"
+        
+        catalog_text += '*Selecciona un producto para ver detalles y precios*'
+        
+        return catalog_text
+        
     except Exception as e:
-        print(f"Error obteniendo catálogo de productos: {e}")
+        print(f"Error obteniendo catálogo: {e}")
         return None
 
 def get_goods():
@@ -325,17 +330,52 @@ def new_admin(his_id):
             f.write(str(his_id) + '\n')
 
 def get_description(name_good):
+    """Descripción del producto con sistema de descuentos"""
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT description FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT description, price FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
         con.close()
-        if result:
-            return result[0]
-        return "Descripción no encontrada"
-    except:
-        return "Descripción no encontrada"
+        
+        if not result:
+            return "Producto no encontrado"
+        
+        description, price = result
+        good_amount = amount_of_goods(name_good)
+        
+        # Obtener configuración de descuentos
+        discount_config = get_discount_config()
+        
+        # Construir descripción
+        product_description = f"*{name_good}*\n\n"
+        product_description += f"📝 *Descripción:*\n{description}\n\n"
+        
+        # Mostrar precios con o sin descuento
+        if discount_config['enabled'] and discount_config['show_fake_price']:
+            # Calcular precio "anterior" falso
+            fake_price = int(price * discount_config['multiplier'])
+            fake_price_str = str(fake_price) + ' USD'
+            array = list(fake_price_str)
+            crossed_price = "̶" + "̶".join(array) + "̶"
+            
+            # Calcular porcentaje de "descuento" para mostrar
+            discount_percent = int(((fake_price - price) / fake_price) * 100)
+            
+            product_description += f"💰 *Precio:*\n"
+            product_description += f"~~{crossed_price}~~ 🔥\n"
+            product_description += f"*${price} USD* (-{discount_percent}% OFF)\n\n"
+        else:
+            product_description += f"💰 *Precio:* ${price} USD\n\n"
+        
+        product_description += f"📦 *Stock disponible:* {good_amount} unidades\n"
+        product_description += f"🛒 *Mínimo de compra:* {get_minimum(name_good)} unidades"
+        
+        return product_description
+        
+    except Exception as e:
+        print(f"Error obteniendo descripción: {e}")
+        return "Error obteniendo información del producto"
 
 def get_paypaldata():
     try:
@@ -496,3 +536,141 @@ def new_buyer(his_id, username, payed):
         con.close()
     except:
         pass
+def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None):
+    """Versión mejorada de new_buy que incluye método de pago y timestamp"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        
+        # Usar timestamp actual
+        from datetime import datetime
+        current_time = datetime.now().isoformat()
+        
+        cursor.execute("""
+            INSERT INTO purchases 
+            (id, username, name_good, amount, price, payment_method, timestamp) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (his_id, username, name_good, amount, price, payment_method, current_time))
+        
+        # También insertar en tabla de validación si existe
+        try:
+            cursor.execute("""
+                INSERT INTO purchase_validation 
+                (user_id, username, product_name, amount, price, payment_method, payment_id, timestamp, status) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
+            """, (his_id, username, name_good, amount, price, payment_method, payment_id, current_time))
+        except:
+            pass  # Si la tabla no existe, continuar
+        
+        con.commit()
+        con.close()
+        return True
+    except Exception as e:
+        print(f"Error en new_buy_improved: {e}")
+        return False
+
+def get_daily_sales():
+    """Obtiene las ventas del día actual"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        
+        # Obtener ventas recientes (aproximación por rowid)
+        cursor.execute("""
+            SELECT COUNT(*), SUM(price)
+            FROM purchases 
+            ORDER BY rowid DESC 
+            LIMIT 100
+        """)
+        
+        count, total = cursor.fetchone()
+        
+        cursor.execute("""
+            SELECT name_good, COUNT(*), SUM(price)
+            FROM purchases 
+            GROUP BY name_good
+            ORDER BY COUNT(*) DESC
+            LIMIT 10
+        """)
+        
+        products = cursor.fetchall()
+        con.close()
+        
+        response = "📊 **Estadísticas de Ventas:**\n\n"
+        response += f"🛍️ **Transacciones recientes:** {count or 0}\n"
+        response += f"💰 **Ingresos totales:** ${total or 0} USD\n\n"
+        
+        if products:
+            response += "📦 **Productos más vendidos:**\n"
+            for product, qty, revenue in products:
+                response += f"• {product}: {qty} ventas (${revenue} USD)\n"
+        
+        return response
+        
+    except Exception as e:
+        return f"❌ Error: {e}"
+
+def search_user_purchases(search_term):
+    """Busca compras por ID de usuario o username"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+        
+        # Si es número, buscar por ID
+        if search_term.isdigit():
+            cursor.execute("""
+                SELECT id, username, name_good, amount, price, payment_method, timestamp 
+                FROM purchases 
+                WHERE id = ?
+                ORDER BY rowid DESC
+            """, (int(search_term),))
+        else:
+            # Si no, buscar por username
+            clean_username = search_term.replace('@', '')
+            cursor.execute("""
+                SELECT id, username, name_good, amount, price, payment_method, timestamp 
+                FROM purchases 
+                WHERE username LIKE ?
+                ORDER BY rowid DESC
+            """, (f"%{clean_username}%",))
+        
+        purchases = cursor.fetchall()
+        con.close()
+        
+        if not purchases:
+            return "❌ No se encontraron compras para este usuario"
+        
+        # Formatear respuesta
+        response = f"📋 **Compras encontradas para: {search_term}**\n\n"
+        total_spent = 0
+        
+        for i, purchase in enumerate(purchases, 1):
+            user_id, username, product, amount, price, payment_method, timestamp = purchase
+            total_spent += price
+            
+            # Formatear fecha
+            try:
+                if timestamp and 'T' in timestamp:
+                    from datetime import datetime
+                    dt = datetime.fromisoformat(timestamp)
+                    date_str = dt.strftime("%d/%m/%Y %H:%M")
+                else:
+                    date_str = str(timestamp) if timestamp else "Fecha no disponible"
+            except:
+                date_str = str(timestamp) if timestamp else "Fecha no disponible"
+            
+            response += f"🛒 **Compra #{i}**\n"
+            response += f"📦 {product} x{amount}\n"
+            response += f"💰 ${price} USD\n"
+            response += f"💳 {payment_method or 'No especificado'}\n"
+            response += f"📅 {date_str}\n"
+            response += f"👤 ID: `{user_id}` | @{username}\n"
+            response += "━━━━━━━━━━━━━━━━━━━━\n\n"
+        
+        response += f"💎 **Total gastado:** ${total_spent} USD\n"
+        response += f"🛍️ **Total compras:** {len(purchases)}"
+        
+        return response
+        
+    except Exception as e:
+        return f"❌ Error buscando compras: {e}"
