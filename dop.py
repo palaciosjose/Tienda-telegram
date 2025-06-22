@@ -1,6 +1,49 @@
 import telebot, shelve, datetime, sqlite3, random, os
 import files, config
 
+# ---------------------------------------------------------------------------
+# Utilidad para asegurar que la base de datos tenga las columnas necesarias
+# para la descripción adicional y la gestión de multimedia. Algunas
+# instalaciones antiguas pueden carecer de estas columnas y provocar errores
+# "no such column" cuando se utilizan las funciones relacionadas. Esta función
+# se ejecuta al importar el módulo y modifica la tabla `goods` si es necesario.
+# ---------------------------------------------------------------------------
+def ensure_database_schema():
+    """Agregar columnas faltantes a la tabla goods si es necesario."""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cursor = con.cursor()
+
+        cursor.execute("PRAGMA table_info(goods)")
+        columns = [c[1] for c in cursor.fetchall()]
+        updated = False
+
+        if 'additional_description' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN additional_description TEXT DEFAULT ''")
+            updated = True
+        if 'media_file_id' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN media_file_id TEXT")
+            updated = True
+        if 'media_type' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN media_type TEXT")
+            updated = True
+        if 'media_caption' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN media_caption TEXT")
+            updated = True
+
+        if updated:
+            con.commit()
+    except Exception as e:
+        print(f"Error asegurando esquema de base de datos: {e}")
+    finally:
+        try:
+            con.close()
+        except:
+            pass
+
+# Asegurar el esquema al importar el módulo
+ensure_database_schema()
+
 bot = telebot.TeleBot(config.token)
 
 def it_first(chat_id):

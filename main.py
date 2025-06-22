@@ -16,6 +16,9 @@ print("✅ DEBUG: main.py - Bot inicializado.")
 @bot.message_handler(content_types=["text"])
 def message_send(message):
     print(f"📨 DEBUG: message_send - Mensaje recibido: {message.text} de {message.chat.id}")
+
+    # Permitir que adminka.py procese archivos multimedia cuando corresponde
+    adminka.handle_multimedia(message)
     
     if '/start' == message.text:
         print(f"🎯 DEBUG: /start handler - Procesando comando /start.")
@@ -191,22 +194,68 @@ def inline(callback):
         key.add(telebot.types.InlineKeyboardButton(text='🔙 Catálogo', callback_data='Ir al catálogo de productos'))
         key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
         
-        try: 
-            # Usar la nueva función para mostrar información básica del producto
-            product_info = dop.format_product_basic_info(callback.data)
-            
-            # Agregar header con emoji
-            enhanced_info = f"🎯 **INFORMACIÓN DEL PRODUCTO**\n{'-'*35}\n\n{product_info}"
-            
+        try:
+            media_info = dop.get_product_media(callback.data)
+            formatted_info = dop.format_product_with_media(callback.data)
+
+            if media_info:
+                if media_info['type'] == 'photo':
+                    bot.edit_message_media(
+                        chat_id=callback.message.chat.id,
+                        message_id=callback.message.message_id,
+                        media=telebot.types.InputMediaPhoto(
+                            media=media_info['file_id'],
+                            caption=formatted_info,
+                            parse_mode='Markdown'
+                        ),
+                        reply_markup=key
+                    )
+                elif media_info['type'] == 'video':
+                    bot.edit_message_media(
+                        chat_id=callback.message.chat.id,
+                        message_id=callback.message.message_id,
+                        media=telebot.types.InputMediaVideo(
+                            media=media_info['file_id'],
+                            caption=formatted_info,
+                            parse_mode='Markdown'
+                        ),
+                        reply_markup=key
+                    )
+                else:
+                    bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                    if media_info['type'] == 'document':
+                        bot.send_document(
+                            chat_id=callback.message.chat.id,
+                            document=media_info['file_id'],
+                            caption=formatted_info,
+                            reply_markup=key,
+                            parse_mode='Markdown'
+                        )
+                    elif media_info['type'] == 'audio':
+                        bot.send_audio(
+                            chat_id=callback.message.chat.id,
+                            audio=media_info['file_id'],
+                            caption=formatted_info,
+                            reply_markup=key,
+                            parse_mode='Markdown'
+                        )
+            else:
+                bot.edit_message_text(
+                    chat_id=callback.message.chat.id,
+                    message_id=callback.message.message_id,
+                    text=formatted_info,
+                    reply_markup=key,
+                    parse_mode='Markdown'
+                )
+        except Exception as e:
+            print(f"DEBUG: Error editando mensaje con multimedia: {e}")
             bot.edit_message_text(
-                chat_id=callback.message.chat.id, 
-                message_id=callback.message.message_id, 
-                text=enhanced_info, 
+                chat_id=callback.message.chat.id,
+                message_id=callback.message.message_id,
+                text=dop.format_product_with_media(callback.data),
                 reply_markup=key,
                 parse_mode='Markdown'
             )
-        except Exception as e:
-            print(f"DEBUG: Error editando mensaje: {e}")
     
     # Mostrar información adicional del producto
     elif callback.data.startswith('MAS_INFO_'):
