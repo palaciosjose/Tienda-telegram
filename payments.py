@@ -97,14 +97,18 @@ def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, a
         key.add(b1)
         key.add(telebot.types.InlineKeyboardButton(text='Volver al inicio', callback_data='Volver al inicio'))
         
-        try: 
-            bot.edit_message_text(
-                chat_id=chat_id, 
-                message_id=message_id, 
-                text=f'Para comprar {name_good} cantidad {amount}\nTotal: ${sum_amount} USD\nHaz clic en "Pagar con PayPal" y completa el pago.\nLuego presiona "Verificar pago".', 
+        try:
+            dop.safe_edit_message(
+                bot,
+                type('obj', (object,), {
+                    'chat': type('chat', (object,), {'id': chat_id})(),
+                    'message_id': message_id,
+                    'content_type': 'text'
+                })(),
+                f'Para comprar {name_good} cantidad {amount}\nTotal: ${sum_amount} USD\nHaz clic en "Pagar con PayPal" y completa el pago.\nLuego presiona "Verificar pago".',
                 reply_markup=key
             )
-        except: 
+        except:
             pass
         
         he_client.append(chat_id)
@@ -130,13 +134,17 @@ def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
             
             if payment.state == 'approved':
                 he_client.remove(chat_id)
-                try: 
-                    bot.edit_message_text(
-                        chat_id=chat_id, 
-                        message_id=message_id, 
-                        text='¡Pago de PayPal confirmado!\nAhora recibirás tu producto'
+                try:
+                    dop.safe_edit_message(
+                        bot,
+                        type('obj', (object,), {
+                            'chat': type('chat', (object,), {'id': chat_id})(),
+                            'message_id': message_id,
+                            'content_type': 'text'
+                        })(),
+                        '¡Pago de PayPal confirmado!\nAhora recibirás tu producto'
                     )
-                except: 
+                except:
                     pass
                 
                 # Entregar producto
@@ -185,11 +193,15 @@ def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, 
     key.add(telebot.types.InlineKeyboardButton(text='🏠 Volver al inicio', callback_data='Volver al inicio'))
     
     # MENSAJE CORREGIDO - CON ID EN LAS INSTRUCCIONES
-    try: 
-        bot.edit_message_text(
-            chat_id=chat_id, 
-            message_id=message_id, 
-            text=f"""💳 **Pago con Binance Pay**
+    try:
+        dop.safe_edit_message(
+            bot,
+            type('obj', (object,), {
+                'chat': type('chat', (object,), {'id': chat_id})(),
+                'message_id': message_id,
+                'content_type': 'text'
+            })(),
+            f"""💳 **Pago con Binance Pay**
 
 📦 **Producto:** {name_good}
 🔢 **Cantidad:** {amount}
@@ -293,10 +305,14 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
     
     # Responder al cliente
     try:
-        bot.edit_message_text(
-            chat_id=chat_id,
-            message_id=message_id,
-            text=f"""⏳ **Pago en Verificación**
+        dop.safe_edit_message(
+            bot,
+            type('obj', (object,), {
+                'chat': type('chat', (object,), {'id': chat_id})(),
+                'message_id': message_id,
+                'content_type': 'text'
+            })(),
+            f"""⏳ **Pago en Verificación**
 
 ✅ Tu solicitud de pago ha sido enviada al administrador.
 
@@ -362,10 +378,14 @@ Gracias por tu compra.""", parse_mode='Markdown')
                     
                     # Confirmar al admin
                     try:
-                        bot.edit_message_text(
-                            chat_id=admin_chat_id,
-                            message_id=message_id,
-                            text=f"✅ **PAGO APROBADO por Admin {admin_chat_id}**\n\nUsuario {user_chat_id} recibió su producto: {name_good}",
+                        dop.safe_edit_message(
+                            bot,
+                            type('obj', (object,), {
+                                'chat': type('chat', (object,), {'id': admin_chat_id})(),
+                                'message_id': message_id,
+                                'content_type': 'text'
+                            })(),
+                            f"✅ **PAGO APROBADO por Admin {admin_chat_id}**\n\nUsuario {user_chat_id} recibió su producto: {name_good}",
                             parse_mode='Markdown'
                         )
                     except Exception as e:
@@ -397,10 +417,14 @@ Tu pago de ${payment_info['amount']} USD no pudo ser verificado.
                 
                 # Confirmar al admin
                 try:
-                    bot.edit_message_text(
-                        chat_id=admin_chat_id,
-                        message_id=message_id,
-                        text=f"❌ **PAGO RECHAZADO por Admin {admin_chat_id}**\n\nUsuario {user_chat_id} fue notificado del rechazo.",
+                    dop.safe_edit_message(
+                        bot,
+                        type('obj', (object,), {
+                            'chat': type('chat', (object,), {'id': admin_chat_id})(),
+                            'message_id': message_id,
+                            'content_type': 'text'
+                        })(),
+                        f"❌ **PAGO RECHAZADO por Admin {admin_chat_id}**\n\nUsuario {user_chat_id} fue notificado del rechazo.",
                         parse_mode='Markdown'
                     )
                 except Exception as e:

@@ -46,6 +46,33 @@ ensure_database_schema()
 
 bot = telebot.TeleBot(config.token)
 
+# -------------------------------------------------
+# Utilidad para editar mensajes con o sin multimedia
+# -------------------------------------------------
+def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
+    """Edita texto o caption según el tipo de mensaje"""
+    try:
+        if getattr(message, 'content_type', 'text') == 'text':
+            bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        else:
+            bot.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                caption=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        return True
+    except Exception as e:
+        print(f"Error editando mensaje de forma segura: {e}")
+        return False
+
 def it_first(chat_id):
     try:
         with open(files.working_log, encoding='utf-8') as f: 

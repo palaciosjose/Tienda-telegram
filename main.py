@@ -179,7 +179,7 @@ def inline(callback):
         else:
             try:
                 catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog()}"
-                bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=catalog_text, reply_markup=key, parse_mode='Markdown')
+                dop.safe_edit_message(bot, callback.message, catalog_text, reply_markup=key, parse_mode='Markdown')
             except Exception as e:
                 print(f"DEBUG: Error editando mensaje: {e}")
 
@@ -245,19 +245,19 @@ def inline(callback):
                             parse_mode='Markdown'
                         )
             else:
-                bot.edit_message_text(
-                    chat_id=callback.message.chat.id,
-                    message_id=callback.message.message_id,
-                    text=formatted_info,
+                dop.safe_edit_message(
+                    bot,
+                    callback.message,
+                    formatted_info,
                     reply_markup=key,
                     parse_mode='Markdown'
                 )
         except Exception as e:
             print(f"DEBUG: Error editando mensaje con multimedia: {e}")
-            bot.edit_message_text(
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=dop.format_product_with_media(callback.data),
+            dop.safe_edit_message(
+                bot,
+                callback.message,
+                dop.format_product_with_media(callback.data),
                 reply_markup=key,
                 parse_mode='Markdown'
             )
@@ -280,10 +280,10 @@ def inline(callback):
             # Agregar header con emoji
             enhanced_additional = f"📋 **INFORMACIÓN ADICIONAL**\n{'-'*30}\n\n{additional_info}"
             
-            bot.edit_message_text(
-                chat_id=callback.message.chat.id,
-                message_id=callback.message.message_id,
-                text=enhanced_additional,
+            dop.safe_edit_message(
+                bot,
+                callback.message,
+                enhanced_additional,
                 reply_markup=key,
                 parse_mode='Markdown'
             )
@@ -308,8 +308,8 @@ def inline(callback):
                     start_message = bd['start']
                 start_message = start_message.replace('username', callback.message.chat.username)
                 start_message = start_message.replace('name', callback.message.from_user.first_name)
-                try: 
-                    bot.edit_message_text(chat_id=callback.message.chat.id, message_id=callback.message.message_id, text=start_message, reply_markup=key)
+                try:
+                    dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
                 except Exception as e:
                     print(f"DEBUG: Error editando mensaje: {e}")
 
@@ -338,11 +338,11 @@ def inline(callback):
 
 💡 **Tip:** Envía solo el número (ej: 5)"""
 
-                bot.edit_message_text(
-                    chat_id=callback.message.chat.id, 
-                    message_id=callback.message.message_id, 
-                    text=purchase_text, 
-                    reply_markup=key, 
+                dop.safe_edit_message(
+                    bot,
+                    callback.message,
+                    purchase_text,
+                    reply_markup=key,
                     parse_mode='Markdown'
                 )
             except Exception as e:
