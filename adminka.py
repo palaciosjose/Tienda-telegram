@@ -3,6 +3,32 @@ import config, dop, files
 
 bot = telebot.TeleBot(config.token)
 
+
+def show_discount_menu(chat_id):
+    """Mostrar menú de configuración de descuentos"""
+    config_dis = dop.get_discount_config()
+
+    status = 'Activado ✅' if config_dis['enabled'] else 'Desactivado ❌'
+    show_fake = 'Sí' if config_dis['show_fake_price'] else 'No'
+
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+    toggle = 'Desactivar descuentos' if config_dis['enabled'] else 'Activar descuentos'
+    toggle_fake = 'Ocultar precios tachados' if config_dis['show_fake_price'] else 'Mostrar precios tachados'
+    user_markup.row(toggle)
+    user_markup.row('Cambiar texto', 'Cambiar multiplicador')
+    user_markup.row(toggle_fake)
+    user_markup.row('Vista previa', 'Volver al menú principal')
+
+    message = (
+        f"💸 *Configuración de Descuentos*\n\n"
+        f"Estado: {status}\n"
+        f"Texto: {config_dis['text']}\n"
+        f"Multiplicador: x{config_dis['multiplier']}\n"
+        f"Mostrar precios tachados: {show_fake}"
+    )
+
+    bot.send_message(chat_id, message, reply_markup=user_markup, parse_mode='Markdown')
+
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
         if message_text == 'Volver al menú principal' or message_text == '/adm':
@@ -14,6 +40,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('📦 Surtido', '➕ Producto')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
+            user_markup.row('💸 Descuentos')
             user_markup.row('⚙️ Otros')
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
@@ -291,6 +318,39 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione a qué grupo de usuarios desea enviar el boletín', reply_markup=user_markup)
 
+        elif '💸 Descuentos' == message_text:
+            show_discount_menu(chat_id)
+
+        elif 'Activar descuentos' == message_text or 'Desactivar descuentos' == message_text:
+            current = dop.get_discount_config()['enabled']
+            dop.update_discount_config(enabled=not current)
+            bot.send_message(chat_id, '✅ Estado de descuentos actualizado')
+            show_discount_menu(chat_id)
+
+        elif 'Mostrar precios tachados' == message_text or 'Ocultar precios tachados' == message_text:
+            current = dop.get_discount_config()['show_fake_price']
+            dop.update_discount_config(show_fake_price=not current)
+            bot.send_message(chat_id, '✅ Configuración de precios actualizada')
+            show_discount_menu(chat_id)
+
+        elif 'Cambiar texto' == message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Envíe el nuevo texto para los descuentos:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 33
+
+        elif 'Cambiar multiplicador' == message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Envíe el nuevo multiplicador (ej. 1.5):', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 34
+
+        elif 'Vista previa' == message_text:
+            preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog()}"
+            bot.send_message(chat_id, preview, parse_mode='Markdown')
+
         elif 'A todos los usuarios' == message_text or 'Solo a los compradores' == message_text:
             if 'A todos los usuarios' == message_text: 
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  
@@ -348,6 +408,7 @@ def text_analytics(message_text, chat_id):
                 user_markup.row('📦 Surtido', '➕ Producto')
                 user_markup.row('💰 Pagos')
                 user_markup.row('📊 Stats', '📣 Difusión')
+                user_markup.row('💸 Descuentos')
                 user_markup.row('⚙️ Otros')
                 bot.send_message(chat_id, 'Mensaje guardado exitosamente!', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
@@ -724,8 +785,32 @@ def text_analytics(message_text, chat_id):
             else:
                 bot.send_message(chat_id, '❌ El producto no tiene multimedia asignada')
             
-            with shelve.open(files.sost_bd) as bd: 
+            with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
+
+        elif sost_num == 33:  # Recibir nuevo texto de descuento
+            if dop.update_discount_config(text=message_text):
+                bot.send_message(chat_id, '✅ Texto de descuento actualizado')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando texto')
+
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_discount_menu(chat_id)
+
+        elif sost_num == 34:  # Recibir nuevo multiplicador
+            try:
+                multiplier = float(message_text)
+                if dop.update_discount_config(multiplier=multiplier):
+                    bot.send_message(chat_id, f'✅ Multiplicador actualizado a {multiplier}')
+                else:
+                    bot.send_message(chat_id, '❌ Error actualizando multiplicador')
+            except ValueError:
+                bot.send_message(chat_id, '❌ Valor inválido, use punto decimal. Ej: 1.5')
+
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_discount_menu(chat_id)
 
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
@@ -737,6 +822,7 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup.row('📦 Surtido', '➕ Producto')
         user_markup.row('💰 Pagos')
         user_markup.row('📊 Stats', '📣 Difusión')
+        user_markup.row('💸 Descuentos')
         user_markup.row('⚙️ Otros')
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
