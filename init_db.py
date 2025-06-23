@@ -117,6 +117,98 @@ def create_database():
     cursor.execute('CREATE INDEX IF NOT EXISTS idx_user_subscriptions_end_date '
                    'ON user_subscriptions(end_date)')
     print("✓ Índice en 'user_subscriptions.end_date' creado")
+
+    # Tablas para sistema de publicidad
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS campaigns (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL,
+            message_text TEXT NOT NULL,
+            media_file_id TEXT,
+            media_type TEXT,
+            media_caption TEXT,
+            button1_text TEXT,
+            button1_url TEXT,
+            button2_text TEXT,
+            button2_url TEXT,
+            status TEXT DEFAULT 'active',
+            created_date TEXT,
+            created_by INTEGER,
+            daily_limit INTEGER DEFAULT 3,
+            priority INTEGER DEFAULT 1
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS campaign_schedules (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            campaign_id INTEGER,
+            schedule_name TEXT,
+            frequency TEXT,
+            send_times TEXT,
+            target_platforms TEXT,
+            is_active INTEGER DEFAULT 1,
+            next_send_telegram TEXT,
+            next_send_whatsapp TEXT,
+            created_date TEXT,
+            FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS target_groups (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform TEXT NOT NULL,
+            group_id TEXT NOT NULL,
+            group_name TEXT,
+            category TEXT,
+            status TEXT DEFAULT 'active',
+            last_sent TEXT,
+            success_rate REAL DEFAULT 1.0,
+            added_date TEXT,
+            notes TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS platform_config (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform TEXT UNIQUE,
+            config_data TEXT,
+            is_active INTEGER DEFAULT 1,
+            last_updated TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS send_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            campaign_id INTEGER,
+            group_id TEXT,
+            platform TEXT,
+            status TEXT,
+            sent_date TEXT,
+            response_time REAL,
+            error_message TEXT,
+            FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS daily_stats (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            date TEXT UNIQUE,
+            total_sent INTEGER DEFAULT 0,
+            telegram_sent INTEGER DEFAULT 0,
+            whatsapp_sent INTEGER DEFAULT 0,
+            success_rate REAL DEFAULT 0,
+            failed_count INTEGER DEFAULT 0,
+            avg_response_time REAL DEFAULT 0
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS rate_limit_logs (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            platform TEXT,
+            success INTEGER,
+            timestamp TEXT
+        )
+    ''')
     
     conn.commit()
     conn.close()
