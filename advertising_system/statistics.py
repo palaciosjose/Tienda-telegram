@@ -9,16 +9,18 @@ class StatisticsManager:
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT INTO send_logs (campaign_id, group_id, platform, status, sent_date, error_message)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+            """
+            INSERT INTO send_logs (campaign_id, group_id, platform, status, sent_date, error_message)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
             (
                 campaign_id,
                 group_id,
                 platform,
                 'sent' if success else 'failed',
                 datetime.now().isoformat(),
-                '' if success else result
-            )
+                '' if success else result,
+            ),
         )
         conn.commit()
         conn.close()
@@ -28,18 +30,24 @@ class StatisticsManager:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute(
-            """SELECT COUNT(*), SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END),
-                      SUM(CASE WHEN platform = 'telegram' THEN 1 ELSE 0 END),
-                      SUM(CASE WHEN platform = 'whatsapp' THEN 1 ELSE 0 END)
-               FROM send_logs WHERE DATE(sent_date) = ?""",
-            (today,)
+            """
+            SELECT COUNT(*),
+                   SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN platform = 'telegram' THEN 1 ELSE 0 END),
+                   SUM(CASE WHEN platform = 'whatsapp' THEN 1 ELSE 0 END)
+            FROM send_logs
+            WHERE DATE(sent_date) = ?
+            """,
+            (today,),
         )
         stats = cursor.fetchone()
         success_rate = (stats[1] / stats[0] * 100) if stats[0] else 0
-        dashboard = f"""📊 **Dashboard de Marketing - {today}**\n\n" \
-            f"📤 **Mensajes enviados:** {stats[0]}\n" \
-            f"✅ **Exitosos:** {stats[1]} ({success_rate:.1f}%)\n" \
-            f"❌ **Fallidos:** {stats[0] - stats[1]}\n\n" \
-            f"📱 **Por plataforma:**\n- Telegram: {stats[2]}\n- WhatsApp: {stats[3]}""
+        dashboard = (
+            f"📊 **Dashboard de Marketing - {today}**\n\n"
+            f"📤 **Mensajes enviados:** {stats[0]}\n"
+            f"✅ **Exitosos:** {stats[1]} ({success_rate:.1f}%)\n"
+            f"❌ **Fallidos:** {stats[0] - stats[1]}\n\n"
+            f"📱 **Por plataforma:**\n- Telegram: {stats[2]}\n- WhatsApp: {stats[3]}"
+        )
         conn.close()
         return dashboard
