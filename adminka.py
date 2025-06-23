@@ -266,21 +266,31 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif '➕ Producto' == message_text:
             key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            key.add(
+                telebot.types.InlineKeyboardButton(
+                    text='Cancelar y volver al menú principal de administración',
+                    callback_data='Volver al menú principal de administración'))
             con = sqlite3.connect(files.main_db)
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
             a = 0
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             for name, price in cursor.fetchall():
                 a += 1
                 user_markup.row(name)
-            if a == 0: 
-                bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!')
+            user_markup.row('Volver al menú principal')
+            if a == 0:
+                bot.send_message(
+                    chat_id,
+                    '¡No se ha creado ninguna posición todavía!',
+                    reply_markup=user_markup)
             else:
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¿De qué posición desea cargar productos?', reply_markup=user_markup, parse_mode='MarkDown')
-                with shelve.open(files.sost_bd) as bd: 
+                bot.send_message(
+                    chat_id,
+                    '¿De qué posición desea cargar productos?',
+                    reply_markup=user_markup,
+                    parse_mode='MarkDown')
+                with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 10
             con.close()
 
