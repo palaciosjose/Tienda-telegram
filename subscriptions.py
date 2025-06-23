@@ -136,8 +136,13 @@ def create_user_subscription(user_id, product_id, payment_method,
     return True
 
 
-def renew_subscription(subscription_id):
-    """Renovar una suscripción existente"""
+def renew_subscription(subscription_id, apply_early_discount=False):
+    """Renovar una suscripción existente.
+
+    Si ``apply_early_discount`` es ``True`` se registra en el historial con la
+    etiqueta ``early``. El cálculo del descuento se debe gestionar en el sistema
+    de pagos externo.
+    """
     init_subscription_db()
     conn = sqlite3.connect(files.main_db)
     cursor = conn.cursor()
@@ -159,7 +164,12 @@ def renew_subscription(subscription_id):
 
     end_date = datetime.fromisoformat(end_date_str)
     new_end = end_date + timedelta(**{duration_unit: duration})
-    new_history = (history or '') + f"|renewed:{datetime.utcnow().isoformat()}"
+    tag = 'renewed'
+    if apply_early_discount:
+        tag += ':early'
+    else:
+        tag += ''
+    new_history = (history or '') + f"|{tag}:{datetime.utcnow().isoformat()}"
 
     cursor.execute(
         '''UPDATE user_subscriptions
@@ -184,6 +194,44 @@ def suspend_subscription(subscription_id):
     conn.close()
     log_action('suspended', subscription_id)
     return True
+
+
+def cancel_subscription(subscription_id):
+    """Cancelar una suscripción manualmente."""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE user_subscriptions SET status = ? WHERE id = ?',
+        ('canceled', subscription_id))
+    conn.commit()
+    conn.close()
+    log_action('canceled', subscription_id)
+    return True
+
+
+def get_user_subscriptions(user_id):
+    """Obtener todas las suscripciones de un usuario."""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT * FROM user_subscriptions WHERE user_id = ?', (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def get_subscription_status(subscription_id):
+    """Devolver el estado actual de una suscripción."""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT status FROM user_subscriptions WHERE id = ?', (subscription_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
 
 
 def log_action(action, subscription_id):
@@ -247,8 +295,19 @@ def check_subscriptions():
             status = 'due'
             log_action('due', sub_id)
 
-        # Verificación de vencimiento
+        # Verificación de vencimiento y renovaciones automáticas
         if now > end_date:
+            if auto_renew:
+                renewed = renew_subscription(sub_id)
+                if renewed:
+                    log_action('auto_renew', sub_id)
+                    try:
+                        bot.send_message(
+                            user_id,
+                            f"🔄 Suscripción a {name} renovada automáticamente.")
+                    except Exception:
+                        pass
+                    continue
             if grace_period and now <= end_date + timedelta(days=grace_period):
                 if status != 'expired':
                     conn = sqlite3.connect(files.main_db)
