@@ -1,5 +1,6 @@
 import telebot, time, shelve, requests, json
-import dop, config, files
+from datetime import datetime, timedelta
+import dop, config, files, subscriptions
 
 bot = telebot.TeleBot(config.token)
 
@@ -449,25 +450,37 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
     """Función común para entregar productos"""
     try:
         print(f"DEBUG: Entregando producto {name_good} a usuario {chat_id}")
-        
-        # Entregar producto
-        text = ''
-        for i in range(int(amount)):
-            if dop.get_goodformat(name_good) == 'file':
-                product_data = dop.get_tovar(name_good)
-                if product_data != "Error obteniendo producto" and product_data != "Producto agotado":
-                    bot.send_document(chat_id, product_data)
-                else:
-                    bot.send_message(chat_id, f"❌ Error obteniendo {name_good}: {product_data}")
-            elif dop.get_goodformat(name_good) == 'text':
-                product_data = dop.get_tovar(name_good)
-                if product_data != "Error obteniendo producto" and product_data != "Producto agotado":
-                    text += product_data + '\n'
-                else:
-                    bot.send_message(chat_id, f"❌ Error obteniendo {name_good}: {product_data}")
-        
-        if dop.get_goodformat(name_good) == 'text' and text.strip(): 
-            bot.send_message(chat_id, text)
+
+        if name_good.startswith('SUB:'):
+            sub_id = int(name_good.split(':')[1])
+            product = subscriptions.get_subscription_product(sub_id)
+            if product:
+                _, name, desc, price, currency, duration, unit, *_ = product
+                subscriptions.create_user_subscription(chat_id, sub_id, payment_method)
+                end_date = (datetime.utcnow() + timedelta(**{unit: duration})).date()
+                bot.send_message(chat_id, f'✅ Suscripción *{name}* activada hasta {end_date}', parse_mode='Markdown')
+                name_good = name
+            else:
+                bot.send_message(chat_id, '❌ Plan de suscripción no encontrado')
+        else:
+            # Entregar producto físico/digital
+            text = ''
+            for i in range(int(amount)):
+                if dop.get_goodformat(name_good) == 'file':
+                    product_data = dop.get_tovar(name_good)
+                    if product_data != "Error obteniendo producto" and product_data != "Producto agotado":
+                        bot.send_document(chat_id, product_data)
+                    else:
+                        bot.send_message(chat_id, f"❌ Error obteniendo {name_good}: {product_data}")
+                elif dop.get_goodformat(name_good) == 'text':
+                    product_data = dop.get_tovar(name_good)
+                    if product_data != "Error obteniendo producto" and product_data != "Producto agotado":
+                        text += product_data + '\n'
+                    else:
+                        bot.send_message(chat_id, f"❌ Error obteniendo {name_good}: {product_data}")
+
+            if dop.get_goodformat(name_good) == 'text' and text.strip():
+                bot.send_message(chat_id, text)
         
         # Mensaje después de compra
         if dop.check_message('after_buy') is True:

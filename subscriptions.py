@@ -102,6 +102,17 @@ def get_subscription_product(product_id):
     return row
 
 
+def get_all_subscription_products():
+    """Obtener todos los planes de suscripción disponibles"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute('SELECT * FROM subscription_products')
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
 # ---------------------------------------------------------------------------
 # Funciones para manejar suscripciones de clientes
 # ---------------------------------------------------------------------------
