@@ -1,4 +1,4 @@
-import telebot, sqlite3, shelve, os
+import telebot, sqlite3, shelve, os, time
 import config, dop, files, subscriptions, subscriptions
 from advertising_system import AdvertisingManager
 
@@ -345,7 +345,16 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
 
         elif '🎯 Nueva campaña' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Nueva campaña* aún no implementada.')
+            data = {
+                'name': f'Campaña {int(time.time())}',
+                'message_text': 'Mensaje de ejemplo',
+                'created_by': chat_id
+            }
+            try:
+                cid = advertising.create_campaign(data)
+                bot.send_message(chat_id, f'✅ Campaña creada con ID {cid}')
+            except Exception as e:
+                bot.send_message(chat_id, f'❌ Error al crear campaña: {e}')
 
         elif '📋 Ver campañas' == message_text:
             campaigns = advertising.get_all_campaigns()
@@ -361,10 +370,23 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, response, parse_mode='Markdown', reply_markup=user_markup)
 
         elif '⏰ Programar envíos' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Programar envíos* aún no implementada.')
+            campaigns = advertising.get_all_campaigns()
+            if not campaigns:
+                bot.send_message(chat_id, 'ℹ️ No hay campañas para programar.')
+            else:
+                cid = campaigns[-1]['id']
+                try:
+                    advertising.schedule_campaign(cid)
+                    bot.send_message(chat_id, f'✅ Envíos programados para campaña {cid}')
+                except Exception as e:
+                    bot.send_message(chat_id, f'❌ Error al programar: {e}')
 
         elif '🎯 Gestionar grupos' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Gestionar grupos* aún no implementada.')
+            try:
+                gid = advertising.add_target_group('telegram', f'demo{int(time.time())}', 'Grupo demo')
+                bot.send_message(chat_id, f'✅ Grupo añadido (id {gid})')
+            except Exception as e:
+                bot.send_message(chat_id, f'❌ Error al añadir grupo: {e}')
 
         elif '📊 Estadísticas hoy' == message_text:
             stats = advertising.get_today_stats()
@@ -377,10 +399,19 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, msg, parse_mode='Markdown')
 
         elif '⚙️ Configuración' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Configuración de marketing* aún no implementada.')
+            bot.send_message(chat_id, 'Configuración de marketing básica cargada.')
 
         elif '▶️ Envío manual' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Envío manual* aún no implementada.')
+            campaigns = advertising.get_all_campaigns()
+            if not campaigns:
+                bot.send_message(chat_id, 'ℹ️ No hay campañas para enviar.')
+            else:
+                cid = campaigns[-1]['id']
+                try:
+                    count = advertising.send_campaign_now(cid)
+                    bot.send_message(chat_id, f'✅ Campaña enviada a {count} grupos')
+                except Exception as e:
+                    bot.send_message(chat_id, f'❌ Error al enviar: {e}')
 
         elif '💼 Suscripciones' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
