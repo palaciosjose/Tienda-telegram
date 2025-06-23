@@ -1,3 +1,8 @@
-# Ignore database files
-**/main_data.db
+.env
+data/
+__pycache__/
+*.db
+backup_*
 
+# Ignore project databases
+**/main_data.db
