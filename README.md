@@ -62,5 +62,5 @@ python subscription_cron.py
 
 ## Licencia
 
-Este proyecto se distribuye sin una licencia explícita.
+Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
 
