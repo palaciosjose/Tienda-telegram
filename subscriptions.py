@@ -107,6 +107,9 @@ def add_subscription_product(name, description, price, duration,
                              delivery_content=None):
     """Agregar un nuevo producto de suscripción"""
     init_subscription_db()
+    if subscription_exists(name):
+        raise ValueError('Plan already exists')
+
     conn = sqlite3.connect(files.main_db)
     cursor = conn.cursor()
     cursor.execute(
@@ -126,6 +129,20 @@ def add_subscription_product(name, description, price, duration,
     conn.commit()
     conn.close()
     return True
+
+
+def subscription_exists(name):
+    """Verificar si ya existe un plan con ese nombre"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    cur.execute(
+        'SELECT 1 FROM subscription_products WHERE name = ?',
+        (name,),
+    )
+    exists = cur.fetchone() is not None
+    conn.close()
+    return exists
 
 
 def get_subscription_product(product_id):
