@@ -98,4 +98,79 @@ def ad_inline(callback_data, chat_id, message_id):
 
 def handle_multimedia(message):
     """Manejar multimedia - versión básica"""
-    pass
+    chat_id = message.chat.id
+
+    try:
+        with shelve.open(files.sost_bd) as bd:
+            state = bd.get(str(chat_id))
+
+        if state not in (32, 48):
+            return
+
+        if state == 32:
+            temp_path = f"data/Temp/{chat_id}media_product.txt"
+        else:
+            temp_path = f"data/Temp/{chat_id}media_plan.txt"
+
+        with open(temp_path, "r", encoding="utf-8") as f:
+            product_name = f.read()
+
+        file_id = None
+        media_type = None
+        caption = message.caption if message.caption else None
+
+        if message.photo:
+            file_id = message.photo[-1].file_id
+            media_type = "photo"
+        elif message.video:
+            file_id = message.video.file_id
+            media_type = "video"
+        elif message.document:
+            file_id = message.document.file_id
+            media_type = "document"
+        elif message.audio:
+            file_id = message.audio.file_id
+            media_type = "audio"
+        elif message.animation:
+            file_id = message.animation.file_id
+            media_type = "animation"
+
+        if file_id and media_type:
+            if state == 32:
+                saved = dop.save_product_media(product_name, file_id, media_type, caption)
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row("🎬 Multimedia productos")
+                user_markup.row("Volver al menú principal")
+            else:
+                saved = subscriptions.save_plan_media(product_name, file_id, media_type, caption)
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row("🎬 Multimedia suscripciones")
+                user_markup.row("Volver al menú principal")
+
+            media_names = {
+                "photo": "📸 Imagen",
+                "video": "🎥 Video",
+                "document": "📄 Documento",
+                "audio": "🎵 Audio",
+                "animation": "🎬 GIF",
+            }
+
+            if saved:
+                target = "producto" if state == 32 else "plan"
+                bot.send_message(
+                    chat_id,
+                    f"✅ {media_names.get(media_type, 'Archivo')} agregado al {target}: {product_name}",
+                    reply_markup=user_markup,
+                )
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
+            else:
+                bot.send_message(chat_id, "❌ Error guardando multimedia")
+        else:
+            bot.send_message(
+                chat_id,
+                "❌ Tipo de archivo no soportado. Envía: foto, video, documento, audio o GIF",
+            )
+    except Exception:
+        pass
