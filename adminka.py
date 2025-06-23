@@ -1,7 +1,9 @@
 import telebot, sqlite3, shelve, os
 import config, dop, files, subscriptions, subscriptions
+from advertising_system import AdvertisingManager
 
 bot = telebot.TeleBot(config.token)
+advertising = AdvertisingManager(files.main_db)
 
 
 def show_discount_menu(chat_id):
@@ -41,6 +43,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('💼 Suscripciones')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
+            user_markup.row('📢 Marketing')
             user_markup.row('💸 Descuentos')
             user_markup.row('⚙️ Otros')
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
@@ -328,6 +331,18 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('A todos los usuarios', 'Solo a los compradores')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione a qué grupo de usuarios desea enviar el boletín', reply_markup=user_markup)
+
+        elif '📢 Marketing' == message_text:
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('🎯 Nueva campaña', '📋 Ver campañas')
+            user_markup.row('⏰ Programar envíos', '🎯 Gestionar grupos')
+            user_markup.row('📊 Estadísticas hoy', '⚙️ Configuración')
+            user_markup.row('▶️ Envío manual', 'Volver al menú principal')
+
+            today_stats = advertising.get_today_stats()
+            stats_text = f"""📢 **Sistema de Marketing**\n\n📊 **Estadísticas de hoy:**\n- Mensajes enviados: {today_stats['sent']}\n- Tasa de éxito: {today_stats['success_rate']}%\n- Grupos alcanzados: {today_stats['groups']}\n\nSelecciona una opción:"""
+
+            bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
 
         elif '💼 Suscripciones' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
@@ -1366,6 +1381,42 @@ def text_analytics(message_text, chat_id):
             except Exception as e:
                 print(f"Error en estado 66: {e}")
                 bot.send_message(chat_id, '❌ Error procesando el contenido')
+
+        elif sost_num == 160:  # Nombre de campaña
+            with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, '📝 **Mensaje de la campaña**\n\nEscribe el texto que se enviará (máximo 500 caracteres):', reply_markup=key, parse_mode='Markdown')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 161
+
+        elif sost_num == 161:  # Mensaje de campaña
+            if len(message_text) > 500:
+                bot.send_message(chat_id, '❌ El mensaje es muy largo. Máximo 500 caracteres.')
+                return
+
+            with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('Sin multimedia')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, '🖼️ **Multimedia (Opcional)**\n\nEnvía una imagen, video o documento.\nO selecciona "Sin multimedia":', reply_markup=user_markup)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 162
+
+        elif sost_num == 162:  # Botones
+            if message_text == 'Sin multimedia':
+                with open('data/Temp/' + str(chat_id) + 'campaign_media.txt', 'w', encoding='utf-8') as f:
+                    f.write('none')
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Sin botones', callback_data='no_buttons'))
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, '🔗 **Botón 1 (Opcional)**\n\nEscribe el texto del primer botón o presiona "Sin botones":', reply_markup=key, parse_mode='Markdown')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 163
 
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
