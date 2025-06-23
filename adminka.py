@@ -360,11 +360,46 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, response, parse_mode='Markdown', reply_markup=user_markup)
 
-        elif '⏰ Programar envíos' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Programar envíos* aún no implementada.')
+        elif message_text.startswith('⏰ Programar envíos'):
+            params = message_text.replace('⏰ Programar envíos', '').strip()
+            if not params:
+                bot.send_message(chat_id, 'Uso: ⏰ Programar envíos <ID> <HH:MM>')
+            else:
+                parts = params.split()
+                if len(parts) < 2:
+                    bot.send_message(chat_id, 'Uso: ⏰ Programar envíos <ID> <HH:MM>')
+                else:
+                    try:
+                        camp_id = int(parts[0])
+                        time_str = parts[1]
+                        ok, msg = advertising.schedule_campaign(camp_id, time_str)
+                        bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                    except ValueError:
+                        bot.send_message(chat_id, '❌ ID de campaña inválido')
 
-        elif '🎯 Gestionar grupos' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Gestionar grupos* aún no implementada.')
+        elif message_text.startswith('🎯 Gestionar grupos'):
+            params = message_text.replace('🎯 Gestionar grupos', '').strip()
+            if not params:
+                bot.send_message(
+                    chat_id,
+                    'Uso: 🎯 Gestionar grupos add <telegram|whatsapp> <id> [nombre]\n'
+                    '     🎯 Gestionar grupos remove <id>'
+                )
+            else:
+                parts = params.split()
+                action = parts[0].lower()
+                if action == 'add' and len(parts) >= 3:
+                    platform = parts[1]
+                    gid = parts[2]
+                    name = ' '.join(parts[3:]) if len(parts) > 3 else None
+                    ok, msg = advertising.add_target_group(platform, gid, name)
+                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                elif action == 'remove' and len(parts) >= 2:
+                    gid = parts[1]
+                    ok, msg = advertising.remove_target_group(gid)
+                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                else:
+                    bot.send_message(chat_id, '❌ Comando inválido')
 
         elif '📊 Estadísticas hoy' == message_text:
             stats = advertising.get_today_stats()
@@ -379,8 +414,17 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '⚙️ Configuración' == message_text:
             bot.send_message(chat_id, '🚧 Función *Configuración de marketing* aún no implementada.')
 
-        elif '▶️ Envío manual' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Envío manual* aún no implementada.')
+        elif message_text.startswith('▶️ Envío manual'):
+            params = message_text.replace('▶️ Envío manual', '').strip()
+            if not params:
+                bot.send_message(chat_id, 'Uso: ▶️ Envío manual <ID>')
+            else:
+                try:
+                    camp_id = int(params.split()[0])
+                    ok, msg = advertising.send_campaign_now(camp_id)
+                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                except ValueError:
+                    bot.send_message(chat_id, '❌ ID de campaña inválido')
 
         elif '💼 Suscripciones' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
