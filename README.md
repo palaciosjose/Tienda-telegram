@@ -60,6 +60,14 @@ Para ejecutar el proceso diario de forma sencilla puedes programar `subscription
 python subscription_cron.py
 ```
 
+## Pruebas
+
+Para ejecutar la suite de pruebas automatizadas utiliza Pytest:
+
+```bash
+pytest
+```
+
 ## Licencia
 
 Este proyecto se distribuye bajo la licencia [MIT](LICENSE).

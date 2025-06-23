@@ -3,3 +3,5 @@ python-dotenv
 paypalrestsdk
 python-binance
 requests
+
+pytest
