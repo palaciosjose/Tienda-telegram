@@ -36,10 +36,12 @@ class StatisticsManager:
         )
         stats = cursor.fetchone()
         success_rate = (stats[1] / stats[0] * 100) if stats[0] else 0
-        dashboard = f"""📊 **Dashboard de Marketing - {today}**\n\n" \
-            f"📤 **Mensajes enviados:** {stats[0]}\n" \
-            f"✅ **Exitosos:** {stats[1]} ({success_rate:.1f}%)\n" \
-            f"❌ **Fallidos:** {stats[0] - stats[1]}\n\n" \
-            f"📱 **Por plataforma:**\n- Telegram: {stats[2]}\n- WhatsApp: {stats[3]}""
+        dashboard = (
+            f"📊 **Dashboard de Marketing - {today}**\n\n"
+            f"📤 **Mensajes enviados:** {stats[0]}\n"
+            f"✅ **Exitosos:** {stats[1]} ({success_rate:.1f}%)\n"
+            f"❌ **Fallidos:** {stats[0] - stats[1]}\n\n"
+            f"📱 **Por plataforma:**\n- Telegram: {stats[2]}\n- WhatsApp: {stats[3]}"
+        )
         conn.close()
         return dashboard
