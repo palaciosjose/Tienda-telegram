@@ -35,7 +35,10 @@ def init_subscription_db():
                grace_period INTEGER DEFAULT 0,
                auto_renew INTEGER DEFAULT 1,
                early_discount INTEGER DEFAULT 0,
-               notification_days TEXT DEFAULT "{DEFAULT_NOTIFICATION_DAYS}"
+               notification_days TEXT DEFAULT "{DEFAULT_NOTIFICATION_DAYS}",
+               media_file_id TEXT,
+               media_type TEXT,
+               media_caption TEXT
         )'''
     )
 
@@ -65,12 +68,23 @@ def init_subscription_db():
 # Funciones de administración de productos de suscripción
 # ---------------------------------------------------------------------------
 
-def add_subscription_product(name, description, price, duration,
-                             currency='USD', duration_unit='days',
-                             service_type='default', status='active',
-                             grace_period=0, auto_renew=True,
-                             early_discount=0,
-                             notification_days=DEFAULT_NOTIFICATION_DAYS):
+def add_subscription_product(
+        name,
+        description,
+        price,
+        duration,
+        currency='USD',
+        duration_unit='days',
+        service_type='default',
+        status='active',
+        grace_period=0,
+        auto_renew=True,
+        early_discount=0,
+        notification_days=DEFAULT_NOTIFICATION_DAYS,
+        media_file_id=None,
+        media_type=None,
+        media_caption=None,
+):
     """Agregar un nuevo producto de suscripción"""
     init_subscription_db()
     conn = sqlite3.connect(files.main_db)
@@ -79,11 +93,26 @@ def add_subscription_product(name, description, price, duration,
         '''INSERT INTO subscription_products
            (name, description, price, currency, duration, duration_unit,
             service_type, status, grace_period, auto_renew,
-            early_discount, notification_days)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-        (name, description, price, currency, duration, duration_unit,
-         service_type, status, grace_period, int(auto_renew),
-         early_discount, notification_days)
+            early_discount, notification_days,
+            media_file_id, media_type, media_caption)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+        (
+            name,
+            description,
+            price,
+            currency,
+            duration,
+            duration_unit,
+            service_type,
+            status,
+            grace_period,
+            int(auto_renew),
+            early_discount,
+            notification_days,
+            media_file_id,
+            media_type,
+            media_caption,
+        )
     )
     conn.commit()
     conn.close()
@@ -102,6 +131,19 @@ def get_subscription_product(product_id):
     return row
 
 
+def get_subscription_product_by_name(name):
+    """Obtener plan por nombre"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT * FROM subscription_products WHERE name = ?', (name,)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row
+
+
 def get_all_subscription_products():
     """Obtener todos los planes de suscripción disponibles"""
     init_subscription_db()
@@ -111,6 +153,87 @@ def get_all_subscription_products():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def save_subscription_media(product_id, file_id, media_type, caption=None):
+    """Guardar información multimedia para un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        '''UPDATE subscription_products
+           SET media_file_id = ?, media_type = ?, media_caption = ?
+           WHERE id = ?''',
+        (file_id, media_type, caption, product_id),
+    )
+    conn.commit()
+    conn.close()
+    return True
+
+
+def get_subscription_media(product_id):
+    """Obtener información multimedia de un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT media_file_id, media_type, media_caption '
+        'FROM subscription_products WHERE id = ?',
+        (product_id,),
+    )
+    row = cursor.fetchone()
+    conn.close()
+    if row and row[0]:
+        return {
+            'file_id': row[0],
+            'type': row[1],
+            'caption': row[2],
+        }
+    return None
+
+
+def get_subscription_products_with_media():
+    """Listar planes que tienen multimedia"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, name, media_type FROM subscription_products '
+        'WHERE media_file_id IS NOT NULL'
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def get_subscription_products_without_media():
+    """Listar planes sin multimedia"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, name FROM subscription_products '
+        'WHERE media_file_id IS NULL'
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def remove_subscription_media(product_id):
+    """Eliminar multimedia de un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'UPDATE subscription_products '
+        'SET media_file_id = NULL, media_type = NULL, media_caption = NULL '
+        'WHERE id = ?',
+        (product_id,),
+    )
+    conn.commit()
+    conn.close()
+    return True
 
 
 # ---------------------------------------------------------------------------

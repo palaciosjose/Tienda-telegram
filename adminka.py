@@ -333,6 +333,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Crear plan de suscripción')
             user_markup.row('Lista de planes')
+            user_markup.row('🎬 Multimedia suscripciones')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Gestión de planes de suscripción:', reply_markup=user_markup)
 
@@ -375,12 +376,79 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif 'Lista de planes' == message_text:
             plans = subscriptions.get_all_subscription_products()
             if plans:
+                grouped = {}
+                for plan in plans:
+                    key_dur = f"{plan[5]} {plan[6]}"
+                    grouped.setdefault(key_dur, []).append(plan)
+
                 text = '📋 *Planes disponibles:*\n\n'
-                for pid, name, desc, price, currency, duration, unit, *_ in plans:
-                    text += f'- {pid}. {name} - {price} {currency}/{duration}{unit}\n'
+                for dur, plist in grouped.items():
+                    text += f'🕒 {dur}\n'
+                    for pid, name, desc, price, currency, duration, unit, *_ in plist:
+                        text += f' - {pid}. {name} - {price} {currency}\n'
+                    text += '\n'
             else:
                 text = 'No hay planes de suscripción.'
             bot.send_message(chat_id, text, parse_mode='Markdown')
+
+        elif '🎬 Multimedia suscripciones' == message_text:
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('📤 Agregar multimedia plan', '🗑️ Eliminar multimedia plan')
+            user_markup.row('📋 Ver planes con multimedia')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(
+                chat_id,
+                '🎬 **Multimedia de Suscripciones**\n\nSelecciona una opción:',
+                reply_markup=user_markup,
+                parse_mode='Markdown'
+            )
+
+        elif '📤 Agregar multimedia plan' == message_text:
+            plans_no_media = subscriptions.get_subscription_products_without_media()
+            if not plans_no_media:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row('🎬 Multimedia suscripciones')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '✅ Todos los planes ya tienen multimedia', reply_markup=user_markup)
+            else:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for pid, name in plans_no_media:
+                    user_markup.row(name)
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '📤 **Agregar Multimedia**\n\n¿A qué plan deseas agregar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 50
+
+        elif '🗑️ Eliminar multimedia plan' == message_text:
+            plans_with_media = subscriptions.get_subscription_products_with_media()
+            if not plans_with_media:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row('🎬 Multimedia suscripciones')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'ℹ️ No hay planes con multimedia', reply_markup=user_markup)
+            else:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for pid, name, mtype in plans_with_media:
+                    emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵', 'animation': '🎬'}.get(mtype, '📎')
+                    user_markup.row(f'{emoji} {name}')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '🗑️ **Eliminar Multimedia**\n\n¿De qué plan deseas eliminar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 51
+
+        elif '📋 Ver planes con multimedia' == message_text:
+            plans_with_media = subscriptions.get_subscription_products_with_media()
+            if not plans_with_media:
+                response = 'ℹ️ No hay planes con multimedia'
+            else:
+                response = '📋 **Planes con Multimedia:**\n\n'
+                for pid, name, mtype in plans_with_media:
+                    emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵', 'animation': '🎬'}.get(mtype, '📎')
+                    response += f'{emoji} **{name}** - {mtype}\n'
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('🎬 Multimedia suscripciones')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, response, reply_markup=user_markup, parse_mode='Markdown')
 
         elif 'Vista previa' == message_text:
             preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog()}"
@@ -897,6 +965,41 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 
+        elif sost_num == 50:  # Seleccionar plan para agregar multimedia
+            names = [name for _, name in subscriptions.get_subscription_products_without_media()]
+            if message_text in names:
+                with open('data/Temp/' + str(chat_id) + 'media_plan.txt', 'w', encoding='utf-8') as f:
+                    f.write(message_text)
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+                bot.send_message(
+                    chat_id,
+                    f'📤 **Agregar multimedia a:** {message_text}\n\nEnvía el archivo multimedia (foto, video, documento, audio, GIF)',
+                    reply_markup=key,
+                    parse_mode='Markdown'
+                )
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 52
+            else:
+                bot.send_message(chat_id, '❌ Plan inválido o ya tiene multimedia')
+
+        elif sost_num == 51:  # Seleccionar plan para eliminar multimedia
+            clean = message_text
+            for e in ['📸 ', '🎥 ', '📄 ', '🎵 ', '🎬 ', '📎 ']:
+                clean = clean.replace(e, '')
+            plan = subscriptions.get_subscription_product_by_name(clean)
+            if plan and subscriptions.get_subscription_media(plan[0]):
+                subscriptions.remove_subscription_media(plan[0])
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row('🎬 Multimedia suscripciones')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, f'✅ Multimedia eliminada del plan: {clean}', reply_markup=user_markup)
+            else:
+                bot.send_message(chat_id, '❌ El plan no tiene multimedia asignada')
+
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
         if dop.get_sost(chat_id) is True:
@@ -949,52 +1052,71 @@ def handle_multimedia(message):
     
     try:
         with shelve.open(files.sost_bd) as bd:
-            if str(chat_id) in bd and bd[str(chat_id)] == 32:
+            state = bd.get(str(chat_id))
+            if state == 32:
                 with open('data/Temp/' + str(chat_id) + 'media_product.txt', 'r', encoding='utf-8') as f:
                     product_name = f.read()
-                
-                file_id = None
-                media_type = None
-                caption = message.caption if message.caption else None
-                
-                if message.photo:
-                    file_id = message.photo[-1].file_id
-                    media_type = 'photo'
-                elif message.video:
-                    file_id = message.video.file_id
-                    media_type = 'video'
-                elif message.document:
-                    file_id = message.document.file_id
-                    media_type = 'document'
-                elif message.audio:
-                    file_id = message.audio.file_id
-                    media_type = 'audio'
-                elif message.animation:
-                    file_id = message.animation.file_id
-                    media_type = 'animation'
-                
-                if file_id and media_type:
-                    if dop.save_product_media(product_name, file_id, media_type, caption):
-                        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                        user_markup.row('🎬 Multimedia productos')
-                        user_markup.row('Volver al menú principal')
-                        
-                        media_names = {
-                            'photo': '📸 Imagen',
-                            'video': '🎥 Video',
-                            'document': '📄 Documento', 
-                            'audio': '🎵 Audio',
-                            'animation': '🎬 GIF'
-                        }
-                        
-                        bot.send_message(chat_id, 
-                                       f'✅ {media_names.get(media_type, "Archivo")} agregado al producto: {product_name}',
-                                       reply_markup=user_markup)
-                        
-                        del bd[str(chat_id)]
-                    else:
-                        bot.send_message(chat_id, '❌ Error guardando multimedia')
-                else:
-                    bot.send_message(chat_id, '❌ Tipo de archivo no soportado. Envía: foto, video, documento, audio o GIF')
+            elif state == 52:
+                with open('data/Temp/' + str(chat_id) + 'media_plan.txt', 'r', encoding='utf-8') as f:
+                    product_name = f.read()
+            else:
+                return
+
+        file_id = None
+        media_type = None
+        caption = message.caption if message.caption else None
+
+        if message.photo:
+            file_id = message.photo[-1].file_id
+            media_type = 'photo'
+        elif message.video:
+            file_id = message.video.file_id
+            media_type = 'video'
+        elif message.document:
+            file_id = message.document.file_id
+            media_type = 'document'
+        elif message.audio:
+            file_id = message.audio.file_id
+            media_type = 'audio'
+        elif message.animation:
+            file_id = message.animation.file_id
+            media_type = 'animation'
+
+        if file_id and media_type:
+            saved = False
+            if state == 32:
+                saved = dop.save_product_media(product_name, file_id, media_type, caption)
+                menu_row = '🎬 Multimedia productos'
+            elif state == 52:
+                plan = subscriptions.get_subscription_product_by_name(product_name)
+                if plan:
+                    saved = subscriptions.save_subscription_media(plan[0], file_id, media_type, caption)
+                menu_row = '🎬 Multimedia suscripciones'
+
+            if saved:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row(menu_row)
+                user_markup.row('Volver al menú principal')
+
+                media_names = {
+                    'photo': '📸 Imagen',
+                    'video': '🎥 Video',
+                    'document': '📄 Documento',
+                    'audio': '🎵 Audio',
+                    'animation': '🎬 GIF'
+                }
+
+                bot.send_message(
+                    chat_id,
+                    f'✅ {media_names.get(media_type, "Archivo")} agregado al producto: {product_name}',
+                    reply_markup=user_markup,
+                )
+                with shelve.open(files.sost_bd) as bd2:
+                    if str(chat_id) in bd2:
+                        del bd2[str(chat_id)]
+            else:
+                bot.send_message(chat_id, '❌ Error guardando multimedia')
+        else:
+            bot.send_message(chat_id, '❌ Tipo de archivo no soportado. Envía: foto, video, documento, audio o GIF')
     except:
         pass

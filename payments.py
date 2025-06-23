@@ -458,7 +458,28 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
                 _, name, desc, price, currency, duration, unit, *_ = product
                 subscriptions.create_user_subscription(chat_id, sub_id, payment_method)
                 end_date = (datetime.utcnow() + timedelta(**{unit: duration})).date()
-                bot.send_message(chat_id, f'✅ Suscripción *{name}* activada hasta {end_date}', parse_mode='Markdown')
+
+                media = subscriptions.get_subscription_media(sub_id)
+                caption = f'✅ Suscripción *{name}* activada hasta {end_date}'
+                if media:
+                    try:
+                        if media['type'] == 'photo':
+                            bot.send_photo(chat_id, media['file_id'], caption=caption, parse_mode='Markdown')
+                        elif media['type'] == 'video':
+                            bot.send_video(chat_id, media['file_id'], caption=caption, parse_mode='Markdown')
+                        elif media['type'] == 'document':
+                            bot.send_document(chat_id, media['file_id'], caption=caption, parse_mode='Markdown')
+                        elif media['type'] == 'audio':
+                            bot.send_audio(chat_id, media['file_id'], caption=caption, parse_mode='Markdown')
+                        elif media['type'] == 'animation':
+                            bot.send_animation(chat_id, media['file_id'], caption=caption, parse_mode='Markdown')
+                        else:
+                            bot.send_message(chat_id, caption, parse_mode='Markdown')
+                    except Exception:
+                        bot.send_message(chat_id, caption, parse_mode='Markdown')
+                else:
+                    bot.send_message(chat_id, caption, parse_mode='Markdown')
+
                 name_good = name
             else:
                 bot.send_message(chat_id, '❌ Plan de suscripción no encontrado')
