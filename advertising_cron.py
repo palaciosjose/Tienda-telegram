@@ -9,7 +9,7 @@ def load_config():
     return {
         'db_path': 'data/db/main_data.db',
         'telegram_tokens': [
-            '8107512310:AAGPO-rwj48QwVM8uK41ndj8q4Cy0f5QMKk',
+            'YOUR_TELEGRAM_BOT_TOKEN_HERE',
         ],
         'whaticket_url': 'https://tu-whaticket.com',
         'whaticket_token': 'tu_token_whaticket'

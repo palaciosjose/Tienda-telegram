@@ -12,7 +12,10 @@ Tienda Telegram es un bot de Telegram para gestionar un pequeño catálogo de pr
 pip install -r requirements.txt
 ```
 
-4. Copia el archivo `.env.example` a `.env` (o crea uno nuevo) e incluye tu `TELEGRAM_BOT_TOKEN` y el `TELEGRAM_ADMIN_ID` que se usarán en `config.py`.
+4. Copia el archivo `.env.example` a `.env` y edita los valores para incluir tu
+   `TELEGRAM_BOT_TOKEN` y el `TELEGRAM_ADMIN_ID` que se usarán en `config.py`.
+   Si el token mostrado aquí se ha hecho público, genera uno nuevo desde
+   BotFather antes de continuar.
 
 ## Uso
 
