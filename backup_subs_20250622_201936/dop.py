@@ -50,39 +50,28 @@ bot = telebot.TeleBot(config.token)
 # Utilidad para editar mensajes con o sin multimedia
 # -------------------------------------------------
 def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
-    """TRIPLE_FALLBACK - Edita mensajes de forma segura"""
+    """Edita texto o caption según el tipo de mensaje"""
     try:
-        bot.edit_message_text(
-            chat_id=message.chat.id,
-            message_id=message.message_id,
-            text=text,
-            reply_markup=reply_markup,
-            parse_mode=parse_mode
-        )
-        return True
-    except:
-        try:
+        if getattr(message, 'content_type', 'text') == 'text':
+            bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        else:
             bot.edit_message_caption(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
                 caption=text,
                 reply_markup=reply_markup,
-                parse_mode=parse_mode
+                parse_mode=parse_mode,
             )
-            return True
-        except:
-            try:
-                bot.delete_message(message.chat.id, message.message_id)
-                bot.send_message(
-                    chat_id=message.chat.id,
-                    text=text,
-                    reply_markup=reply_markup,
-                    parse_mode=parse_mode
-                )
-                return True
-            except:
-                return False
-
+        return True
+    except Exception as e:
+        print(f"Error editando mensaje de forma segura: {e}")
+        return False
 
 def it_first(chat_id):
     try:
@@ -1124,13 +1113,3 @@ def format_product_with_media(product_name):
     except Exception as e:
         print(f"Error formateando producto: {e}")
         return None
-
-def save_message(message_type, message_text):
-    """Guardar mensaje del bot"""
-    try:
-        with shelve.open(files.bot_message_bd) as bd:
-            bd[message_type] = message_text
-        return True
-    except Exception as e:
-        print(f"Error guardando mensaje: {e}")
-        return False

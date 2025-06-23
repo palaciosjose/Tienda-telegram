@@ -1124,13 +1124,3 @@ def format_product_with_media(product_name):
     except Exception as e:
         print(f"Error formateando producto: {e}")
         return None
-
-def save_message(message_type, message_text):
-    """Guardar mensaje del bot"""
-    try:
-        with shelve.open(files.bot_message_bd) as bd:
-            bd[message_type] = message_text
-        return True
-    except Exception as e:
-        print(f"Error guardando mensaje: {e}")
-        return False

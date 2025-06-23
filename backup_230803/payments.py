@@ -22,10 +22,6 @@ except ImportError:
     print("Advertencia: python-binance no instalado. Los pagos Binance no funcionarán.")
 
 def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, amount):
-    # PAYPAL DESHABILITADO TEMPORALMENTE
-    bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text="PayPal temporalmente deshabilitado")
-    return
-    # FIN DESHABILITACION
     """Crear factura PayPal - función sin cambios"""
     if not PAYPAL_AVAILABLE:
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='PayPal no está disponible!')
