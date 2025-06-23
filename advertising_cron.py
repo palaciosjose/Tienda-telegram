@@ -16,12 +16,19 @@ def load_config():
     }
 
 def is_running():
+    pid_file = 'data/autosender.pid'
+    if not os.path.exists(pid_file):
+        return False
     try:
-        with open('data/autosender.pid', 'r') as f:
+        with open(pid_file, 'r') as f:
             pid = int(f.read())
-            os.kill(pid, 0)
-            return True
+        os.kill(pid, 0)
+        return True
     except Exception:
+        try:
+            os.remove(pid_file)
+        except Exception:
+            pass
         return False
 
 
