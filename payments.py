@@ -1,6 +1,10 @@
 import telebot, time, shelve, requests, json
 from datetime import datetime, timedelta
-import dop, config, files, subscriptions
+import dop, config, files
+import importlib
+
+# Garantizar la disponibilidad del módulo de suscripciones
+subscriptions = importlib.import_module('subscriptions')
 
 bot = telebot.TeleBot(config.token)
 

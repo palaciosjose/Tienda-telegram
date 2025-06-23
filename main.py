@@ -1,5 +1,9 @@
 import telebot, shelve, sqlite3, os
-import config, dop, payments, adminka, files, subscriptions
+import config, dop, payments, adminka, files
+import importlib
+
+# Garantizar la disponibilidad del módulo de suscripciones
+subscriptions = importlib.import_module('subscriptions')
 
 print("🚀 DEBUG: main.py - Script iniciado.")
 

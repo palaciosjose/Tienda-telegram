@@ -1,5 +1,9 @@
 import telebot, sqlite3, shelve, os
-import config, dop, files, subscriptions
+import config, dop, files
+import importlib
+
+# Garantizar la disponibilidad del módulo de suscripciones
+subscriptions = importlib.import_module('subscriptions')
 
 bot = telebot.TeleBot(config.token)
 
