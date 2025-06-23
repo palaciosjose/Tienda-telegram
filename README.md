@@ -60,6 +60,38 @@ Para ejecutar el proceso diario de forma sencilla puedes programar `subscription
 python subscription_cron.py
 ```
 
+## Marketing/Advertising
+
+El sistema incluye un módulo de **marketing automatizado** para enviar
+campañas a distintos grupos de Telegram o WhatsApp. Todas las tablas
+necesarias (`campaigns`, `campaign_schedules`, `target_groups`, etc.) se
+crean automáticamente cuando ejecutas `init_db.py`, por lo que no requiere
+una configuración extra.
+
+Para mantener activo el envío automático ejecuta `advertising_cron.py` de
+forma periódica o déjalo en segundo plano mediante un servicio `systemd` o
+una entrada de `cron`:
+
+```bash
+python advertising_cron.py
+```
+
+Desde el panel de administración aparecerá una nueva opción **📢 Marketing**
+con comandos para gestionar campañas:
+
+- `🎯 Nueva campaña` para registrar una campaña.
+- `📋 Ver campañas` para listar las existentes.
+- `⏰ Programar envíos` para definir los horarios.
+- `🎯 Gestionar grupos` para administrar los grupos objetivo.
+- `📊 Estadísticas hoy` para consultar el resumen diario.
+- `⚙️ Configuración` para ajustes adicionales.
+- `▶️ Envío manual` para disparar un envío inmediato.
+
+Actualmente los tokens que usa el *AutoSender* se establecen directamente en
+`advertising_cron.py`. No se definen variables de entorno adicionales, pero
+puedes modificar el script para leer valores como `AUTOSENDER_TELEGRAM_TOKENS`
+si lo necesitas.
+
 ## Pruebas
 
 Para ejecutar las pruebas automatizadas instala las dependencias y luego ejecuta:
