@@ -340,7 +340,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             
             # Mostrar resumen de planes
             plans = subscriptions.get_all_subscription_products()
-            if planes:
+            if plans:
                 resumen = 'Planes de suscripción disponibles:\n\n'
                 for plan in plans:
                     # Desempaquetar de forma segura
@@ -350,7 +350,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     price = plan[3] if len(plan) > 3 else 0
                     currency = plan[4] if len(plan) > 4 else 'USD'
                     duration = plan[5] if len(plan) > 5 else 30
-                    unit = plan[6] if len(plan) > 6 else 'days':7]:  # Solo primeros 7 campos
+                    unit = plan[6] if len(plan) > 6 else 'days'  # Solo primeros 7 campos
                     try:
                         contenido = subscriptions.count_plan_content_lines(name)
                         formato = subscriptions.get_plan_format(name)
@@ -367,14 +367,14 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif 'Eliminar plan' == message_text:
             plans = subscriptions.get_all_subscription_products()
-            if not planes:
+            if not plans:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('💼 Suscripciones')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No hay planes para eliminar!', reply_markup=user_markup)
             else:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name in [(p[0], p[1]) for p in planes]:
+                for pid, name in [(p[0], p[1]) for p in plans]:
                     user_markup.row(f"{pid}. {name}")
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¿Qué plan desea eliminar?', reply_markup=user_markup)
@@ -383,14 +383,14 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif 'Cambiar descripción de plan' == message_text:
             plans = subscriptions.get_all_subscription_products()
-            if not planes:
+            if not plans:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('💼 Suscripciones')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No hay planes disponibles!', reply_markup=user_markup)
             else:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name in [(p[0], p[1]) for p in planes]:
+                for pid, name in [(p[0], p[1]) for p in plans]:
                     user_markup.row(f"{pid}. {name}")
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¿Para qué plan desea cambiar la descripción?', reply_markup=user_markup)
@@ -399,14 +399,14 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif 'Cambiar precio de plan' == message_text:
             plans = subscriptions.get_all_subscription_products()
-            if not planes:
+            if not plans:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('💼 Suscripciones')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No hay planes disponibles!', reply_markup=user_markup)
             else:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name, desc, price, currency in [(p[0], p[1], p[2], p[3], p[4]) for p in planes]:
+                for pid, name, desc, price, currency in [(p[0], p[1], p[2], p[3], p[4]) for p in plans]:
                     user_markup.row(f"{pid}. {name} (${price} {currency})")
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¿Para qué plan desea cambiar el precio?', reply_markup=user_markup)
@@ -415,14 +415,14 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif 'Cargar contenido a plan' == message_text:
             plans = subscriptions.get_all_subscription_products()
-            if not planes:
+            if not plans:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('💼 Suscripciones')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No hay planes disponibles!', reply_markup=user_markup)
             else:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name in [(p[0], p[1]) for p in planes]:
+                for pid, name in [(p[0], p[1]) for p in plans]:
                     try:
                         contenido_actual = subscriptions.count_plan_content_lines(name)
                         user_markup.row(f"{name} ({contenido_actual} items)")
@@ -490,7 +490,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '📝 Descripción adicional plan' == message_text:
             plans = subscriptions.get_all_subscription_products()
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            for pid, name in [(p[0], p[1]) for p in planes]:
+            for pid, name in [(p[0], p[1]) for p in plans]:
                 user_markup.row(name)
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, '¿Para qué plan desea editar la descripción adicional?', reply_markup=user_markup)
