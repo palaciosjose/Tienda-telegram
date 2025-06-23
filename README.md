@@ -60,6 +60,14 @@ Para ejecutar el proceso diario de forma sencilla puedes programar `subscription
 python subscription_cron.py
 ```
 
+## Pruebas
+
+Para ejecutar las pruebas automatizadas instala las dependencias y luego ejecuta:
+
+```bash
+pytest
+```
+
 ## Licencia
 
 Este proyecto se distribuye sin una licencia explícita.
