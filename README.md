@@ -47,10 +47,18 @@ Con el módulo `subscriptions.py` puedes:
 2. Crear suscripciones para los usuarios con `create_user_subscription()` una
    vez que se complete un pago.
 3. Ejecutar `check_subscriptions()` de forma diaria (por ejemplo mediante cron)
-   para enviar recordatorios, marcar suscripciones vencidas y suspender las que
-   superen el periodo de gracia.
-4. Consultar vencimientos próximos con `get_upcoming_subscriptions()` para
+   para enviar recordatorios, renovar automáticamente si está configurado y
+   suspender las suscripciones vencidas.
+4. Cancelar suscripciones con `cancel_subscription()` y consultar todas las de
+   un usuario mediante `get_user_subscriptions()`.
+5. Consultar vencimientos próximos con `get_upcoming_subscriptions()` para
    mostrar un dashboard o generar reportes.
+
+Para ejecutar el proceso diario de forma sencilla puedes programar `subscription_cron.py` con tu gestor de tareas preferido:
+
+```bash
+python subscription_cron.py
+```
 
 ## Licencia
 
