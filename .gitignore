@@ -1,0 +1,8 @@
+.env
+data/
+__pycache__/
+*.db
+backup_*
+
+# Ignore project databases
+**/main_data.db
