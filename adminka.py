@@ -344,6 +344,44 @@ def in_adminka(chat_id, message_text, username, name_user):
 
             bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
 
+        elif '🎯 Nueva campaña' == message_text:
+            bot.send_message(chat_id, '🚧 Función *Nueva campaña* aún no implementada.')
+
+        elif '📋 Ver campañas' == message_text:
+            campaigns = advertising.get_all_campaigns()
+            if campaigns:
+                response = '📋 *Campañas registradas:*\n'
+                for c in campaigns:
+                    response += f"- {c['id']}. {c['name']} ({c['status']})\n"
+            else:
+                response = 'ℹ️ No hay campañas registradas.'
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('📢 Marketing')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, response, parse_mode='Markdown', reply_markup=user_markup)
+
+        elif '⏰ Programar envíos' == message_text:
+            bot.send_message(chat_id, '🚧 Función *Programar envíos* aún no implementada.')
+
+        elif '🎯 Gestionar grupos' == message_text:
+            bot.send_message(chat_id, '🚧 Función *Gestionar grupos* aún no implementada.')
+
+        elif '📊 Estadísticas hoy' == message_text:
+            stats = advertising.get_today_stats()
+            msg = (
+                f"📊 *Estadísticas de hoy*\n\n"
+                f"Mensajes enviados: {stats['sent']}\n"
+                f"Tasa de éxito: {stats['success_rate']}%\n"
+                f"Grupos alcanzados: {stats['groups']}"
+            )
+            bot.send_message(chat_id, msg, parse_mode='Markdown')
+
+        elif '⚙️ Configuración' == message_text:
+            bot.send_message(chat_id, '🚧 Función *Configuración de marketing* aún no implementada.')
+
+        elif '▶️ Envío manual' == message_text:
+            bot.send_message(chat_id, '🚧 Función *Envío manual* aún no implementada.')
+
         elif '💼 Suscripciones' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Crear plan de suscripción', 'Eliminar plan')
