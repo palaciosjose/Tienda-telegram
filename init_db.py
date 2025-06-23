@@ -35,7 +35,12 @@ def create_database():
             additional_description TEXT DEFAULT '',
             media_file_id TEXT,
             media_type TEXT,
-            media_caption TEXT
+            media_caption TEXT,
+            is_subscription INTEGER DEFAULT 0,
+            duration INTEGER DEFAULT 0,
+            duration_unit TEXT DEFAULT 'days',
+            auto_renew INTEGER DEFAULT 1,
+            grace_period INTEGER DEFAULT 0
         )
     ''')
     print("✓ Tabla 'goods' creada")

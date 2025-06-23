@@ -30,6 +30,21 @@ def ensure_database_schema():
         if 'media_caption' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN media_caption TEXT")
             updated = True
+        if 'is_subscription' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN is_subscription INTEGER DEFAULT 0")
+            updated = True
+        if 'duration' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN duration INTEGER DEFAULT 0")
+            updated = True
+        if 'duration_unit' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN duration_unit TEXT DEFAULT 'days'")
+            updated = True
+        if 'auto_renew' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN auto_renew INTEGER DEFAULT 1")
+            updated = True
+        if 'grace_period' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN grace_period INTEGER DEFAULT 0")
+            updated = True
 
         if updated:
             con.commit()
@@ -194,7 +209,7 @@ def get_goods():
     try:
         con = sqlite3.connect(files.main_db)
         cursor = con.cursor()
-        cursor.execute("SELECT name FROM goods;")
+        cursor.execute("SELECT name FROM goods WHERE is_subscription=0 OR is_subscription IS NULL;")
         goods = []
         for row in cursor.fetchall(): 
             goods.append(row[0])
@@ -945,7 +960,12 @@ def format_product_basic_info(good_name):
 📦 **Cantidad mínima:** {product_info['minimum']}
 📋 **Formato:** {format_display}
 📊 **Disponibles:** {amount}"""
-        
+
+        if is_subscription_product(good_name):
+            dur, unit = get_subscription_duration(good_name)
+            if dur is not None:
+                info_text += f"\n⏳ **Duración:** {dur} {unit}"
+
         return info_text
     except Exception as e:
         print(f"Error formateando información básica: {e}")
@@ -1089,11 +1109,16 @@ def format_product_with_media(product_name):
             return None
             
         name, description, price, file_id, media_type, caption = result
-        
+
         info = f"🎯 **{name}**\n"
         info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"
-        
+
+        if is_subscription_product(name):
+            dur, unit = get_subscription_duration(name)
+            if dur is not None:
+                info += f"⏳ **Duración:** {dur} {unit}\n"
+
         if file_id:
             media_types = {
                 'photo': '📸 Imagen',
@@ -1113,3 +1138,44 @@ def format_product_with_media(product_name):
     except Exception as e:
         print(f"Error formateando producto: {e}")
         return None
+
+
+def is_subscription_product(product_name):
+    """Verificar si un producto es una suscripción"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cur = con.cursor()
+        cur.execute(
+            "SELECT is_subscription FROM goods WHERE name = ?", (product_name,)
+        )
+        row = cur.fetchone()
+        con.close()
+        return row is not None and row[0] == 1
+    except Exception:
+        return False
+
+
+def get_subscription_duration(product_name):
+    """Obtener la duración y unidad de una suscripción"""
+    try:
+        con = sqlite3.connect(files.main_db)
+        cur = con.cursor()
+        cur.execute(
+            "SELECT duration, duration_unit FROM goods WHERE name = ?",
+            (product_name,),
+        )
+        row = cur.fetchone()
+        con.close()
+        if row:
+            return row[0], row[1]
+        return None, None
+    except Exception:
+        return None, None
+
+
+def format_subscription_info(product_name):
+    """Formatear información de suscripción"""
+    dur, unit = get_subscription_duration(product_name)
+    if dur is None:
+        return ""
+    return f"⏳ *Duración:* {dur} {unit}"

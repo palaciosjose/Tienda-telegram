@@ -309,19 +309,49 @@ def inline(callback):
             print(f"DEBUG: Error mostrando información adicional: {e}")
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Error cargando información')
 
+    elif callback.data.startswith('SUBINFO_'):
+        sub_id = int(callback.data.split('_')[1])
+        plan = subscriptions.get_subscription_product(sub_id)
+        if not plan:
+            bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no encontrado')
+        else:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al plan', callback_data=f'SUBP_{sub_id}'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+            info = subscriptions.format_plan_additional_info(sub_id)
+            enhanced = f"📋 **INFORMACIÓN ADICIONAL**\n{'-'*30}\n\n{info}"
+            dop.safe_edit_message(bot, callback.message, enhanced, reply_markup=key, parse_mode='Markdown')
+
     elif callback.data.startswith('SUBP_'):
         sub_id = int(callback.data.split('_')[1])
         plan = subscriptions.get_subscription_product(sub_id)
         if not plan:
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no encontrado')
         else:
-            _, name, desc, price, currency, duration, unit, *_ = plan
             key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='💳 Suscribirme', callback_data=f'BUY_SUB_{sub_id}'))
-            key.add(telebot.types.InlineKeyboardButton(text='🔙 Suscripciones', callback_data='Ir al catálogo de suscripciones'))
-            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            text = (f"**{name}**\n\n{desc}\n\nPrecio: {price} {currency}\nDuración: {duration} {unit}")
-            dop.safe_edit_message(bot, callback.message, text, reply_markup=key, parse_mode='Markdown')
+            if subscriptions.has_additional_description(plan[1]):
+                key.add(telebot.types.InlineKeyboardButton(text="ℹ️ Más información", callback_data=f"SUBINFO_{sub_id}"))
+            key.add(telebot.types.InlineKeyboardButton(text="💳 Suscribirme", callback_data=f"BUY_SUB_{sub_id}"))
+            key.add(telebot.types.InlineKeyboardButton(text="🔙 Suscripciones", callback_data="Ir al catálogo de suscripciones"))
+            key.add(telebot.types.InlineKeyboardButton(text="🏠 Inicio", callback_data="Volver al inicio"))
+            media = subscriptions.get_plan_media(plan[1])
+            formatted = subscriptions.format_plan_with_media(sub_id)
+            if media and media["type"] in ("photo", "video"):
+                try:
+                    input_media = telebot.types.InputMediaPhoto if media["type"] == "photo" else telebot.types.InputMediaVideo
+                    bot.edit_message_media(chat_id=callback.message.chat.id, message_id=callback.message.message_id, media=input_media(media=media["file_id"], caption=formatted, parse_mode="Markdown"), reply_markup=key)
+                except Exception:
+                    dop.safe_edit_message(bot, callback.message, formatted, reply_markup=key, parse_mode="Markdown")
+            elif media and media["type"] in ("document", "audio", "animation"):
+                bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                if media["type"] == "document":
+                    bot.send_document(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
+                elif media["type"] == "audio":
+                    bot.send_audio(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
+                else:
+                    bot.send_animation(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
+            else:
+                dop.safe_edit_message(bot, callback.message, formatted, reply_markup=key, parse_mode="Markdown")
 
     elif callback.data.startswith('BUY_SUB_'):
         sub_id = int(callback.data.split('_')[2])
@@ -366,19 +396,29 @@ def inline(callback):
     elif callback.data == 'Comprar':
         with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
             name_good = f.read()
-        if not name_good.startswith('SUB:') and dop.amount_of_goods(name_good) == 0:
+        if not name_good.startswith('SUB:') and not dop.is_subscription_product(name_good) and dop.amount_of_goods(name_good) == 0:
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Producto agotado - No disponible para compra')
         elif dop.payments_checkvkl() == None:
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='💳 Los pagos están temporalmente desactivados')
         else:
             key = telebot.types.InlineKeyboardMarkup()
-            back_cb = name_good if not name_good.startswith('SUB:') else f'SUBP_{name_good.split(":")[1]}'
+            if name_good.startswith('SUB:'):
+                back_cb = f'SUBP_{name_good.split(":")[1]}'
+            elif dop.is_subscription_product(name_good):
+                sub_row = subscriptions.get_subscription_by_name(name_good)
+                back_cb = f'SUBP_{sub_row[0]}' if sub_row else name_good
+            else:
+                back_cb = name_good
             key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=back_cb))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
             
-            if name_good.startswith('SUB:'):
-                sub_id = int(name_good.split(':')[1])
-                plan = subscriptions.get_subscription_product(sub_id)
+            if name_good.startswith('SUB:') or dop.is_subscription_product(name_good):
+                if name_good.startswith('SUB:'):
+                    sub_id = int(name_good.split(':')[1])
+                    plan = subscriptions.get_subscription_product(sub_id)
+                else:
+                    plan = subscriptions.get_subscription_by_name(name_good)
+                    sub_id = plan[0] if plan else None
                 if plan:
                     _, name, desc, price, currency, duration, unit, *_ = plan
                     purchase_text = f"🌀 *{name}*\nPrecio: {price} {currency}\nDuración: {duration} {unit}"
@@ -386,6 +426,8 @@ def inline(callback):
                     with open('data/Temp/' + str(callback.message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
                         f.write('1\n')
                         f.write(str(price) + '\n')
+                    with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', 'w', encoding='utf-8') as f:
+                        f.write(f'SUB:{sub_id}')
                 else:
                     bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no disponible')
                     return
