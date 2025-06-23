@@ -52,6 +52,22 @@ Con el módulo `subscriptions.py` puedes:
 4. Consultar vencimientos próximos con `get_upcoming_subscriptions()` para
    mostrar un dashboard o generar reportes.
 
+### Cómo utilizar el sistema de suscripciones
+
+Las funciones del módulo `subscriptions.py` no están aún integradas en el menú del bot. Puedes ejecutarlas manualmente o crear comandos propios que las llamen. Un ejemplo rápido desde la consola de Python:
+
+```bash
+python - <<'PY'
+import subscriptions
+
+subscriptions.add_subscription_product(name="Plan mensual", description="Acceso por 30 días", price=500, duration=30)
+subscriptions.create_user_subscription(user_id=123456789, product_id=1, payment_method="PayPal")
+subscriptions.check_subscriptions()
+PY
+```
+
+Programa `check_subscriptions()` con cron para el monitoreo diario.
+
 ## Licencia
 
 Este proyecto se distribuye sin una licencia explícita.
