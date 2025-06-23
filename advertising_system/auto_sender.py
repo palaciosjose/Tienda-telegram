@@ -2,6 +2,7 @@ import sqlite3
 import time
 import threading
 import logging
+import os
 from .scheduler import CampaignScheduler
 from .telegram_multi import TelegramMultiBot
 from .whaticket_api import WHATicketAPI
@@ -24,6 +25,13 @@ class AutoSender:
         if self.running:
             return False
         self.running = True
+        # Save PID so other processes can check if we are running
+        try:
+            os.makedirs('data', exist_ok=True)
+            with open('data/autosender.pid', 'w') as f:
+                f.write(str(os.getpid()))
+        except Exception as e:
+            self.logger.error(f"No se pudo escribir autosender.pid: {e}")
         self.thread = threading.Thread(target=self._main_loop)
         self.thread.daemon = True
         self.thread.start()
@@ -34,6 +42,15 @@ class AutoSender:
         self.running = False
         if self.thread:
             self.thread.join()
+        try:
+            pid_file = 'data/autosender.pid'
+            if os.path.exists(pid_file):
+                with open(pid_file, 'r') as f:
+                    pid_in_file = f.read().strip()
+                if pid_in_file == str(os.getpid()):
+                    os.remove(pid_file)
+        except Exception as e:
+            self.logger.error(f"No se pudo eliminar autosender.pid: {e}")
         self.logger.info("AutoSender detenido")
 
     def _main_loop(self):
