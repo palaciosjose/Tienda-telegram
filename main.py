@@ -309,19 +309,49 @@ def inline(callback):
             print(f"DEBUG: Error mostrando información adicional: {e}")
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Error cargando información')
 
+    elif callback.data.startswith('SUBINFO_'):
+        sub_id = int(callback.data.split('_')[1])
+        plan = subscriptions.get_subscription_product(sub_id)
+        if not plan:
+            bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no encontrado')
+        else:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al plan', callback_data=f'SUBP_{sub_id}'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+            info = subscriptions.format_plan_additional_info(sub_id)
+            enhanced = f"📋 **INFORMACIÓN ADICIONAL**\n{'-'*30}\n\n{info}"
+            dop.safe_edit_message(bot, callback.message, enhanced, reply_markup=key, parse_mode='Markdown')
+
     elif callback.data.startswith('SUBP_'):
         sub_id = int(callback.data.split('_')[1])
         plan = subscriptions.get_subscription_product(sub_id)
         if not plan:
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no encontrado')
         else:
-            _, name, desc, price, currency, duration, unit, *_ = plan
             key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='💳 Suscribirme', callback_data=f'BUY_SUB_{sub_id}'))
-            key.add(telebot.types.InlineKeyboardButton(text='🔙 Suscripciones', callback_data='Ir al catálogo de suscripciones'))
-            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            text = (f"**{name}**\n\n{desc}\n\nPrecio: {price} {currency}\nDuración: {duration} {unit}")
-            dop.safe_edit_message(bot, callback.message, text, reply_markup=key, parse_mode='Markdown')
+            if subscriptions.has_additional_description(plan[1]):
+                key.add(telebot.types.InlineKeyboardButton(text="ℹ️ Más información", callback_data=f"SUBINFO_{sub_id}"))
+            key.add(telebot.types.InlineKeyboardButton(text="💳 Suscribirme", callback_data=f"BUY_SUB_{sub_id}"))
+            key.add(telebot.types.InlineKeyboardButton(text="🔙 Suscripciones", callback_data="Ir al catálogo de suscripciones"))
+            key.add(telebot.types.InlineKeyboardButton(text="🏠 Inicio", callback_data="Volver al inicio"))
+            media = subscriptions.get_plan_media(plan[1])
+            formatted = subscriptions.format_plan_with_media(sub_id)
+            if media and media["type"] in ("photo", "video"):
+                try:
+                    input_media = telebot.types.InputMediaPhoto if media["type"] == "photo" else telebot.types.InputMediaVideo
+                    bot.edit_message_media(chat_id=callback.message.chat.id, message_id=callback.message.message_id, media=input_media(media=media["file_id"], caption=formatted, parse_mode="Markdown"), reply_markup=key)
+                except Exception:
+                    dop.safe_edit_message(bot, callback.message, formatted, reply_markup=key, parse_mode="Markdown")
+            elif media and media["type"] in ("document", "audio", "animation"):
+                bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                if media["type"] == "document":
+                    bot.send_document(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
+                elif media["type"] == "audio":
+                    bot.send_audio(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
+                else:
+                    bot.send_animation(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
+            else:
+                dop.safe_edit_message(bot, callback.message, formatted, reply_markup=key, parse_mode="Markdown")
 
     elif callback.data.startswith('BUY_SUB_'):
         sub_id = int(callback.data.split('_')[2])

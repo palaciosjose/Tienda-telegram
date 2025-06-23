@@ -455,10 +455,18 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
             sub_id = int(name_good.split(':')[1])
             product = subscriptions.get_subscription_product(sub_id)
             if product:
-                _, name, desc, price, currency, duration, unit, *_ = product
+                (_, name, desc, price, currency, duration, unit,
+                 *_, additional_desc, media_file_id, media_type,
+                 media_caption, delivery_format, delivery_content) = product
                 subscriptions.create_user_subscription(chat_id, sub_id, payment_method)
                 end_date = (datetime.utcnow() + timedelta(**{unit: duration})).date()
                 bot.send_message(chat_id, f'✅ Suscripción *{name}* activada hasta {end_date}', parse_mode='Markdown')
+
+                if delivery_format == 'text' and delivery_content:
+                    bot.send_message(chat_id, delivery_content)
+                elif delivery_format == 'file' and delivery_content:
+                    bot.send_document(chat_id, delivery_content)
+
                 name_good = name
             else:
                 bot.send_message(chat_id, '❌ Plan de suscripción no encontrado')

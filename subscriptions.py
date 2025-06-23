@@ -35,9 +35,38 @@ def init_subscription_db():
                grace_period INTEGER DEFAULT 0,
                auto_renew INTEGER DEFAULT 1,
                early_discount INTEGER DEFAULT 0,
-               notification_days TEXT DEFAULT "{DEFAULT_NOTIFICATION_DAYS}"
+               notification_days TEXT DEFAULT "{DEFAULT_NOTIFICATION_DAYS}",
+               additional_description TEXT DEFAULT '',
+               media_file_id TEXT,
+               media_type TEXT,
+               media_caption TEXT,
+               delivery_format TEXT DEFAULT 'none',
+               delivery_content TEXT
         )'''
     )
+
+    # Asegurar columnas adicionales por compatibilidad
+    cursor.execute("PRAGMA table_info(subscription_products)")
+    existing_cols = [c[1] for c in cursor.fetchall()]
+    alter_commands = []
+    if 'additional_description' not in existing_cols:
+        alter_commands.append("ALTER TABLE subscription_products ADD COLUMN additional_description TEXT DEFAULT ''")
+    if 'media_file_id' not in existing_cols:
+        alter_commands.append("ALTER TABLE subscription_products ADD COLUMN media_file_id TEXT")
+    if 'media_type' not in existing_cols:
+        alter_commands.append("ALTER TABLE subscription_products ADD COLUMN media_type TEXT")
+    if 'media_caption' not in existing_cols:
+        alter_commands.append("ALTER TABLE subscription_products ADD COLUMN media_caption TEXT")
+    if 'delivery_format' not in existing_cols:
+        alter_commands.append("ALTER TABLE subscription_products ADD COLUMN delivery_format TEXT DEFAULT 'none'")
+    if 'delivery_content' not in existing_cols:
+        alter_commands.append("ALTER TABLE subscription_products ADD COLUMN delivery_content TEXT")
+
+    for cmd in alter_commands:
+        try:
+            cursor.execute(cmd)
+        except Exception:
+            pass
 
     cursor.execute(
         '''CREATE TABLE IF NOT EXISTS user_subscriptions (
@@ -70,7 +99,12 @@ def add_subscription_product(name, description, price, duration,
                              service_type='default', status='active',
                              grace_period=0, auto_renew=True,
                              early_discount=0,
-                             notification_days=DEFAULT_NOTIFICATION_DAYS):
+                             notification_days=DEFAULT_NOTIFICATION_DAYS,
+                             additional_description='',
+                             media_file_id=None, media_type=None,
+                             media_caption=None,
+                             delivery_format='none',
+                             delivery_content=None):
     """Agregar un nuevo producto de suscripción"""
     init_subscription_db()
     conn = sqlite3.connect(files.main_db)
@@ -79,11 +113,15 @@ def add_subscription_product(name, description, price, duration,
         '''INSERT INTO subscription_products
            (name, description, price, currency, duration, duration_unit,
             service_type, status, grace_period, auto_renew,
-            early_discount, notification_days)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
+            early_discount, notification_days,
+            additional_description, media_file_id, media_type,
+            media_caption, delivery_format, delivery_content)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
         (name, description, price, currency, duration, duration_unit,
          service_type, status, grace_period, int(auto_renew),
-         early_discount, notification_days)
+         early_discount, notification_days,
+         additional_description, media_file_id, media_type,
+         media_caption, delivery_format, delivery_content)
     )
     conn.commit()
     conn.close()
@@ -111,6 +149,201 @@ def get_all_subscription_products():
     rows = cursor.fetchall()
     conn.close()
     return rows
+
+
+def get_plan_media(plan_name):
+    """Obtener información multimedia asociada a un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT media_file_id, media_type, media_caption FROM subscription_products WHERE name = ?",
+        (plan_name,)
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row and row[0]:
+        return {'file_id': row[0], 'type': row[1], 'caption': row[2]}
+    return None
+
+
+def save_plan_media(plan_name, file_id, media_type, caption=None):
+    """Guardar multimedia para un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE subscription_products SET media_file_id=?, media_type=?, media_caption=? WHERE name=?",
+            (file_id, media_type, caption, plan_name),
+        )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def remove_plan_media(plan_name):
+    """Eliminar multimedia de un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE subscription_products SET media_file_id=NULL, media_type=NULL, media_caption=NULL WHERE name=?",
+            (plan_name,),
+        )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def has_plan_media(plan_name):
+    return get_plan_media(plan_name) is not None
+
+
+def get_plans_with_media():
+    """Listar planes con multimedia"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT name, media_type FROM subscription_products WHERE media_file_id IS NOT NULL"
+    )
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
+def get_plans_without_media():
+    """Listar planes sin multimedia"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT name FROM subscription_products WHERE media_file_id IS NULL"
+    )
+    rows = [r[0] for r in cur.fetchall()]
+    conn.close()
+    return rows
+
+
+def get_delivery_info(plan_id):
+    """Obtener información de entrega de un plan"""
+    plan = get_subscription_product(plan_id)
+    if not plan:
+        return None, None
+    delivery_format = plan[17] if len(plan) > 17 else 'none'
+    delivery_content = plan[18] if len(plan) > 18 else None
+    return delivery_format, delivery_content
+
+
+def set_delivery_info(plan_name, delivery_format, delivery_content):
+    """Actualizar información de entrega"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE subscription_products SET delivery_format=?, delivery_content=? WHERE name=?",
+            (delivery_format, delivery_content, plan_name),
+        )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def get_additional_description(plan_name):
+    """Obtener descripción adicional de un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    cur.execute(
+        "SELECT additional_description FROM subscription_products WHERE name=?",
+        (plan_name,),
+    )
+    row = cur.fetchone()
+    conn.close()
+    if row and row[0]:
+        return row[0]
+    return ""
+
+
+def set_additional_description(plan_name, desc):
+    """Actualizar descripción adicional de un plan"""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cur = conn.cursor()
+    try:
+        cur.execute(
+            "UPDATE subscription_products SET additional_description=? WHERE name=?",
+            (desc, plan_name),
+        )
+        conn.commit()
+        return True
+    except Exception:
+        return False
+    finally:
+        conn.close()
+
+
+def has_additional_description(plan_name):
+    desc = get_additional_description(plan_name)
+    return bool(desc and desc.strip())
+
+
+def format_plan_with_media(plan_id):
+    """Formatear información de un plan para mostrar al usuario"""
+    plan = get_subscription_product(plan_id)
+    if not plan:
+        return None
+    (
+        _pid,
+        name,
+        desc,
+        price,
+        currency,
+        duration,
+        unit,
+        *_rest,
+        additional_desc,
+        media_file_id,
+        media_type,
+        media_caption,
+        _delivery_format,
+        _delivery_content,
+    ) = plan
+    info = f"**{name}**\n\n{desc}\n\nPrecio: {price} {currency}\nDuración: {duration} {unit}"
+    if media_file_id:
+        media_types = {
+            'photo': '📸',
+            'video': '🎥',
+            'document': '📄',
+            'audio': '🎵',
+            'animation': '🎬',
+        }
+        info += f"\n{media_types.get(media_type, '📎')}"
+        if media_caption:
+            info += f" {media_caption}"
+    return info
+
+
+def format_plan_additional_info(plan_id):
+    plan = get_subscription_product(plan_id)
+    if not plan:
+        return None
+    additional_desc = plan[13] if len(plan) > 13 else ''
+    if not additional_desc:
+        return 'No hay información adicional disponible'
+    return additional_desc
 
 
 # ---------------------------------------------------------------------------
