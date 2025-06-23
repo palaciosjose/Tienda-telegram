@@ -13,10 +13,11 @@ pip install -r requirements.txt
 ```
 
 4. Copia el archivo `.env.example` a `.env` (o crea uno nuevo) e incluye tu `TELEGRAM_BOT_TOKEN` y el `TELEGRAM_ADMIN_ID` que se usarán en `config.py`.
+5. Ejecuta `python init_db.py` para generar una base de datos vacía en `data/db/`. Este archivo no se incluye en el repositorio.
 
 ## Uso
 
-Antes de iniciar el bot por primera vez se debe crear la estructura de la base de datos. Ejecuta:
+Antes de iniciar el bot por primera vez (o si no existe `data/db/main_data.db`) se debe crear la estructura de la base de datos. Ejecuta:
 
 ```bash
 python init_db.py
