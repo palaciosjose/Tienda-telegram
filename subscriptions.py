@@ -5,6 +5,10 @@ from datetime import datetime, timedelta
 import files
 import telebot
 import config
+import dop
+
+# Días de notificación por defecto (30, 15, 7 y 1 día antes)
+DEFAULT_NOTIFICATION_DAYS = '30,15,7,1'
 
 bot = telebot.TeleBot(config.token)
 
@@ -18,7 +22,7 @@ def init_subscription_db():
     cursor = conn.cursor()
 
     cursor.execute(
-        '''CREATE TABLE IF NOT EXISTS subscription_products (
+        f'''CREATE TABLE IF NOT EXISTS subscription_products (
                id INTEGER PRIMARY KEY AUTOINCREMENT,
                name TEXT UNIQUE,
                description TEXT,
@@ -31,7 +35,7 @@ def init_subscription_db():
                grace_period INTEGER DEFAULT 0,
                auto_renew INTEGER DEFAULT 1,
                early_discount INTEGER DEFAULT 0,
-               notification_days TEXT DEFAULT '30,7,1'
+               notification_days TEXT DEFAULT "{DEFAULT_NOTIFICATION_DAYS}"
         )'''
     )
 
@@ -48,6 +52,11 @@ def init_subscription_db():
         )'''
     )
 
+    cursor.execute(
+        'CREATE INDEX IF NOT EXISTS idx_user_subscriptions_end_date '
+        'ON user_subscriptions(end_date)'
+    )
+
     conn.commit()
     conn.close()
 
@@ -60,7 +69,8 @@ def add_subscription_product(name, description, price, duration,
                              currency='USD', duration_unit='days',
                              service_type='default', status='active',
                              grace_period=0, auto_renew=True,
-                             early_discount=0, notification_days='30,7,1'):
+                             early_discount=0,
+                             notification_days=DEFAULT_NOTIFICATION_DAYS):
     """Agregar un nuevo producto de suscripción"""
     init_subscription_db()
     conn = sqlite3.connect(files.main_db)
@@ -172,7 +182,13 @@ def suspend_subscription(subscription_id):
         ('suspended', subscription_id))
     conn.commit()
     conn.close()
+    log_action('suspended', subscription_id)
     return True
+
+
+def log_action(action, subscription_id):
+    """Guardar acción en el archivo de log"""
+    dop.log(f'Subscription {subscription_id}: {action}')
 
 
 # ---------------------------------------------------------------------------
@@ -218,19 +234,38 @@ def check_subscriptions():
                         f"🔔 Tu suscripción a {name} vence en {days} días.")
                 except Exception:
                     pass
+                log_action(f'notify {days}', sub_id)
+
+        if 0 <= days_remaining <= max(notif_levels) and status == 'active':
+            conn = sqlite3.connect(files.main_db)
+            cur = conn.cursor()
+            cur.execute(
+                'UPDATE user_subscriptions SET status = ? WHERE id = ?',
+                ('due', sub_id))
+            conn.commit()
+            conn.close()
+            status = 'due'
+            log_action('due', sub_id)
 
         # Verificación de vencimiento
         if now > end_date:
             if grace_period and now <= end_date + timedelta(days=grace_period):
-                if status != 'grace':
-                    suspend_subscription(sub_id)
-                    try:
-                        bot.send_message(
-                            user_id,
-                            f"⚠️ Tu suscripción a {name} ha vencido."
-                            f" Tienes {grace_period} días de gracia.")
-                    except Exception:
-                        pass
+                if status != 'expired':
+                    conn = sqlite3.connect(files.main_db)
+                    cur = conn.cursor()
+                    cur.execute(
+                        'UPDATE user_subscriptions SET status = ? WHERE id = ?',
+                        ('expired', sub_id))
+                    conn.commit()
+                    conn.close()
+                    log_action('expired', sub_id)
+                try:
+                    bot.send_message(
+                        user_id,
+                        f"⚠️ Tu suscripción a {name} ha vencido."
+                        f" Tienes {grace_period} días de gracia.")
+                except Exception:
+                    pass
             else:
                 suspend_subscription(sub_id)
                 try:
@@ -241,3 +276,64 @@ def check_subscriptions():
                     pass
 
     return True
+
+
+def get_upcoming_subscriptions(days=30):
+    """Obtener suscripciones que vencen en los próximos `days` días."""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    end_limit = datetime.utcnow() + timedelta(days=days)
+    cursor.execute(
+        'SELECT id, user_id, product_id, end_date, status FROM user_subscriptions '
+        'WHERE end_date <= ? AND status NOT IN ("canceled", "suspended")',
+        (end_limit.isoformat(),)
+    )
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def list_subscription_products():
+    """Devolver todos los planes de suscripción activos."""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, name, price, duration, duration_unit FROM subscription_products '
+        'WHERE status = "active"')
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def list_user_subscriptions(user_id):
+    """Listar suscripciones para un usuario específico."""
+    init_subscription_db()
+    conn = sqlite3.connect(files.main_db)
+    cursor = conn.cursor()
+    cursor.execute(
+        'SELECT id, product_id, end_date, status FROM user_subscriptions '
+        'WHERE user_id = ?',
+        (user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return rows
+
+
+def start_subscription_monitor(interval_hours=24):
+    """Iniciar hilo que revisa suscripciones periódicamente."""
+    import threading
+    import time
+
+    def _loop():
+        while True:
+            try:
+                check_subscriptions()
+            except Exception as e:  # pragma: no cover - solo logging
+                dop.log(f'subscription monitor error: {e}')
+            time.sleep(interval_hours * 3600)
+
+    thread = threading.Thread(target=_loop, daemon=True)
+    thread.start()
+    return thread

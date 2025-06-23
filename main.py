@@ -1,5 +1,5 @@
 import telebot, shelve, sqlite3, os
-import config, dop, payments, adminka, files
+import config, dop, payments, adminka, files, subscriptions
 
 print("🚀 DEBUG: main.py - Script iniciado.")
 
@@ -131,6 +131,18 @@ def message_send(message):
             bot.send_message(message.chat.id, help_message)
         elif dop.check_message('help') is False and message.chat.id in dop.get_adminlist():
             bot.send_message(message.chat.id, '❓ **¡El mensaje de ayuda aún no ha sido agregado!**\n\nPara agregarlo, ve al panel de administración con el comando `/adm` y **configura las respuestas del bot**', parse_mode='Markdown')
+
+    elif '/mysubs' == message.text:
+        subs = subscriptions.list_user_subscriptions(message.chat.id)
+        if not subs:
+            bot.send_message(message.chat.id, '🚫 No tienes suscripciones activas.')
+        else:
+            text = '📋 *Tus suscripciones:*\n'
+            for sid, pid, end_date, status in subs:
+                product = subscriptions.get_subscription_product(pid)
+                name = product[1] if product else f'ID {pid}'
+                text += f'- {name}: vence {end_date[:10]} ({status})\n'
+            bot.send_message(message.chat.id, text, parse_mode='Markdown')
 
 
 @bot.callback_query_handler(func=lambda c:True)
@@ -391,5 +403,6 @@ def handle_media_files(message):
     adminka.handle_multimedia(message)
 
 if __name__ == '__main__':
+    subscriptions.start_subscription_monitor()
     print("🚀 DEBUG: main.py - Iniciando bot.infinity_polling()...")
     bot.infinity_polling()

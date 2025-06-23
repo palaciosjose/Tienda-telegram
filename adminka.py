@@ -1,5 +1,5 @@
 import telebot, sqlite3, shelve, os
-import config, dop, files
+import config, dop, files, subscriptions
 
 bot = telebot.TeleBot(config.token)
 
@@ -29,6 +29,15 @@ def show_discount_menu(chat_id):
 
     bot.send_message(chat_id, message, reply_markup=user_markup, parse_mode='Markdown')
 
+
+def show_subscription_menu(chat_id):
+    """Mostrar opciones de gestión de suscripciones"""
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+    user_markup.row('Crear nuevo plan')
+    user_markup.row('Listar planes', 'Revisar suscripciones')
+    user_markup.row('Volver al menú principal')
+    bot.send_message(chat_id, '📅 *Menú de Suscripciones*', reply_markup=user_markup, parse_mode='Markdown')
+
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
         if message_text == 'Volver al menú principal' or message_text == '/adm':
@@ -41,6 +50,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
             user_markup.row('💸 Descuentos')
+            user_markup.row('📅 Suscripciones')
             user_markup.row('⚙️ Otros')
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
@@ -321,6 +331,30 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '💸 Descuentos' == message_text:
             show_discount_menu(chat_id)
 
+        elif '📅 Suscripciones' == message_text:
+            show_subscription_menu(chat_id)
+
+        elif 'Crear nuevo plan' == message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Ingrese el nombre del nuevo plan:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 40
+
+        elif 'Listar planes' == message_text:
+            plans = subscriptions.list_subscription_products()
+            if not plans:
+                bot.send_message(chat_id, 'No hay planes registrados.')
+            else:
+                text = 'Planes disponibles:\n'
+                for pid, name, price, duration, unit in plans:
+                    text += f'ID {pid} - {name}: ${price} por {duration} {unit}\n'
+                bot.send_message(chat_id, text)
+
+        elif 'Revisar suscripciones' == message_text:
+            subscriptions.check_subscriptions()
+            bot.send_message(chat_id, 'Proceso de revisión completado.')
+
         elif 'Activar descuentos' == message_text or 'Desactivar descuentos' == message_text:
             current = dop.get_discount_config()['enabled']
             dop.update_discount_config(enabled=not current)
@@ -409,6 +443,7 @@ def text_analytics(message_text, chat_id):
                 user_markup.row('💰 Pagos')
                 user_markup.row('📊 Stats', '📣 Difusión')
                 user_markup.row('💸 Descuentos')
+                user_markup.row('📅 Suscripciones')
                 user_markup.row('⚙️ Otros')
                 bot.send_message(chat_id, 'Mensaje guardado exitosamente!', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
@@ -818,6 +853,50 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
             show_discount_menu(chat_id)
 
+        elif sost_num == 40:  # Nombre del nuevo plan
+            with open('data/Temp/' + str(chat_id) + 'sub_name.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Ingrese la descripción del plan:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 41
+
+        elif sost_num == 41:
+            with open('data/Temp/' + str(chat_id) + 'sub_desc.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Precio en USD:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 42
+
+        elif sost_num == 42:
+            with open('data/Temp/' + str(chat_id) + 'sub_price.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Duración en días:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 43
+
+        elif sost_num == 43:
+            try:
+                with open('data/Temp/' + str(chat_id) + 'sub_name.txt', encoding='utf-8') as f:
+                    name = f.read()
+                with open('data/Temp/' + str(chat_id) + 'sub_desc.txt', encoding='utf-8') as f:
+                    desc = f.read()
+                with open('data/Temp/' + str(chat_id) + 'sub_price.txt', encoding='utf-8') as f:
+                    price = float(f.read())
+                duration = int(message_text)
+                subscriptions.add_subscription_product(name=name, description=desc, price=price, duration=duration)
+                bot.send_message(chat_id, '✅ Plan creado correctamente')
+            except Exception as e:
+                bot.send_message(chat_id, f'❌ Error creando plan: {e}')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_subscription_menu(chat_id)
+
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
         if dop.get_sost(chat_id) is True:
@@ -829,6 +908,7 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup.row('💰 Pagos')
         user_markup.row('📊 Stats', '📣 Difusión')
         user_markup.row('💸 Descuentos')
+        user_markup.row('📅 Suscripciones')
         user_markup.row('⚙️ Otros')
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
