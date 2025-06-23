@@ -62,12 +62,11 @@ python subscription_cron.py
 
 ## Pruebas
 
-Para ejecutar la suite de pruebas utiliza Pytest:
+Para ejecutar la suite de pruebas automatizadas utiliza Pytest:
 
 ```bash
 pytest
 ```
-
 
 ## Licencia
 

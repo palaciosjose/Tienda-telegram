@@ -1,3 +1,6 @@
+import pytest
+pytest.skip("manual script not intended for pytest", allow_module_level=True)
+
 import telebot
 import config # Importa tu archivo config para obtener el token y admin_id
 
