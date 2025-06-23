@@ -1,5 +1,5 @@
 import telebot, sqlite3, shelve, os
-import config, dop, files, subscriptions
+import config, dop, files
 from advertising_system import AdvertisingManager
 
 bot = telebot.TeleBot(config.token)
