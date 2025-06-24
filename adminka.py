@@ -345,7 +345,11 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
 
         elif '🎯 Nueva campaña' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Nueva campaña* aún no implementada.')
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, '📝 *Nombre de la campaña*\n\nEnvía el nombre para la nueva campaña:', reply_markup=key, parse_mode='Markdown')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 160
 
         elif '📋 Ver campañas' == message_text:
             campaigns = advertising.get_all_campaigns()
@@ -377,29 +381,45 @@ def in_adminka(chat_id, message_text, username, name_user):
                     except ValueError:
                         bot.send_message(chat_id, '❌ ID de campaña inválido')
 
-        elif message_text.startswith('🎯 Gestionar grupos'):
-            params = message_text.replace('🎯 Gestionar grupos', '').strip()
-            if not params:
-                bot.send_message(
-                    chat_id,
-                    'Uso: 🎯 Gestionar grupos add <telegram|whatsapp> <id> [nombre]\n'
-                    '     🎯 Gestionar grupos remove <id>'
-                )
+        elif '🎯 Gestionar grupos' == message_text:
+            msg = (
+                '🎯 *Gestionar grupos*\n\n'
+                'Selecciona una acción o envía /cancel para regresar.'
+            )
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('➕ Agregar grupo', '➖ Eliminar grupo')
+            user_markup.row('📋 Listar grupos')
+            user_markup.row('📢 Marketing')
+            bot.send_message(chat_id, msg, reply_markup=user_markup, parse_mode='Markdown')
+
+        elif message_text == '➕ Agregar grupo':
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('telegram', 'whatsapp')
+            user_markup.row('Cancelar')
+            bot.send_message(chat_id, '¿Para qué plataforma es el grupo?', reply_markup=user_markup)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 170
+
+        elif message_text == '➖ Eliminar grupo':
+            bot.send_message(chat_id, 'Envía el ID del grupo a eliminar:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 172
+
+        elif message_text == '📋 Listar grupos':
+            conn = sqlite3.connect(files.main_db)
+            cur = conn.cursor()
+            cur.execute("SELECT platform, group_id, group_name FROM target_groups")
+            rows = cur.fetchall()
+            conn.close()
+            if rows:
+                txt = '🎯 *Grupos registrados:*\n'
+                for r in rows:
+                    name = r[2] or ''
+                    txt += f"- {r[0]} {r[1]} {name}\n"
             else:
-                parts = params.split()
-                action = parts[0].lower()
-                if action == 'add' and len(parts) >= 3:
-                    platform = parts[1]
-                    gid = parts[2]
-                    name = ' '.join(parts[3:]) if len(parts) > 3 else None
-                    ok, msg = advertising.add_target_group(platform, gid, name)
-                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
-                elif action == 'remove' and len(parts) >= 2:
-                    gid = parts[1]
-                    ok, msg = advertising.remove_target_group(gid)
-                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
-                else:
-                    bot.send_message(chat_id, '❌ Comando inválido')
+                txt = 'No hay grupos registrados.'
+            bot.send_message(chat_id, txt, parse_mode='Markdown')
+
 
         elif '📊 Estadísticas hoy' == message_text:
             stats = advertising.get_today_stats()
@@ -412,7 +432,43 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, msg, parse_mode='Markdown')
 
         elif '⚙️ Configuración' == message_text:
-            bot.send_message(chat_id, '🚧 Función *Configuración de marketing* aún no implementada.')
+            configs = {c['platform']: c for c in advertising.get_platform_configs()}
+            tel_status = 'Activo ✅' if configs.get('telegram', {}).get('is_active', True) else 'Inactivo ❌'
+            wa_status = 'Activo ✅' if configs.get('whatsapp', {}).get('is_active', True) else 'Inactivo ❌'
+            msg_cfg = (
+                '⚙️ *Configuración de plataformas*\n\n'
+                f'Telegram: {tel_status}\n'
+                f'WhatsApp: {wa_status}'
+            )
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('Toggle telegram', 'Toggle whatsapp')
+            user_markup.row('Editar telegram', 'Editar whatsapp')
+            user_markup.row('📢 Marketing')
+            bot.send_message(chat_id, msg_cfg, reply_markup=user_markup, parse_mode='Markdown')
+
+        elif message_text == 'Toggle telegram':
+            cfg = {c['platform']: c for c in advertising.get_platform_configs()}
+            current = cfg.get('telegram', {}).get('is_active', True)
+            advertising.update_platform_config('telegram', is_active=not current)
+            bot.send_message(chat_id, '✅ Estado de Telegram actualizado')
+            in_adminka(chat_id, '⚙️ Configuración', username, name_user)
+
+        elif message_text == 'Toggle whatsapp':
+            cfg = {c['platform']: c for c in advertising.get_platform_configs()}
+            current = cfg.get('whatsapp', {}).get('is_active', True)
+            advertising.update_platform_config('whatsapp', is_active=not current)
+            bot.send_message(chat_id, '✅ Estado de WhatsApp actualizado')
+            in_adminka(chat_id, '⚙️ Configuración', username, name_user)
+
+        elif message_text == 'Editar telegram':
+            bot.send_message(chat_id, 'Envíe la nueva configuración (texto o JSON) para Telegram:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 175
+
+        elif message_text == 'Editar whatsapp':
+            bot.send_message(chat_id, 'Envíe la nueva configuración (texto o JSON) para WhatsApp:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 176
 
         elif message_text.startswith('▶️ Envío manual'):
             params = message_text.replace('▶️ Envío manual', '').strip()
@@ -1481,24 +1537,85 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text)
 
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Sin multimedia')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, '🖼️ **Multimedia (Opcional)**\n\nEnvía una imagen, video o documento.\nO selecciona "Sin multimedia":', reply_markup=user_markup)
+            bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 162
 
-        elif sost_num == 162:  # Botones
-            if message_text == 'Sin multimedia':
-                with open('data/Temp/' + str(chat_id) + 'campaign_media.txt', 'w', encoding='utf-8') as f:
-                    f.write('none')
+        elif sost_num == 162:  # Crear campaña
+            button1_text = None
+            button1_url = None
+            if message_text.lower() not in ('no', 'sin botones'):
+                parts = message_text.split()
+                if len(parts) >= 2:
+                    button1_text = parts[0]
+                    button1_url = parts[1]
 
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Sin botones', callback_data='no_buttons'))
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, '🔗 **Botón 1 (Opcional)**\n\nEscribe el texto del primer botón o presiona "Sin botones":', reply_markup=key, parse_mode='Markdown')
+            with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', encoding='utf-8') as f:
+                name = f.read()
+            with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', encoding='utf-8') as f:
+                text = f.read()
+
+            data = {
+                'name': name,
+                'message_text': text,
+                'button1_text': button1_text,
+                'button1_url': button1_url,
+                'created_by': chat_id,
+            }
+            camp_id = advertising.create_campaign(data)
+            bot.send_message(chat_id, f'✅ Campaña creada con ID {camp_id}')
             with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 163
+                del bd[str(chat_id)]
+
+        elif sost_num == 170:  # Plataforma para nuevo grupo
+            platform = message_text.lower()
+            if platform in ('telegram', 'whatsapp'):
+                with open('data/Temp/' + str(chat_id) + 'group_platform.txt', 'w', encoding='utf-8') as f:
+                    f.write(platform)
+                bot.send_message(chat_id, 'Envíe el ID del grupo:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 171
+            else:
+                bot.send_message(chat_id, 'Plataforma inválida. Use telegram o whatsapp.')
+
+        elif sost_num == 171:  # ID del grupo
+            with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
+                platform = f.read()
+            with open('data/Temp/' + str(chat_id) + 'group_id.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text.strip())
+            bot.send_message(chat_id, 'Envíe un nombre opcional para el grupo o escriba "no":')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 173
+
+        elif sost_num == 173:  # Nombre opcional del grupo y creación
+            with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
+                platform = f.read()
+            with open('data/Temp/' + str(chat_id) + 'group_id.txt', encoding='utf-8') as f:
+                gid = f.read()
+            name = None if message_text.lower() == 'no' else message_text
+            ok, msg = advertising.add_target_group(platform, gid, name)
+            bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+        elif sost_num == 172:  # Eliminar grupo
+            gid = message_text.strip()
+            ok, msg = advertising.remove_target_group(gid)
+            bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+        elif sost_num == 175:  # Editar config telegram
+            advertising.update_platform_config('telegram', config_data=message_text)
+            bot.send_message(chat_id, '✅ Configuración de Telegram actualizada')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+        elif sost_num == 176:  # Editar config whatsapp
+            advertising.update_platform_config('whatsapp', config_data=message_text)
+            bot.send_message(chat_id, '✅ Configuración de WhatsApp actualizada')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
 
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
