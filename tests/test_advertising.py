@@ -15,6 +15,14 @@ sys.modules.setdefault(
 sys.modules.setdefault(
     "advertising_system.auto_sender", types.SimpleNamespace(AutoSender=object)
 )
+sys.modules.setdefault(
+    "advertising_system.telegram_multi",
+    types.SimpleNamespace(TelegramMultiBot=lambda *a, **k: None),
+)
+sys.modules.setdefault(
+    "advertising_system.whaticket_api",
+    types.SimpleNamespace(WHATicketAPI=lambda *a, **k: None),
+)
 
 from advertising_system.ad_manager import AdvertisingManager
 
@@ -97,4 +105,52 @@ def test_get_today_stats_empty_db(tmp_path):
     stats = manager.get_today_stats()
 
     assert stats == {"sent": 0, "success_rate": 100, "groups": 0}
+
+
+def test_send_campaign_now(tmp_path, monkeypatch):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "Camp", "message_text": "Hi", "created_by": 1})
+    manager.add_target_group("telegram", "111")
+    manager.add_target_group("whatsapp", "222")
+
+    sent = []
+
+    class DummyTG:
+        def __init__(self, *a, **k):
+            pass
+
+        def send_message(self, gid, msg, media_file_id=None, media_type=None, buttons=None):
+            sent.append(("tg", gid, msg))
+            return True, "ok"
+
+    class DummyWA:
+        def __init__(self, *a, **k):
+            pass
+
+        def send_message(self, gid, msg, media_url=None):
+            sent.append(("wa", gid, msg))
+            return True, "ok"
+
+    import advertising_system.ad_manager as mod
+    monkeypatch.setattr(mod, "TelegramMultiBot", DummyTG)
+    monkeypatch.setattr(mod, "WHATicketAPI", DummyWA)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "x")
+    monkeypatch.setenv("WHATICKET_URL", "http://wa")
+    monkeypatch.setenv("WHATICKET_TOKEN", "t")
+
+    ok, msg = manager.send_campaign_now(camp_id, ["telegram", "whatsapp"])
+    assert ok
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT platform, status FROM send_logs ORDER BY id")
+    rows = cur.fetchall()
+    conn.close()
+
+    assert len(rows) == 2
+    assert sent == [("tg", "111", "Hi"), ("wa", "222", "Hi")]
+    assert all(r[1] == "sent" for r in rows)
 
