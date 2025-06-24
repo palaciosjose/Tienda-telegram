@@ -7,12 +7,11 @@ from advertising_system.auto_sender import AutoSender
 
 def load_config():
     tokens_env = os.getenv("TELEGRAM_TOKEN")
-    if tokens_env:
-        telegram_tokens = [t.strip() for t in tokens_env.split(',') if t.strip()]
-    else:
-        telegram_tokens = [
-            '8107512310:AAGPO-rwj48QwVM8uK41ndj8q4Cy0f5QMKk',
-        ]
+    if not tokens_env:
+        raise SystemExit("TELEGRAM_TOKEN environment variable is required")
+    telegram_tokens = [t.strip() for t in tokens_env.split(',') if t.strip()]
+    if not telegram_tokens:
+        raise SystemExit("TELEGRAM_TOKEN is empty")
 
     return {
         'db_path': 'data/db/main_data.db',

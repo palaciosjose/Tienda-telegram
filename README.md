@@ -16,8 +16,9 @@ pip install -r requirements.txt
    archivo de ejemplo incluye los campos `TELEGRAM_BOT_TOKEN` y
    `TELEGRAM_ADMIN_ID` como referencia, así que sólo debes reemplazar sus
    valores con tus credenciales.  Si utilizarás el sistema de publicidad,
-   completa también `TELEGRAM_TOKEN` con el token (o los tokens separados
-   por comas) que empleará `advertising_cron.py`.
+   **debes** definir `TELEGRAM_TOKEN` con el token (o los tokens separados
+   por comas) que empleará `advertising_cron.py`; el script fallará si no
+   se configura esta variable.
 
 ## Uso
 
@@ -92,10 +93,10 @@ con comandos para gestionar campañas:
 - `⚙️ Configuración` para ajustes adicionales.
 - `▶️ Envío manual` para disparar un envío inmediato.
 
-Actualmente los tokens que usa el *AutoSender* se establecen directamente en
-`advertising_cron.py`. No se definen variables de entorno adicionales, pero
-puedes modificar el script para leer valores como `AUTOSENDER_TELEGRAM_TOKENS`
-si lo necesitas.
+`advertising_cron.py` obtiene los tokens a utilizar desde la variable de entorno
+`TELEGRAM_TOKEN`.  Puedes indicar varios tokens separados por comas si
+necesitas repartir la carga entre diferentes bots.  Si la variable no está
+definida el script terminará con un error.
 
 ## Pruebas
 
