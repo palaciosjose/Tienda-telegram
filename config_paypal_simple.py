@@ -24,7 +24,7 @@ def config_paypal():
         conn.close()
         
         print("GUARDADO!")
-        print("Ahora ejecuta: python3 reactivar_paypal.py")
+        print("Ahora ejecuta: python3 reactivar_paypal_simple.py")
         
     except Exception as e:
         print(f"ERROR: {e}")
