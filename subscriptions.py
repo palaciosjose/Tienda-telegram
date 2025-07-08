@@ -7,11 +7,11 @@ import telebot
 import config
 import dop
 import os
+from bot_instance import bot
 
 # Días de notificación por defecto (30, 15, 7 y 1 día antes)
 DEFAULT_NOTIFICATION_DAYS = '30,15,7,1'
 
-bot = telebot.TeleBot(config.token)
 
 # ---------------------------------------------------------------------------
 # Inicialización de base de datos

@@ -1,8 +1,8 @@
 import telebot, sqlite3, shelve, os
 import config, dop, files
 from advertising_system import AdvertisingManager
+from bot_instance import bot
 
-bot = telebot.TeleBot(config.token)
 advertising = AdvertisingManager(files.main_db)
 
 

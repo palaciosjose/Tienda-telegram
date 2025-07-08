@@ -1,8 +1,7 @@
 import telebot, time, shelve, requests, json
 from datetime import datetime, timedelta
 import dop, config, files, subscriptions
-
-bot = telebot.TeleBot(config.token)
+from bot_instance import bot
 
 he_client = []
 pending_payments = {}  # Para almacenar pagos pendientes

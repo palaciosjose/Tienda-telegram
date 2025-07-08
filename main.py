@@ -1,5 +1,6 @@
 import telebot, shelve, sqlite3, os
 import config, dop, payments, adminka, files, subscriptions
+from bot_instance import bot
 import atexit
 import glob
 
@@ -25,7 +26,7 @@ if not os.path.exists('data/db/main_data.db'):
     print("❌ ERROR: Base de datos no encontrada. Ejecuta init_db.py primero.")
     exit(1)
 
-bot = telebot.TeleBot(config.token)
+
 in_admin = []
 
 @bot.message_handler(content_types=["text"])

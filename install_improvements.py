@@ -109,8 +109,7 @@ import telebot
 import files
 import config
 from datetime import datetime
-
-bot = telebot.TeleBot(config.token)
+from bot_instance import bot
 
 def validate_purchase_by_user(user_id=None, username=None):
     """Valida las compras de un usuario específico"""
