@@ -1200,19 +1200,17 @@ def text_analytics(message_text, chat_id):
                 in_adminka(chat_id, 'Volver al menú principal', None, None)
                 return
 
-            media = None
-            if message_text.lower() in ('no', 'skip', 'sin archivo'):
-                pass
+            if message_text.lower().strip() in ('no', 'skip', 'sin archivo'):
+                result = dop.broadcast_message(group, amount, text)
+                bot.send_message(chat_id, result)
+                try:
+                    os.remove('data/Temp/' + str(chat_id) + '.txt')
+                except Exception:
+                    pass
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
             else:
-                media = None
-            result = dop.broadcast_message(group, amount, text, media)
-            bot.send_message(chat_id, result)
-            try:
-                os.remove('data/Temp/' + str(chat_id) + '.txt')
-            except Exception:
-                pass
-            with shelve.open(files.sost_bd) as bd:
-                del bd[str(chat_id)]
+                bot.send_message(chat_id, 'Envía un archivo multimedia o escribe "no" para continuar sin archivo.')
 
 
 
