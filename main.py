@@ -228,7 +228,9 @@ def inline(callback):
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
             else:
                 catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog()}"
-                dop.safe_edit_message(bot, callback.message, catalog_text, reply_markup=key, parse_mode='Markdown')
+                if callback.message.content_type != 'text':
+                    bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
 
         elif callback.data == 'Ir al catálogo de suscripciones':
             plans = subscriptions.get_all_subscription_products()
@@ -404,11 +406,13 @@ def inline(callback):
                 key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
                 key.add(telebot.types.InlineKeyboardButton(text='🌀 Suscripciones', callback_data='Ir al catálogo de suscripciones'))
                 if dop.check_message('start'):
-                    with shelve.open(files.bot_message_bd) as bd: 
+                    with shelve.open(files.bot_message_bd) as bd:
                         start_message = bd['start']
                     start_message = start_message.replace('username', callback.message.chat.username)
                     start_message = start_message.replace('name', callback.message.from_user.first_name)
-                    dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
+                    if callback.message.content_type != 'text':
+                        bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                    bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
 
         elif callback.data == 'Comprar':
             with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
