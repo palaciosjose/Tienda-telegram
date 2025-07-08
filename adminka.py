@@ -439,7 +439,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, 'Ingrese la API Key de Binance:', reply_markup=key)
             with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 40
+                bd[str(chat_id)] = 19
 
         elif '📊 Stats' == message_text:
             result = dop.get_daily_sales()
@@ -617,8 +617,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, '¿A cuántos usuarios desea enviar el boletín? Ingrese un número. Máximo posible ' + str(amount))
-            with shelve.open(files.sost_bd) as bd: 
-                bd[str(chat_id)] = 19
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 40
 
         elif '⚙️ Otros' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
