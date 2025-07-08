@@ -423,37 +423,22 @@ def in_adminka(chat_id, message_text, username, name_user):
             if not campaigns:
                 bot.send_message(chat_id, 'ℹ️ No hay campañas registradas.')
             else:
+                markup = telebot.types.InlineKeyboardMarkup()
+                lines = ['📋 *Campañas registradas:*']
                 for camp in campaigns:
-                    details = advertising.get_campaign(camp['id'])
-                    if not details:
-                        continue
-                    markup = telebot.types.InlineKeyboardMarkup()
+                    lines.append(f"- {camp['id']} {camp['name']} ({camp['status']})")
                     markup.add(
                         telebot.types.InlineKeyboardButton(
-                            text='✏️ Editar',
-                            callback_data=f'edit_campaign:{camp["id"]}'
-                        ),
-                        telebot.types.InlineKeyboardButton(
-                            text='🗑️ Eliminar',
-                            callback_data=f'delete_campaign:{camp["id"]}'
-                        ),
+                            text=f'✏️ Editar {camp["id"]}',
+                            callback_data=f'EDIT_CAMPAIGN_{camp["id"]}'
+                        )
                     )
-                    text = f"📋 *{camp['id']} - {camp['name']} ({camp['status']})*\n\n{details['message_text']}"
-                    if details.get('media_type') == 'photo' and details.get('media_file_id'):
-                        bot.send_photo(
-                            chat_id,
-                            details['media_file_id'],
-                            caption=text,
-                            reply_markup=markup,
-                            parse_mode='Markdown'
-                        )
-                    else:
-                        bot.send_message(
-                            chat_id,
-                            text,
-                            reply_markup=markup,
-                            parse_mode='Markdown'
-                        )
+                bot.send_message(
+                    chat_id,
+                    '\n'.join(lines),
+                    reply_markup=markup,
+                    parse_mode='Markdown'
+                )
 
         elif message_text.startswith('⏰ Programar envíos'):
             params = message_text.replace('⏰ Programar envíos', '').strip()
@@ -1437,6 +1422,23 @@ def text_analytics(message_text, chat_id):
             except Exception:
                 pass
 
+        elif sost_num == 165:  # Guardar edición de campaña (texto)
+            path = f'data/Temp/{chat_id}_edit_campaign.txt'
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    cid = int(f.read())
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            ok = advertising.update_campaign(cid, {'message_text': message_text})
+            bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + 'Campaña actualizada')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+
         elif sost_num == 170:  # Selección de grupo de Telegram
             tmp = f'data/Temp/{chat_id}_group_choices.json'
             if message_text == 'Cancelar':
@@ -1480,7 +1482,7 @@ def text_analytics(message_text, chat_id):
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:
         if dop.get_sost(chat_id) is True:
-            with shelve.open(files.sost_bd) as bd: 
+            with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('💬 Respuestas')
@@ -1491,6 +1493,22 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup.row('⚙️ Otros')
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
+
+    elif callback_data.startswith('EDIT_CAMPAIGN_'):
+        camp_id = int(callback_data.split('_')[-1])
+        path = f'data/Temp/{chat_id}_edit_campaign.txt'
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(str(camp_id))
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(
+            telebot.types.InlineKeyboardButton(
+                text='Cancelar y volver al menú principal de administración',
+                callback_data='Volver al menú principal de administración'
+            )
+        )
+        bot.send_message(chat_id, 'Envía el nuevo texto o la nueva multimedia para la campaña:', reply_markup=key)
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(chat_id)] = 165
 
     elif callback_data == 'SKIP_NEW_MEDIA':
         key = telebot.types.InlineKeyboardMarkup()
@@ -1642,7 +1660,7 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200, 42, 162):
+        if state not in (32, 200, 42, 162, 165):
             return
 
         if state == 32:
@@ -1652,6 +1670,8 @@ def handle_multimedia(message):
         elif state == 162:
             temp_path = None
             media_path = f'data/Temp/{chat_id}_campaign_media.txt'
+        elif state == 165:
+            temp_path = None
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
 
@@ -1727,6 +1747,27 @@ def handle_multimedia(message):
                 bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 163
+                return
+            elif state == 165:
+                path = f'data/Temp/{chat_id}_edit_campaign.txt'
+                try:
+                    with open(path, 'r', encoding='utf-8') as f:
+                        cid = int(f.read())
+                except FileNotFoundError:
+                    session_expired(chat_id)
+                    return
+                updates = {'media_file_id': file_id, 'media_type': media_type}
+                if caption:
+                    updates['message_text'] = caption
+                ok = advertising.update_campaign(cid, updates)
+                bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + 'Campaña actualizada')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:

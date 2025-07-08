@@ -69,6 +69,10 @@ class AdvertisingManager:
             conn.close()
         return removed > 0
 
+    def update_campaign(self, campaign_id, fields):
+        """Actualizar los datos de una campaña."""
+        return self.db.update_campaign(campaign_id, fields)
+
     def get_today_stats(self):
         """Obtener estadísticas rápidas del día"""
         conn, shared = self._get_connection()

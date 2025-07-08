@@ -45,3 +45,26 @@ class CampaignDB:
         for r in rows:
             result.append({'id': r[0], 'name': r[1], 'status': r[2], 'sent_count': 0, 'last_sent': ''})
         return result
+
+    def update_campaign(self, campaign_id, fields):
+        """Actualizar campos de una campaña existente."""
+        if not fields:
+            return False
+
+        conn, shared = self._get_connection()
+        cursor = conn.cursor()
+
+        columns = []
+        params = []
+        for key, value in fields.items():
+            columns.append(f"{key} = ?")
+            params.append(value)
+
+        params.append(campaign_id)
+        sql = "UPDATE campaigns SET " + ", ".join(columns) + " WHERE id = ?"
+        cursor.execute(sql, tuple(params))
+        conn.commit()
+        updated = cursor.rowcount
+        if not shared:
+            conn.close()
+        return updated > 0
