@@ -454,7 +454,7 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif message_text == '➕ Agregar grupo':
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('telegram', 'whatsapp')
+            user_markup.row('telegram')
             user_markup.row('Cancelar')
             bot.send_message(chat_id, '¿Para qué plataforma es el grupo?', reply_markup=user_markup)
             with shelve.open(files.sost_bd) as bd:
@@ -493,15 +493,13 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '⚙️ Configuración' == message_text:
             configs = {c['platform']: c for c in advertising.get_platform_configs()}
             tel_status = 'Activo ✅' if configs.get('telegram', {}).get('is_active', True) else 'Inactivo ❌'
-            wa_status = 'Activo ✅' if configs.get('whatsapp', {}).get('is_active', True) else 'Inactivo ❌'
             msg_cfg = (
                 '⚙️ *Configuración de plataformas*\n\n'
-                f'Telegram: {tel_status}\n'
-                f'WhatsApp: {wa_status}'
+                f'Telegram: {tel_status}'
             )
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Toggle telegram', 'Toggle whatsapp')
-            user_markup.row('Editar telegram', 'Editar whatsapp')
+            user_markup.row('Toggle telegram')
+            user_markup.row('Editar telegram')
             user_markup.row('📢 Marketing')
             bot.send_message(chat_id, msg_cfg, reply_markup=user_markup, parse_mode='Markdown')
 
@@ -512,22 +510,10 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, '✅ Estado de Telegram actualizado')
             in_adminka(chat_id, '⚙️ Configuración', username, name_user)
 
-        elif message_text == 'Toggle whatsapp':
-            cfg = {c['platform']: c for c in advertising.get_platform_configs()}
-            current = cfg.get('whatsapp', {}).get('is_active', True)
-            advertising.update_platform_config('whatsapp', is_active=not current)
-            bot.send_message(chat_id, '✅ Estado de WhatsApp actualizado')
-            in_adminka(chat_id, '⚙️ Configuración', username, name_user)
-
         elif message_text == 'Editar telegram':
             bot.send_message(chat_id, 'Envíe la nueva configuración (texto o JSON) para Telegram:')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 175
-
-        elif message_text == 'Editar whatsapp':
-            bot.send_message(chat_id, 'Envíe la nueva configuración (texto o JSON) para WhatsApp:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 176
 
         elif message_text.startswith('▶️ Envío manual'):
             params = message_text.replace('▶️ Envío manual', '').strip()
@@ -1388,14 +1374,14 @@ def text_analytics(message_text, chat_id):
 
         elif sost_num == 170:  # Plataforma para nuevo grupo
             platform = message_text.lower()
-            if platform in ('telegram', 'whatsapp'):
+            if platform == 'telegram':
                 with open('data/Temp/' + str(chat_id) + 'group_platform.txt', 'w', encoding='utf-8') as f:
                     f.write(platform)
                 bot.send_message(chat_id, 'Envíe el ID del grupo:')
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 171
             else:
-                bot.send_message(chat_id, 'Plataforma inválida. Use telegram o whatsapp.')
+                bot.send_message(chat_id, 'Plataforma inválida. Use telegram.')
 
         elif sost_num == 171:  # ID del grupo
             try:
@@ -1438,11 +1424,6 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 
-        elif sost_num == 176:  # Editar config whatsapp
-            advertising.update_platform_config('whatsapp', config_data=message_text)
-            bot.send_message(chat_id, '✅ Configuración de WhatsApp actualizada')
-            with shelve.open(files.sost_bd) as bd:
-                del bd[str(chat_id)]
 
 def ad_inline(callback_data, chat_id, message_id):
     if 'Volver al menú principal de administración' == callback_data:

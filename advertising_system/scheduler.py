@@ -1,6 +1,5 @@
 import sqlite3
 from datetime import datetime, timedelta
-import json
 import files
 import db
 
@@ -9,8 +8,7 @@ class CampaignScheduler:
         self.db_path = db_path
         self.optimal_times = ['10:00', '15:00', '20:00']
         self.platform_delays = {
-            'telegram': 60,
-            'whatsapp': 90
+            'telegram': 60
         }
 
     def _get_connection(self):
@@ -18,7 +16,7 @@ class CampaignScheduler:
             return db.get_db_connection(), True
         return sqlite3.connect(self.db_path), False
 
-    def create_daily_schedule(self, campaign_id, platforms=['telegram', 'whatsapp']):
+    def create_daily_schedule(self, campaign_id, platforms=['telegram']):
         conn, shared = self._get_connection()
         cursor = conn.cursor()
 
@@ -87,9 +85,9 @@ class CampaignScheduler:
         conn, shared = self._get_connection()
         cursor = conn.cursor()
         if platform == 'telegram':
-            cursor.execute("UPDATE campaign_schedules SET next_send_telegram = ? WHERE id = ?", (next_send.isoformat(), schedule_id))
-        else:
-            cursor.execute("UPDATE campaign_schedules SET next_send_whatsapp = ? WHERE id = ?", (next_send.isoformat(), schedule_id))
+            cursor.execute(
+                "UPDATE campaign_schedules SET next_send_telegram = ? WHERE id = ?",
+                (next_send.isoformat(), schedule_id))
         conn.commit()
         if not shared:
             conn.close()

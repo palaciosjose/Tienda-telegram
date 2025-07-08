@@ -101,7 +101,7 @@ obtenidos.
 ## Marketing/Advertising
 
 El sistema incluye un módulo de **marketing automatizado** para enviar
-campañas a distintos grupos de Telegram o WhatsApp. Todas las tablas
+campañas a distintos grupos de Telegram. Todas las tablas
 necesarias (`campaigns`, `campaign_schedules`, `target_groups`, etc.) se
 crean automáticamente cuando ejecutas `init_db.py`, por lo que no requiere
 una configuración extra.

@@ -15,9 +15,7 @@ def load_config():
 
     return {
         'db_path': 'data/db/main_data.db',
-        'telegram_tokens': telegram_tokens,
-        'whaticket_url': os.getenv('WHATICKET_URL', 'https://tu-whaticket.com'),
-        'whaticket_token': os.getenv('WHATICKET_TOKEN', 'tu_token_whaticket')
+        'telegram_tokens': telegram_tokens
     }
 
 def is_running():

@@ -10,9 +10,7 @@ def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
 
     config = {
         'db_path': str(tmp_path / 'db.db'),
-        'telegram_tokens': ['t'],
-        'whaticket_url': 'http://w',
-        'whaticket_token': 'tok'
+        'telegram_tokens': ['t']
     }
     sender = AutoSender(config)
 
@@ -21,7 +19,6 @@ def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
 
     calls = []
     monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
-    monkeypatch.setattr(sender, '_send_whatsapp_campaign', lambda *a, **k: calls.append('wa'))
 
     sender.scheduler.get_pending_sends = lambda: [(1, 2, None, None, None, None, 'telegram')]
     assert sender._check_and_send_campaigns() is True
@@ -42,7 +39,7 @@ def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
             pass
 
         def get_pending_sends(self):
-            return [(1, 2, None, None, None, None, 'telegram,whatsapp')]
+            return [(1, 2, None, None, None, None, 'telegram')]
 
         def update_next_send(self, *a):
             pass
@@ -59,25 +56,21 @@ def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
     monkeypatch.setattr(auto_sender, 'IntelligentRateLimiter', DummyRateLimiter)
     monkeypatch.setattr(auto_sender, 'StatisticsManager', DummyStats)
     monkeypatch.setattr(auto_sender, 'TelegramMultiBot', lambda *a, **k: object())
-    monkeypatch.setattr(auto_sender, 'WHATicketAPI', lambda *a, **k: object())
 
     AutoSender = auto_sender.AutoSender
 
     config = {
         'db_path': 'db',
-        'telegram_tokens': ['t'],
-        'whaticket_url': 'http://w',
-        'whaticket_token': 'tok'
+        'telegram_tokens': ['t']
     }
     sender = AutoSender(config)
 
     monkeypatch.setattr(auto_sender.time, 'sleep', lambda x: None)
     calls = []
     monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
-    monkeypatch.setattr(sender, '_send_whatsapp_campaign', lambda *a, **k: calls.append('wa'))
 
     assert sender._check_and_send_campaigns() is True
-    assert calls == ['tg', 'wa']
+    assert calls == ['tg']
 
     calls.clear()
     sender.scheduler.get_pending_sends = lambda: []
