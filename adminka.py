@@ -42,6 +42,26 @@ def show_discount_menu(chat_id):
     bot.send_message(chat_id, message, reply_markup=user_markup, parse_mode='Markdown')
 
 
+def show_product_menu(chat_id):
+    """Mostrar listado de productos para la gestión de unidades"""
+    con = db.get_db_connection()
+    cursor = con.cursor()
+    cursor.execute("SELECT name FROM goods;")
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+    count = 0
+    for (name,) in cursor.fetchall():
+        count += 1
+        user_markup.row(name)
+    user_markup.row('Volver al menú principal')
+
+    if count == 0:
+        bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
+    else:
+        bot.send_message(chat_id, '¿De qué posición desea gestionar unidades?', reply_markup=user_markup, parse_mode='MarkDown')
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(chat_id)] = 10
+
+
 
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
@@ -329,33 +349,7 @@ def in_adminka(chat_id, message_text, username, name_user):
 
 
         elif '➕ Producto' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(
-                telebot.types.InlineKeyboardButton(
-                    text='Cancelar y volver al menú principal de administración',
-                    callback_data='Volver al menú principal de administración'))
-            con = db.get_db_connection()
-            cursor = con.cursor()
-            cursor.execute("SELECT name, price FROM goods;")
-            a = 0
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-            for name, price in cursor.fetchall():
-                a += 1
-                user_markup.row(name)
-            user_markup.row('Volver al menú principal')
-            if a == 0:
-                bot.send_message(
-                    chat_id,
-                    '¡No se ha creado ninguna posición todavía!',
-                    reply_markup=user_markup)
-            else:
-                bot.send_message(
-                    chat_id,
-                    '¿De qué posición desea cargar productos?',
-                    reply_markup=user_markup,
-                    parse_mode='MarkDown')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 10
+            show_product_menu(chat_id)
 
         elif '💰 Pagos' == message_text:
             with shelve.open(files.payments_bd) as bd:
@@ -838,52 +832,143 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, 'Error: ingrese un número válido')
 
         elif sost_num == 10:
-            file_path = 'data/goods/' + message_text + '.txt'
-            if not os.path.exists(file_path):
-                open(file_path, 'w', encoding='utf-8').close()
+            product = message_text
+            if product not in dop.get_goods():
+                bot.send_message(chat_id, '❌ Producto no válido')
+                return
 
-            with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+            with open('data/Temp/' + str(chat_id) + '_product.txt', 'w', encoding='utf-8') as f:
+                f.write(product)
 
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(
-                text='Cancelar y volver al menú principal de administración',
-                callback_data='Volver al menú principal de administración'))
-            bot.send_message(
-                chat_id,
-                f'Contenido actual del archivo {message_text}:\n\n{content}\n\nEnvíe el nuevo contenido (cada línea será un producto):')
-
-            with open(
-                'data/Temp/' + str(chat_id) + 'upload_file.txt',
-                'w',
-                encoding='utf-8') as f:
-                f.write(message_text)
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+            user_markup.row('Añadir unidades')
+            user_markup.row('Editar unidades', 'Eliminar unidades')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, f'Producto seleccionado: {product}\nElija una acción:', reply_markup=user_markup)
 
             with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 11
+                bd[str(chat_id)] = 179
 
-        elif sost_num == 11:
+        elif sost_num == 179:
             try:
-                with open('data/Temp/' + str(chat_id) + 'upload_file.txt', encoding='utf-8') as f:
-                    file_name = f.read()
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            file_path = 'data/goods/' + file_name + '.txt'
+
+            action = message_text.strip().lower()
+            file_path = f'data/goods/{product}.txt'
+            if action == 'añadir unidades':
+                bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 180
+            elif action == 'editar unidades':
+                if not os.path.exists(file_path):
+                    bot.send_message(chat_id, 'El producto aún no tiene unidades.')
+                    show_product_menu(chat_id)
+                    with shelve.open(files.sost_bd) as bd:
+                        del bd[str(chat_id)]
+                    return
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    lines = [ln.rstrip('\n') for ln in f.readlines()]
+                text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
+                bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 181
+            elif action == 'eliminar unidades':
+                if not os.path.exists(file_path):
+                    bot.send_message(chat_id, 'El producto aún no tiene unidades.')
+                    show_product_menu(chat_id)
+                    with shelve.open(files.sost_bd) as bd:
+                        del bd[str(chat_id)]
+                    return
+                with open(file_path, 'r', encoding='utf-8') as f:
+                    lines = [ln.rstrip('\n') for ln in f.readlines()]
+                text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
+                bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 182
+            else:
+                show_product_menu(chat_id)
+
+        elif sost_num == 180:
             try:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(message_text)
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
-                user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
-                user_markup.row('📝 Descripción adicional')
-                user_markup.row('🎬 Multimedia productos')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡Productos cargados con éxito!', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd: 
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            file_path = f'data/goods/{product}.txt'
+            with open(file_path, 'a', encoding='utf-8') as f:
+                f.write(message_text + '\n')
+            bot.send_message(chat_id, '¡Unidades añadidas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 181:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            file_path = f'data/goods/{product}.txt'
+            if not os.path.exists(file_path):
+                bot.send_message(chat_id, '❌ Archivo de producto no encontrado')
+                show_product_menu(chat_id)
+                with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
-            except Exception as e:
-                bot.send_message(chat_id, f'Error cargando productos: {e}')
+                return
+            parts = message_text.split(' ', 1)
+            if len(parts) != 2 or not parts[0].isdigit():
+                bot.send_message(chat_id, 'Formato incorrecto. Use "número nuevo_texto"')
+                return
+            idx = int(parts[0]) - 1
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = [ln.rstrip('\n') for ln in f.readlines()]
+            if idx < 0 or idx >= len(lines):
+                bot.send_message(chat_id, 'Número fuera de rango')
+                return
+            lines[idx] = parts[1]
+            with open(file_path, 'w', encoding='utf-8') as f:
+                for line in lines:
+                    f.write(line + '\n')
+            bot.send_message(chat_id, '¡Unidades editadas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 182:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            file_path = f'data/goods/{product}.txt'
+            if not os.path.exists(file_path):
+                bot.send_message(chat_id, '❌ Archivo de producto no encontrado')
+                show_product_menu(chat_id)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                return
+            try:
+                indices = [int(i)-1 for i in message_text.replace(',', ' ').split()]
+            except ValueError:
+                bot.send_message(chat_id, 'Formato incorrecto. Use números separados por espacios')
+                return
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = [ln.rstrip('\n') for ln in f.readlines()]
+            new_lines = [line for i, line in enumerate(lines) if i not in indices]
+            with open(file_path, 'w', encoding='utf-8') as f:
+                for line in new_lines:
+                    f.write(line + '\n')
+            bot.send_message(chat_id, '¡Unidades eliminadas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
 
         elif sost_num == 18:
             # PayPal Client ID
