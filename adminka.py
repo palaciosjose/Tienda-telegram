@@ -1781,6 +1781,8 @@ def ad_inline(callback_data, chat_id, message_id):
             ),
         )
         con.commit()
+        goods_file = f"data/goods/{name}.txt"
+        open(goods_file, "a", encoding="utf-8").close()
         # Mostrar información del producto con la multimedia que se haya adjuntado
         media_info = dop.get_product_media(name)
         caption = dop.format_product_with_media(name)
