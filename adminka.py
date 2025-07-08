@@ -265,18 +265,44 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif '📋 Ver productos con multimedia' == message_text:
             products_with_media = dop.get_products_with_media()
+            menu_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            menu_markup.row('🎬 Multimedia productos')
+            menu_markup.row('Volver al menú principal')
+
             if not products_with_media:
-                response = 'ℹ️ No hay productos con multimedia asignada'
+                bot.send_message(
+                    chat_id,
+                    'ℹ️ No hay productos con multimedia asignada',
+                    reply_markup=menu_markup,
+                )
             else:
-                response = '📋 **Productos con Multimedia:**\n\n'
-                for product, media_type in products_with_media:
-                    media_emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵'}.get(media_type, '📎')
-                    response += f"{media_emoji} **{product}** - {media_type}\n"
-            
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('🎬 Multimedia productos')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, response, reply_markup=user_markup, parse_mode='Markdown')
+                for product_name, media_type in products_with_media:
+                    media_info = dop.get_product_media(product_name)
+                    caption = dop.format_product_with_media(product_name)
+                    if media_info:
+                        mtype = media_info['type']
+                        file_id = media_info['file_id']
+                        if mtype == 'photo':
+                            bot.send_photo(chat_id, file_id, caption=caption, parse_mode='Markdown')
+                        elif mtype == 'video':
+                            bot.send_video(chat_id, file_id, caption=caption, parse_mode='Markdown')
+                        elif mtype == 'document':
+                            bot.send_document(chat_id, file_id, caption=caption, parse_mode='Markdown')
+                        elif mtype == 'audio':
+                            bot.send_audio(chat_id, file_id, caption=caption, parse_mode='Markdown')
+                        elif mtype == 'animation':
+                            bot.send_animation(chat_id, file_id, caption=caption, parse_mode='Markdown')
+                        else:
+                            bot.send_message(chat_id, caption, parse_mode='Markdown')
+                    else:
+                        bot.send_message(chat_id, caption or product_name, parse_mode='Markdown')
+
+                bot.send_message(
+                    chat_id,
+                    '📋 Fin de la lista de productos con multimedia',
+                    reply_markup=menu_markup,
+                )
+
 
         elif '➕ Producto' == message_text:
             key = telebot.types.InlineKeyboardMarkup()
