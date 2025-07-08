@@ -101,10 +101,11 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row(start + ' bienvenida al usuario')
             user_markup.row(after_buy + ' mensaje después de pagar el producto')
             user_markup.row(help + ' respuesta al comando help', userfalse + ' mensaje si no hay nombre de usuario')
+            user_markup.row('Agregar/Cambiar mensaje de entrega manual')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione qué mensaje desea cambiar.\nDespués de seleccionar, recibirá una breve instrucción', reply_markup=user_markup)
 
-        elif ' bienvenida al usuario' in message_text or ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text:
+        elif ' bienvenida al usuario' in message_text or ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text or 'mensaje de entrega manual' in message_text:
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
             if ' bienvenida al usuario' in message_text: 
@@ -119,6 +120,9 @@ def in_adminka(chat_id, message_text, username, name_user):
             elif ' mensaje si no hay nombre de usuario' in message_text:
                 bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que se enviará si el usuario no tiene `username`! En el texto puede usar `uname`. Se reemplazará automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
                 message = 'userfalse'
+            elif 'mensaje de entrega manual' in message_text:
+                bot.send_message(chat_id, 'Ingrese el mensaje que recibirá el comprador para productos de entrega manual. Puede usar `username` y `name`.', parse_mode='MarkDown', reply_markup=key)
+                message = 'manual_delivery'
             with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding ='utf-8') as f: 
                 f.write(message)
             with shelve.open(files.sost_bd) as bd : 
@@ -602,12 +606,15 @@ def text_analytics(message_text, chat_id):
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            try:
-                with shelve.open(files.bot_message_bd) as bd:
-                    bd[message] = message_text
-                success = True
-            except:
-                success = False
+            if message == 'manual_delivery':
+                success = dop.save_message('manual_delivery', message_text)
+            else:
+                try:
+                    with shelve.open(files.bot_message_bd) as bd:
+                        bd[message] = message_text
+                    success = True
+                except:
+                    success = False
             if success:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
                 user_markup.row('💬 Respuestas')
@@ -632,14 +639,34 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 3
 
         elif sost_num == 3:
-            with open('data/Temp/' + str(chat_id) + 'good_description.txt', 'w', encoding='utf-8') as f: 
+            with open('data/Temp/' + str(chat_id) + 'good_description.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('En formato de texto', 'En formato de archivo')
+            user_markup.row('Sí', 'No')
             user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, 'Ahora seleccione el formato del producto', reply_markup=user_markup)
+            bot.send_message(chat_id, '¿Entrega manual?', reply_markup=user_markup)
             with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 4
+                bd[str(chat_id)] = 11
+
+        elif sost_num == 11:
+            manual_flag = '1' if message_text == 'Sí' else '0'
+            with open('data/Temp/' + str(chat_id) + 'good_manual.txt', 'w', encoding='utf-8') as f:
+                f.write(manual_flag)
+            if manual_flag == '1':
+                with open('data/Temp/' + str(chat_id) + 'good_format.txt', 'w', encoding='utf-8') as f2:
+                    f2.write('manual')
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+                bot.send_message(chat_id, 'Ahora ingrese la cantidad mínima para comprar', reply_markup=key)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 5
+            else:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row('En formato de texto', 'En formato de archivo')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'Ahora seleccione el formato del producto', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 4
 
         elif sost_num == 4:
             format_map = {
@@ -707,6 +734,8 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
                     format_type = f.read()
                 format_display = 'Texto' if format_type == 'text' else 'Archivo'
+                with open('data/Temp/' + str(chat_id) + 'good_manual.txt', encoding='utf-8') as f:
+                    manual_flag = f.read().strip()
                 with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f:
                     minimum = f.read()
                 with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
@@ -718,9 +747,11 @@ def text_analytics(message_text, chat_id):
             if duration_val > 0:
                 duration_display = f'\n*Duración:* {duration_val} días'
 
+            manual_text = 'Sí' if manual_flag == '1' else 'No'
             summary = (
                 f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}'
                 f'\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${price} USD{duration_display}'
+                f'\n*Entrega manual:* {manual_text}'
             )
 
             media_temp = 'data/Temp/' + str(chat_id) + 'new_media.txt'
@@ -1440,6 +1471,8 @@ def ad_inline(callback_data, chat_id, message_id):
                 description = f.read()
             with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
                 format_type = f.read()
+            with open('data/Temp/' + str(chat_id) + 'good_manual.txt', encoding='utf-8') as f:
+                manual_flag = f.read().strip()
             with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f:
                 minimum = f.read()
             with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
@@ -1469,10 +1502,12 @@ def ad_inline(callback_data, chat_id, message_id):
                     media_type = lines[1]
                     media_caption = lines[2] if len(lines) > 2 else None
 
+        if manual_flag == '1':
+            format_type = 'manual'
         cursor.execute(
             """
-            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption, duration_days)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption, duration_days, manual_delivery)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
@@ -1486,6 +1521,7 @@ def ad_inline(callback_data, chat_id, message_id):
                 media_type,
                 media_caption,
                 duration_days,
+                int(manual_flag),
             ),
         )
         con.commit()

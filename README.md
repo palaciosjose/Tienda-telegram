@@ -63,8 +63,13 @@ El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start
 ## Panel de administración
 
 Al entrar verás botones para gestionar las distintas funciones del bot. Entre
-ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **💰 Pagos**, 
+ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **💰 Pagos**,
 **📊 Stats**, **📣 Difusión**, **📢 Marketing**, **💸 Descuentos** y **⚙️ Otros**.
+
+En **💬 Respuestas** puedes definir distintos textos que el bot enviará. Se añadió la opción
+**Agregar/Cambiar mensaje de entrega manual**, utilizado cuando un producto requiere
+entrega manual. En ese mensaje puedes incluir las palabras `username` y `name` para
+personalizarlo.
 
 ### Carga y edición de unidades
 
@@ -76,6 +81,10 @@ aparecen tres opciones:
 - **Eliminar unidades** – borra las líneas seleccionadas.
 
 Después de cada acción se vuelve al menú de productos.
+
+Al crear una nueva posición se preguntará ahora **¿Entrega manual?**. Si respondes
+*Sí*, el bot omitirá el formato del producto y utilizará el mensaje configurado
+anteriormente para avisar al comprador.
 
 ### Difusión
 
