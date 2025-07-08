@@ -4,7 +4,6 @@ from datetime import datetime
 from .campaign_database import CampaignDB
 from .scheduler import CampaignScheduler
 from .telegram_multi import TelegramMultiBot
-from .whaticket_api import WHATicketAPI
 import os
 import files
 import db
@@ -95,7 +94,7 @@ class AdvertisingManager:
     def add_target_group(self, platform, group_id, group_name=None):
         """Registrar un nuevo grupo objetivo."""
         platform = platform.lower()
-        if platform not in ('telegram', 'whatsapp'):
+        if platform != 'telegram':
             return False, 'Plataforma inválida'
         if not re.match(r'^-?\d+$', str(group_id)):
             return False, 'ID de grupo inválido'
@@ -206,10 +205,6 @@ class AdvertisingManager:
 
         telegram_tokens = [t.strip() for t in os.getenv('TELEGRAM_TOKEN', '').split(',') if t.strip()]
         telegram_bot = TelegramMultiBot(telegram_tokens) if telegram_tokens else None
-        whatsapp_api = WHATicketAPI(
-            os.getenv('WHATICKET_URL', 'https://whaticket.local'),
-            os.getenv('WHATICKET_TOKEN', 'token'),
-        )
 
         for platform in platforms:
             cur.execute(
@@ -231,14 +226,6 @@ class AdvertisingManager:
                             'button2_url': campaign[7],
                         },
                     )
-                elif platform == 'whatsapp':
-                    msg = campaign[1]
-                    if campaign[4]:
-                        msg += f"\n\n{campaign[4]}: {campaign[5]}"
-                    if campaign[6]:
-                        msg += f"\n{campaign[6]}: {campaign[7]}"
-                    media = campaign[2] if campaign[3] == 'photo' else None
-                    success, resp = whatsapp_api.send_message(gid, msg, media)
                 else:
                     success, resp = False, 'Plataforma no soportada'
 

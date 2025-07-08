@@ -37,8 +37,7 @@ class StatisticsManager:
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute(
             """SELECT COUNT(*), SUM(CASE WHEN status = 'sent' THEN 1 ELSE 0 END),
-                      SUM(CASE WHEN platform = 'telegram' THEN 1 ELSE 0 END),
-                      SUM(CASE WHEN platform = 'whatsapp' THEN 1 ELSE 0 END)
+                      SUM(CASE WHEN platform = 'telegram' THEN 1 ELSE 0 END)
                FROM send_logs WHERE DATE(sent_date) = ?""",
             (today,)
         )
@@ -49,7 +48,7 @@ class StatisticsManager:
             f"📤 **Mensajes enviados:** {stats[0]}\n"
             f"✅ **Exitosos:** {stats[1]} ({success_rate:.1f}%)\n"
             f"❌ **Fallidos:** {stats[0] - stats[1]}\n\n"
-            f"📱 **Por plataforma:**\n- Telegram: {stats[2]}\n- WhatsApp: {stats[3]}"
+            f"📱 **Por plataforma:**\n- Telegram: {stats[2]}"
         )
         if not shared:
             conn.close()

@@ -14,12 +14,6 @@ class IntelligentRateLimiter:
                 'messages_per_minute': 1800,
                 'messages_per_hour': 100000,
                 'delay_between_groups': 1.0
-            },
-            'whatsapp': {
-                'messages_per_second': 1,
-                'messages_per_minute': 50,
-                'messages_per_hour': 2000,
-                'delay_between_groups': 1.5
             }
         }
         self.counters = defaultdict(lambda: defaultdict(int))

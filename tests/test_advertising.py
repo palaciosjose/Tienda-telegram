@@ -19,10 +19,6 @@ sys.modules.setdefault(
     "advertising_system.telegram_multi",
     types.SimpleNamespace(TelegramMultiBot=lambda *a, **k: None),
 )
-sys.modules.setdefault(
-    "advertising_system.whaticket_api",
-    types.SimpleNamespace(WHATicketAPI=lambda *a, **k: None),
-)
 
 from advertising_system.ad_manager import AdvertisingManager
 
@@ -114,7 +110,6 @@ def test_send_campaign_now(tmp_path, monkeypatch):
 
     camp_id = manager.create_campaign({"name": "Camp", "message_text": "Hi", "created_by": 1})
     manager.add_target_group("telegram", "111")
-    manager.add_target_group("whatsapp", "222")
 
     sent = []
 
@@ -126,22 +121,12 @@ def test_send_campaign_now(tmp_path, monkeypatch):
             sent.append(("tg", gid, msg))
             return True, "ok"
 
-    class DummyWA:
-        def __init__(self, *a, **k):
-            pass
-
-        def send_message(self, gid, msg, media_url=None):
-            sent.append(("wa", gid, msg))
-            return True, "ok"
 
     import advertising_system.ad_manager as mod
     monkeypatch.setattr(mod, "TelegramMultiBot", DummyTG)
-    monkeypatch.setattr(mod, "WHATicketAPI", DummyWA)
     monkeypatch.setenv("TELEGRAM_TOKEN", "x")
-    monkeypatch.setenv("WHATICKET_URL", "http://wa")
-    monkeypatch.setenv("WHATICKET_TOKEN", "t")
 
-    ok, msg = manager.send_campaign_now(camp_id, ["telegram", "whatsapp"])
+    ok, msg = manager.send_campaign_now(camp_id, ["telegram"])
     assert ok
 
     conn = sqlite3.connect(db_path)
@@ -150,7 +135,7 @@ def test_send_campaign_now(tmp_path, monkeypatch):
     rows = cur.fetchall()
     conn.close()
 
-    assert len(rows) == 2
-    assert sent == [("tg", "111", "Hi"), ("wa", "222", "Hi")]
+    assert len(rows) == 1
+    assert sent == [("tg", "111", "Hi")]
     assert all(r[1] == "sent" for r in rows)
 

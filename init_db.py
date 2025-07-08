@@ -97,7 +97,6 @@ def create_database():
             target_platforms TEXT,
             is_active INTEGER DEFAULT 1,
             next_send_telegram TEXT,
-            next_send_whatsapp TEXT,
             created_date TEXT,
             FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
         )
@@ -144,7 +143,6 @@ def create_database():
             date TEXT UNIQUE,
             total_sent INTEGER DEFAULT 0,
             telegram_sent INTEGER DEFAULT 0,
-            whatsapp_sent INTEGER DEFAULT 0,
             success_rate REAL DEFAULT 0,
             failed_count INTEGER DEFAULT 0,
             avg_response_time REAL DEFAULT 0

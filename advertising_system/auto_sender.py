@@ -7,7 +7,6 @@ import files
 import db
 from .scheduler import CampaignScheduler
 from .telegram_multi import TelegramMultiBot
-from .whaticket_api import WHATicketAPI
 from .rate_limiter import IntelligentRateLimiter
 from .statistics import StatisticsManager
 
@@ -17,7 +16,6 @@ class AutoSender:
         self.rate_limiter = IntelligentRateLimiter(config['db_path'])
         self.stats = StatisticsManager(config['db_path'])
         self.telegram = TelegramMultiBot(config['telegram_tokens'])
-        self.whatsapp = WHATicketAPI(config['whaticket_url'], config['whaticket_token'])
         self.running = False
         self.thread = None
         logging.basicConfig(filename='data/advertising.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -79,10 +77,8 @@ class AutoSender:
             for platform in platforms:
                 if platform == 'telegram':
                     self._send_telegram_campaign(campaign_id, schedule_id, send_data)
-                elif platform == 'whatsapp':
-                    self._send_whatsapp_campaign(campaign_id, schedule_id, send_data)
-                processed = True
-                time.sleep(2)
+                    processed = True
+                    time.sleep(2)
         return processed
 
     def _get_telegram_groups(self):
@@ -90,17 +86,6 @@ class AutoSender:
         cursor = conn.cursor()
         cursor.execute(
             "SELECT id, group_id, group_name FROM target_groups WHERE platform = 'telegram' AND status = 'active'"
-        )
-        rows = cursor.fetchall()
-        if not shared:
-            conn.close()
-        return [{'id': r[0], 'group_id': r[1], 'group_name': r[2]} for r in rows]
-
-    def _get_whatsapp_groups(self):
-        conn, shared = self._get_connection()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id, group_id, group_name FROM target_groups WHERE platform = 'whatsapp' AND status = 'active'"
         )
         rows = cursor.fetchall()
         if not shared:
@@ -153,30 +138,3 @@ class AutoSender:
             time.sleep(delay)
         self.scheduler.update_next_send(schedule_id, 'telegram')
 
-    def _send_whatsapp_campaign(self, campaign_id, schedule_id, campaign_data):
-        groups = self._get_whatsapp_groups()
-        for group in groups:
-            can_send, reason = self.rate_limiter.can_send('whatsapp')
-            if not can_send:
-                self.logger.warning(f"Rate limit WhatsApp: {reason}")
-                time.sleep(120)
-                continue
-            message = campaign_data[8]
-            if campaign_data[11]:
-                message += f"\n\n🔗 {campaign_data[11]}: {campaign_data[12]}"
-            if campaign_data[13]:
-                message += f"\n🔗 {campaign_data[13]}: {campaign_data[14]}"
-            success, result = self.whatsapp.send_message(
-                group['group_id'],
-                message,
-                campaign_data[9] if campaign_data[10] == 'photo' else None
-            )
-            self.rate_limiter.register_send('whatsapp', success)
-            self.stats.log_send(campaign_id, group['group_id'], 'whatsapp', success, str(result))
-            if success:
-                self.logger.info(f"WhatsApp enviado a {group['group_name']}")
-            else:
-                self.logger.error(f"Error WhatsApp {group['group_name']}: {result}")
-            delay = self.rate_limiter.get_optimal_delay('whatsapp')
-            time.sleep(delay)
-        self.scheduler.update_next_send(schedule_id, 'whatsapp')
