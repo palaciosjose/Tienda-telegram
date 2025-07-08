@@ -105,11 +105,19 @@ def in_adminka(chat_id, message_text, username, name_user):
             cursor = con.cursor()
             goodz = 'Productos creados:\n\n'
             a = 0
-            cursor.execute("SELECT name, description, format, minimum, price, stored FROM goods;") 
-            for name, description, format, minimum, price, stored in cursor.fetchall():
+            cursor.execute("SELECT name, description, format, minimum, price, stored, duration_days FROM goods;")
+            for name, description, format, minimum, price, stored, duration in cursor.fetchall():
                 a += 1
                 amount = dop.amount_of_goods(name)
-                goodz += '*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + str(minimum) + '\n*Precio por unidad:* $' + str(price) + ' USD' + '\n*Unidades restantes:* ' + str(amount) + '\n\n'
+                dur_line = f"\n*Duración:* {duration} días" if duration not in (None, 0) else ''
+                goodz += (
+                    '*Nombre:* ' + name + '\n*Descripción:* ' + description +
+                    '\n*Formato del producto:* ' + format +
+                    '\n*Cantidad mínima para comprar:* ' + str(minimum) +
+                    '\n*Precio por unidad:* $' + str(price) + ' USD' +
+                    dur_line +
+                    '\n*Unidades restantes:* ' + str(amount) + '\n\n'
+                )
             if a == 0: 
                 goodz = '¡No se han creado posiciones todavía!'
             bot.send_message(chat_id, goodz, reply_markup=user_markup, parse_mode='MarkDown')

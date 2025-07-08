@@ -436,7 +436,7 @@ def get_description(name_good):
             product_description += f"💰 *Precio:* ${price} USD\n\n"
         
         product_description += f"📦 *Stock disponible:* {good_amount} unidades\n"
-        if duration:
+        if duration not in (None, 0):
             product_description += f"⏳ *Duración:* {duration} días\n"
         product_description += f"🛒 *Mínimo de compra:* {get_minimum(name_good)} unidades"
         
@@ -959,8 +959,9 @@ def format_product_basic_info(good_name):
 📋 **Formato:** {format_display}
 📊 **Disponibles:** {amount}"""
 
-        if product_info.get('duration_days'):
-            info_text += f"\n⏳ **Duración:** {product_info['duration_days']} días"
+        duration = product_info.get('duration_days')
+        if duration not in (None, 0):
+            info_text += f"\n⏳ **Duración:** {duration} días"
         
         return info_text
     except Exception as e:
@@ -1103,7 +1104,7 @@ def format_product_with_media(product_name):
         info = f"🎯 **{name}**\n"
         info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"
-        if duration:
+        if duration not in (None, 0):
             info += f"⏳ **Duración:** {duration} días\n"
         
         if file_id:
