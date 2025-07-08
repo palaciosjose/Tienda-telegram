@@ -29,6 +29,45 @@ class AdvertisingManager:
         """Obtener todas las campañas"""
         return self.db.fetch_all_campaigns()
 
+    def get_campaign(self, campaign_id):
+        """Obtener los detalles completos de una campaña."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT id, name, message_text, media_file_id, media_type,
+                      button1_text, button1_url, button2_text, button2_url, status
+                   FROM campaigns WHERE id = ?""",
+            (campaign_id,),
+        )
+        row = cur.fetchone()
+        if not shared:
+            conn.close()
+        if not row:
+            return None
+        return {
+            'id': row[0],
+            'name': row[1],
+            'message_text': row[2],
+            'media_file_id': row[3],
+            'media_type': row[4],
+            'button1_text': row[5],
+            'button1_url': row[6],
+            'button2_text': row[7],
+            'button2_url': row[8],
+            'status': row[9],
+        }
+
+    def delete_campaign(self, campaign_id):
+        """Eliminar una campaña existente."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute('DELETE FROM campaigns WHERE id = ?', (campaign_id,))
+        conn.commit()
+        removed = cur.rowcount
+        if not shared:
+            conn.close()
+        return removed > 0
+
     def get_today_stats(self):
         """Obtener estadísticas rápidas del día"""
         conn, shared = self._get_connection()

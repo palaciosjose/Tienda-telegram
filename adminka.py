@@ -418,11 +418,41 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 160
 
         elif '📋 Ver campañas' == message_text:
-            response = list_campaigns_for_admin()
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('📢 Marketing')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, response, parse_mode='Markdown', reply_markup=user_markup)
+            campaigns = advertising.get_all_campaigns()
+            if not campaigns:
+                bot.send_message(chat_id, 'ℹ️ No hay campañas registradas.')
+            else:
+                for camp in campaigns:
+                    details = advertising.get_campaign(camp['id'])
+                    if not details:
+                        continue
+                    markup = telebot.types.InlineKeyboardMarkup()
+                    markup.add(
+                        telebot.types.InlineKeyboardButton(
+                            text='✏️ Editar',
+                            callback_data=f'edit_campaign:{camp["id"]}'
+                        ),
+                        telebot.types.InlineKeyboardButton(
+                            text='🗑️ Eliminar',
+                            callback_data=f'delete_campaign:{camp["id"]}'
+                        ),
+                    )
+                    text = f"📋 *{camp['id']} - {camp['name']} ({camp['status']})*\n\n{details['message_text']}"
+                    if details.get('media_type') == 'photo' and details.get('media_file_id'):
+                        bot.send_photo(
+                            chat_id,
+                            details['media_file_id'],
+                            caption=text,
+                            reply_markup=markup,
+                            parse_mode='Markdown'
+                        )
+                    else:
+                        bot.send_message(
+                            chat_id,
+                            text,
+                            reply_markup=markup,
+                            parse_mode='Markdown'
+                        )
 
         elif message_text.startswith('⏰ Programar envíos'):
             params = message_text.replace('⏰ Programar envíos', '').strip()
