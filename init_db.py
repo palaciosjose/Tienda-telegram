@@ -36,7 +36,8 @@ def create_database():
             media_file_id TEXT,
             media_type TEXT,
             media_caption TEXT,
-            duration_days INTEGER DEFAULT NULL
+            duration_days INTEGER DEFAULT NULL,
+            manual_delivery INTEGER DEFAULT 0
         )
     ''')
     print("✓ Tabla 'goods' creada")

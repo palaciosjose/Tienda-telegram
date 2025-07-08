@@ -35,6 +35,9 @@ def ensure_database_schema():
         if 'duration_days' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN duration_days INTEGER DEFAULT NULL")
             updated = True
+        if 'manual_delivery' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN manual_delivery INTEGER DEFAULT 0")
+            updated = True
 
         if updated:
             con.commit()
@@ -221,14 +224,16 @@ def get_stored(name_good):
         return None
 
 def amount_of_goods(name_good):
+    if is_manual_delivery(name_good):
+        return 10 ** 9
     stored = get_stored(name_good)
     if not stored:
         return 0
-    try: 
-        with open(stored, encoding='utf-8') as f: 
+    try:
+        with open(stored, encoding='utf-8') as f:
             lines = f.readlines()
             return len([line for line in lines if line.strip()])
-    except: 
+    except:
         return 0
 
 def get_minimum(name_good):
@@ -979,19 +984,41 @@ def set_duration_days(product_name, days):
         print(f"Error estableciendo duración: {e}")
         return False
 
+def is_manual_delivery(product_name):
+    """Indica si un producto requiere entrega manual."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("SELECT manual_delivery FROM goods WHERE name = ?", (product_name,))
+        result = cursor.fetchone()
+        return bool(result and result[0])
+    except Exception as e:
+        print(f"Error comprobando entrega manual: {e}")
+        return False
+
+def get_manual_delivery_message(username, name):
+    """Obtiene el mensaje de entrega manual personalizado."""
+    try:
+        with shelve.open(files.bot_message_bd) as bd:
+            text = bd.get('manual_delivery', 'Gracias por su compra, username')
+    except Exception:
+        text = 'Gracias por su compra, username'
+    text = text.replace('username', username).replace('name', name)
+    return text
+
 def get_product_full_info(good_name):
     """Obtiene toda la información del producto incluyendo descripción adicional"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
-            SELECT name, description, additional_description, format, minimum, price, duration_days
+            SELECT name, description, additional_description, format, minimum, price, duration_days, manual_delivery
             FROM goods WHERE name = ?
         """, (good_name,))
         result = cursor.fetchone()
 
         if result:
-            name, description, additional_desc, format, minimum, price, duration_days = result
+            name, description, additional_desc, format, minimum, price, duration_days, manual = result
             return {
                 'name': name,
                 'description': description,
@@ -999,7 +1026,8 @@ def get_product_full_info(good_name):
                 'format': format,
                 'minimum': minimum,
                 'price': price,
-                'duration_days': duration_days
+                'duration_days': duration_days,
+                'manual_delivery': bool(manual)
             }
         else:
             return None
@@ -1014,7 +1042,7 @@ def format_product_basic_info(good_name):
         if not product_info:
             return "Producto no encontrado"
         
-        amount = amount_of_goods(good_name)  # Usar función existente
+        amount = amount_of_goods(good_name)
         
         format_map = {'text': 'Texto', 'file': 'Archivo'}
         format_display = format_map.get(product_info['format'], product_info['format'])
@@ -1026,8 +1054,12 @@ def format_product_basic_info(good_name):
 
 💰 **Precio:** ${product_info['price']} USD
 📦 **Cantidad mínima:** {product_info['minimum']}
-📋 **Formato:** {format_display}
-📊 **Disponibles:** {amount}"""
+📋 **Formato:** {format_display}"""
+
+        if product_info.get('manual_delivery'):
+            info_text += "\n🚚 **Entrega manual**"
+        else:
+            info_text += f"\n📊 **Disponibles:** {amount}"
 
         duration = product_info.get('duration_days')
         if duration not in (None, 0):
@@ -1160,7 +1192,7 @@ def format_product_with_media(product_name):
         con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
-            SELECT name, description, price, media_file_id, media_type, media_caption, duration_days
+            SELECT name, description, price, media_file_id, media_type, media_caption, duration_days, manual_delivery
             FROM goods
             WHERE name = ?
         """, (product_name,))
@@ -1169,14 +1201,17 @@ def format_product_with_media(product_name):
         if not result:
             return None
             
-        name, description, price, file_id, media_type, caption, duration = result
+        name, description, price, file_id, media_type, caption, duration, manual = result
         
         info = f"🎯 **{name}**\n"
         info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"
         if duration not in (None, 0):
             info += f"⏳ **Duración:** {duration} días\n"
-        
+
+        if manual:
+            info += "🚚 **Entrega manual**\n"
+
         if file_id:
             media_types = {
                 'photo': '📸 Imagen',
