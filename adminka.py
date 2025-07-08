@@ -800,7 +800,8 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 22
 
 def text_analytics(message_text, chat_id):
-    if message_text in ('Volver al men\u00fa principal', '/adm'):
+    normalized = message_text.strip().lower()
+    if normalized in ('volver al men\u00fa principal', 'volver al menu principal', '/adm'):
         with shelve.open(files.sost_bd) as bd:
             if str(chat_id) in bd:
                 del bd[str(chat_id)]
