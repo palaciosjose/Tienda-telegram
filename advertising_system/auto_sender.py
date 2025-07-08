@@ -122,9 +122,9 @@ class AutoSender:
             success, result = self.telegram.send_message(
                 group['group_id'],
                 message_data['message'],
-                message_data['media_file_id'],
-                message_data['media_type'],
-                message_data['buttons']
+                media_file_id=message_data['media_file_id'],
+                media_type=message_data['media_type'],
+                buttons=message_data['buttons']
             )
             self.rate_limiter.register_send('telegram', success)
             self.stats.log_send(campaign_id, group['group_id'], 'telegram', success, str(result))

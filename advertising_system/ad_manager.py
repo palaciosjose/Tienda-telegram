@@ -217,9 +217,9 @@ class AdvertisingManager:
                     success, resp = telegram_bot.send_message(
                         gid,
                         campaign[1],
-                        campaign[2],
-                        campaign[3],
-                        {
+                        media_file_id=campaign[2],
+                        media_type=campaign[3],
+                        buttons={
                             'button1_text': campaign[4],
                             'button1_url': campaign[5],
                             'button2_text': campaign[6],

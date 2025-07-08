@@ -1335,11 +1335,19 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text)
 
-            bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
+            bot.send_message(chat_id, 'Si deseas adjuntar una foto, video o documento envíalo ahora o escribe "no" para omitir:')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 162
 
-        elif sost_num == 162:  # Crear campaña
+        elif sost_num == 162:  # Multimedia opcional
+            if message_text.lower() in ('no', 'sin archivo'):
+                bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 163
+            else:
+                bot.send_message(chat_id, '❌ Envía la foto, video o documento o escribe "no" para continuar sin archivo.')
+
+        elif sost_num == 163:  # Crear campaña
             button1_text = None
             button1_url = None
             if message_text.lower() not in ('no', 'sin botones'):
@@ -1353,6 +1361,15 @@ def text_analytics(message_text, chat_id):
                     name = f.read()
                 with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', encoding='utf-8') as f:
                     text = f.read()
+                media_file_id = None
+                media_type = None
+                media_path = f'data/Temp/{chat_id}_campaign_media.txt'
+                if os.path.exists(media_path):
+                    with open(media_path, 'r', encoding='utf-8') as mf:
+                        lines = mf.read().splitlines()
+                        if len(lines) >= 2:
+                            media_file_id = lines[0]
+                            media_type = lines[1]
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
@@ -1360,6 +1377,8 @@ def text_analytics(message_text, chat_id):
             data = {
                 'name': name,
                 'message_text': text,
+                'media_file_id': media_file_id,
+                'media_type': media_type,
                 'button1_text': button1_text,
                 'button1_url': button1_url,
                 'created_by': chat_id,
@@ -1371,6 +1390,11 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, '❌ ' + msg)
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
+            try:
+                if os.path.exists(media_path):
+                    os.remove(media_path)
+            except Exception:
+                pass
 
         elif sost_num == 170:  # Plataforma para nuevo grupo
             platform = message_text.lower()
@@ -1590,13 +1614,16 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200, 42):
+        if state not in (32, 200, 42, 162):
             return
 
         if state == 32:
             temp_path = 'data/Temp/' + str(chat_id) + 'media_product.txt'
         elif state == 42:
             temp_path = 'data/Temp/' + str(chat_id) + '.txt'
+        elif state == 162:
+            temp_path = None
+            media_path = f'data/Temp/{chat_id}_campaign_media.txt'
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
 
@@ -1664,6 +1691,14 @@ def handle_multimedia(message):
                 bot.send_message(chat_id, 'Archivo recibido. ¿Desea enviar el mensaje ahora?', reply_markup=key)
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
+                return
+            elif state == 162:
+                with open(media_path, 'w', encoding='utf-8') as f:
+                    f.write(file_id + '\n')
+                    f.write(media_type)
+                bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 163
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
