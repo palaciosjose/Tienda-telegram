@@ -37,13 +37,6 @@ def ensure_database_schema():
             con.commit()
     except Exception as e:
         print(f"Error asegurando esquema de base de datos: {e}")
-    finally:
-        try:
-            con.close()
-        except:
-            pass
-
-# Asegurar el esquema al importar el módulo
 ensure_database_schema()
 
 # -------------------------------------------------
@@ -178,7 +171,6 @@ def get_productcatalog():
         cursor = con.cursor()
         cursor.execute("SELECT COUNT(*) FROM goods;")
         product_count = cursor.fetchone()[0]
-        con.close()
         
         if product_count == 0:
             return None
@@ -209,7 +201,6 @@ def get_goods():
         goods = []
         for row in cursor.fetchall(): 
             goods.append(row[0])
-        con.close()
         return goods
     except:
         return []
@@ -220,7 +211,6 @@ def get_stored(name_good):
         cursor = con.cursor()
         cursor.execute("SELECT stored FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
-        con.close()
         if result:
             return result[0]
         return None
@@ -244,7 +234,6 @@ def get_minimum(name_good):
         cursor = con.cursor()
         cursor.execute("SELECT minimum FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
-        con.close()
         if result:
             return result[0]
         return 1
@@ -257,7 +246,6 @@ def order_sum(name_good, amount):
         cursor = con.cursor()
         cursor.execute("SELECT price FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
-        con.close()
         if result:
             return int(result[0]) * amount
         return 0
@@ -298,7 +286,6 @@ def get_goodformat(name_good):
         cursor = con.cursor()
         cursor.execute("SELECT format FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
-        con.close()
         if result:
             return result[0]
         return 'text'
@@ -313,7 +300,6 @@ def get_profit():
         price_amount = 0
         for row in cursor.fetchall(): 
             price_amount += int(row[0])
-        con.close()
         return price_amount
     except:
         return 0
@@ -324,7 +310,6 @@ def get_amountsbayers():
         cursor = con.cursor()
         cursor.execute("SELECT COUNT(*) FROM buyers;")
         result = cursor.fetchone()
-        con.close()
         return result[0] if result else 0
     except:
         return 0
@@ -380,7 +365,6 @@ def rasl(group, amount, text):
                 except: 
                     lose_send += 1
                     new_blockuser(chat_id)
-            con.close()
         except:
             pass
 
@@ -417,7 +401,6 @@ def get_description(name_good):
         cursor = con.cursor()
         cursor.execute("SELECT description, price FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
-        con.close()
         
         if not result:
             return "Producto no encontrado"
@@ -464,7 +447,6 @@ def get_paypaldata():
         cursor = con.cursor()
         cursor.execute("SELECT client_id, client_secret, sandbox FROM paypal_data;")
         result = cursor.fetchone()
-        con.close()
         if result:
             return result[0], result[1], bool(result[2])
         return None
@@ -477,7 +459,6 @@ def get_binancedata():
         cursor = con.cursor()
         cursor.execute("SELECT api_key, api_secret, merchant_id FROM binance_data;")
         result = cursor.fetchone()
-        con.close()
         if result:
             return result[0], result[1], result[2]
         return None
@@ -595,7 +576,6 @@ def new_buy(his_id, username, name_good, amount, price):
         cursor = con.cursor()
         cursor.execute("INSERT INTO purchases VALUES(?, ?, ?, ?, ?)", (his_id, username, name_good, amount, price))
         con.commit()
-        con.close()
     except:
         pass
 
@@ -614,7 +594,6 @@ def new_buyer(his_id, username, payed):
             cursor.execute("UPDATE buyers SET payed = ? WHERE id = ?;", (total_payed, his_id))
         
         con.commit()
-        con.close()
     except:
         pass
 def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None):
@@ -644,7 +623,6 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
             pass  # Si la tabla no existe, continuar
         
         con.commit()
-        con.close()
         return True
     except Exception as e:
         print(f"Error en new_buy_improved: {e}")
@@ -675,7 +653,6 @@ def get_daily_sales():
         """)
         
         products = cursor.fetchall()
-        con.close()
         
         response = "📊 **Estadísticas de Ventas:**\n\n"
         response += f"🛍️ **Transacciones recientes:** {count or 0}\n"
@@ -716,7 +693,6 @@ def search_user_purchases(search_term):
             """, (f"%{clean_username}%",))
         
         purchases = cursor.fetchall()
-        con.close()
         
         if not purchases:
             return "❌ No se encontraron compras para este usuario"
@@ -764,7 +740,6 @@ def get_discount_config():
         cursor = con.cursor()
         cursor.execute("SELECT discount_enabled, discount_text, discount_multiplier, show_fake_price FROM discount_config WHERE id = 1;")
         result = cursor.fetchone()
-        con.close()
         
         if result:
             return {
@@ -832,7 +807,6 @@ def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_p
             cursor.execute("UPDATE discount_config SET show_fake_price = ? WHERE id = 1;", (int(show_fake_price),))
         
         con.commit()
-        con.close()
         return True
         
     except Exception as e:
@@ -863,7 +837,6 @@ def setup_discount_system():
             """)
         
         con.commit()
-        con.close()
         print("✅ Sistema de descuentos configurado")
         return True
         
@@ -883,7 +856,6 @@ def get_additional_description(good_name):
         cursor = con.cursor()
         cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (good_name,))
         result = cursor.fetchone()
-        con.close()
         
         if result and result[0]:
             return result[0]
@@ -901,7 +873,6 @@ def set_additional_description(good_name, additional_description):
         cursor.execute("UPDATE goods SET additional_description = ? WHERE name = ?", 
                       (additional_description, good_name))
         con.commit()
-        con.close()
         return True
     except Exception as e:
         print(f"Error estableciendo descripción adicional: {e}")
@@ -917,7 +888,6 @@ def get_product_full_info(good_name):
             FROM goods WHERE name = ?
         """, (good_name,))
         result = cursor.fetchone()
-        con.close()
         
         if result:
             name, description, additional_desc, format, minimum, price = result
@@ -997,7 +967,6 @@ def save_product_media(product_name, file_id, media_type, caption=None):
             WHERE name = ?
         """, (file_id, media_type, caption, product_name))
         con.commit()
-        con.close()
         return True
     except Exception as e:
         print(f"Error guardando multimedia: {e}")
@@ -1014,7 +983,6 @@ def get_product_media(product_name):
             WHERE name = ?
         """, (product_name,))
         result = cursor.fetchone()
-        con.close()
         
         if result and result[0]:
             return {
@@ -1043,7 +1011,6 @@ def remove_product_media(product_name):
             WHERE name = ?
         """, (product_name,))
         con.commit()
-        con.close()
         return True
     except Exception as e:
         print(f"Error eliminando multimedia: {e}")
@@ -1060,7 +1027,6 @@ def get_products_with_media():
             WHERE media_file_id IS NOT NULL
         """)
         results = cursor.fetchall()
-        con.close()
         return results
     except Exception as e:
         print(f"Error obteniendo productos con multimedia: {e}")
@@ -1077,7 +1043,6 @@ def get_products_without_media():
             WHERE media_file_id IS NULL
         """)
         results = cursor.fetchall()
-        con.close()
         return [row[0] for row in results]
     except Exception as e:
         print(f"Error obteniendo productos sin multimedia: {e}")
@@ -1094,7 +1059,6 @@ def format_product_with_media(product_name):
             WHERE name = ?
         """, (product_name,))
         result = cursor.fetchone()
-        con.close()
         
         if not result:
             return None
