@@ -373,6 +373,76 @@ def rasl(group, amount, text):
 
     return f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
 
+
+def _send_media_message(chat_id, text, media):
+    """Enviar un mensaje multimedia según el tipo especificado."""
+    mtype = media.get('type')
+    fid = media.get('file_id')
+    caption = media.get('caption') or text
+
+    if mtype == 'photo':
+        bot.send_photo(chat_id, fid, caption=caption)
+    elif mtype == 'video':
+        bot.send_video(chat_id, fid, caption=caption)
+    elif mtype == 'document':
+        bot.send_document(chat_id, fid, caption=caption)
+    elif mtype == 'audio':
+        bot.send_audio(chat_id, fid, caption=caption)
+    elif mtype == 'animation':
+        bot.send_animation(chat_id, fid, caption=caption)
+    else:
+        bot.send_message(chat_id, text)
+
+
+def broadcast_message(group, amount, text, media=None):
+    """Enviar un anuncio masivo a usuarios o compradores."""
+    good_send = 0
+    lose_send = 0
+    i = 0
+
+    if group == 'all':
+        try:
+            with open(files.users_list, encoding='utf-8') as f:
+                users = f.readlines()
+
+            while i < int(amount) and i < len(users):
+                chat_id = int(users[i].strip())
+                try:
+                    if media:
+                        _send_media_message(chat_id, text, media)
+                    else:
+                        bot.send_message(chat_id, text)
+                    good_send += 1
+                except Exception:
+                    lose_send += 1
+                    new_blockuser(chat_id)
+                i += 1
+        except Exception:
+            pass
+
+    elif group == 'buyers':
+        try:
+            con = db.get_db_connection()
+            cursor = con.cursor()
+            cursor.execute("SELECT id FROM buyers LIMIT ?;", (int(amount),))
+            buyers = cursor.fetchall()
+
+            for buyer in buyers:
+                chat_id = int(buyer[0])
+                try:
+                    if media:
+                        _send_media_message(chat_id, text, media)
+                    else:
+                        bot.send_message(chat_id, text)
+                    good_send += 1
+                except Exception:
+                    lose_send += 1
+                    new_blockuser(chat_id)
+        except Exception:
+            pass
+
+    return f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
+
 def del_id(file, chat_id):
     try:
         text = ''
