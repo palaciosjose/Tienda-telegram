@@ -1,5 +1,5 @@
 import telebot, shelve, sqlite3, os
-import config, dop, payments, adminka, files, subscriptions
+import config, dop, payments, adminka, files
 import db
 from bot_instance import bot
 import atexit
@@ -92,7 +92,6 @@ def message_send(message):
             elif dop.check_message('start') is True:
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
-                key.add(telebot.types.InlineKeyboardButton(text='🌀 Suscripciones', callback_data='Ir al catálogo de suscripciones'))
                 with shelve.open(files.bot_message_bd) as bd: 
                     start_message = bd['start']
                 start_message = start_message.replace('username', message.chat.username)
@@ -186,7 +185,7 @@ def inline(callback):
     try:
         # Solo obtener goods cuando sea necesario - optimización aplicada
         the_goods = None
-        if callback.data == 'Ir al catálogo de productos' or (callback.data not in ['APROBAR_PAGO_', 'RECHAZAR_PAGO_', 'Enviar comprobante Binance', 'Volver al inicio', 'Comprar'] and not callback.data.startswith(('SUBINFO_', 'SUBP_', 'BUY_SUB_', 'MAS_INFO_'))):
+        if callback.data == 'Ir al catálogo de productos' or (callback.data not in ['APROBAR_PAGO_', 'RECHAZAR_PAGO_', 'Enviar comprobante Binance', 'Volver al inicio', 'Comprar'] and not callback.data.startswith('MAS_INFO_')):
             the_goods = dop.get_goods()
         
         # Manejar callbacks de aprobación/rechazo de pagos
@@ -231,19 +230,6 @@ def inline(callback):
                 if callback.message.content_type != 'text':
                     bot.delete_message(callback.message.chat.id, callback.message.message_id)
                 bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
-
-        elif callback.data == 'Ir al catálogo de suscripciones':
-            plans = subscriptions.get_all_subscription_products()
-            key = telebot.types.InlineKeyboardMarkup()
-            for plan in plans:
-                key.add(telebot.types.InlineKeyboardButton(text=f'🌀 {plan[1]}', callback_data=f'SUBP_{plan[0]}'))
-            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-
-            if not plans:
-                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='No hay planes disponibles')
-            else:
-                catalog_text = '🌀 *PLANES DISPONIBLES*\n\nSeleccione un plan para ver detalles.'
-                dop.safe_edit_message(bot, callback.message, catalog_text, reply_markup=key, parse_mode='Markdown')
 
         # Mostrar información del producto
         elif the_goods and callback.data in the_goods:
@@ -331,70 +317,6 @@ def inline(callback):
             dop.safe_edit_message(bot, callback.message, enhanced_additional, reply_markup=key, parse_mode='Markdown')
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=False, text='ℹ️ Información adicional mostrada')
 
-        elif callback.data.startswith('SUBINFO_'):
-            sub_id = int(callback.data.split('_')[1])
-            plan = subscriptions.get_subscription_product(sub_id)
-            if not plan:
-                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no encontrado')
-            else:
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al plan', callback_data=f'SUBP_{sub_id}'))
-                key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-                info = subscriptions.format_plan_additional_info(sub_id)
-                enhanced = f"📋 **INFORMACIÓN ADICIONAL**\n{'-'*30}\n\n{info}"
-                dop.safe_edit_message(bot, callback.message, enhanced, reply_markup=key, parse_mode='Markdown')
-
-        elif callback.data.startswith('SUBP_'):
-            sub_id = int(callback.data.split('_')[1])
-            plan = subscriptions.get_subscription_product(sub_id)
-            if not plan:
-                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no encontrado')
-            else:
-                key = telebot.types.InlineKeyboardMarkup()
-                if subscriptions.has_additional_description(plan[1]):
-                    key.add(telebot.types.InlineKeyboardButton(text="ℹ️ Más información", callback_data=f"SUBINFO_{sub_id}"))
-                key.add(telebot.types.InlineKeyboardButton(text="💳 Suscribirme", callback_data=f"BUY_SUB_{sub_id}"))
-                key.add(telebot.types.InlineKeyboardButton(text="🔙 Suscripciones", callback_data="Ir al catálogo de suscripciones"))
-                key.add(telebot.types.InlineKeyboardButton(text="🏠 Inicio", callback_data="Volver al inicio"))
-                media = subscriptions.get_plan_media(plan[1])
-                formatted = subscriptions.format_plan_with_media(sub_id)
-                if media and media["type"] in ("photo", "video"):
-                    try:
-                        input_media = telebot.types.InputMediaPhoto if media["type"] == "photo" else telebot.types.InputMediaVideo
-                        bot.edit_message_media(chat_id=callback.message.chat.id, message_id=callback.message.message_id, media=input_media(media=media["file_id"], caption=formatted, parse_mode="Markdown"), reply_markup=key)
-                    except Exception:
-                        dop.safe_edit_message(bot, callback.message, formatted, reply_markup=key, parse_mode="Markdown")
-                elif media and media["type"] in ("document", "audio", "animation"):
-                    bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                    if media["type"] == "document":
-                        bot.send_document(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
-                    elif media["type"] == "audio":
-                        bot.send_audio(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
-                    else:
-                        bot.send_animation(callback.message.chat.id, media["file_id"], caption=formatted, reply_markup=key, parse_mode="Markdown")
-                else:
-                    dop.safe_edit_message(bot, callback.message, formatted, reply_markup=key, parse_mode="Markdown")
-
-        elif callback.data.startswith('BUY_SUB_'):
-            sub_id = int(callback.data.split('_')[2])
-            plan = subscriptions.get_subscription_product(sub_id)
-            if not plan:
-                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no disponible')
-            else:
-                _, name, desc, price, currency, duration, unit, *_ = plan
-                key = telebot.types.InlineKeyboardMarkup()
-                if dop.check_vklpayments('paypal') == '✅':
-                    key.add(telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal'))
-                if dop.check_vklpayments('binance') == '✅':
-                    key.add(telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance'))
-                key.add(telebot.types.InlineKeyboardButton(text='🔙 Plan', callback_data=f'SUBP_{sub_id}'))
-                key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-                dop.safe_edit_message(bot, callback.message, f'🌀 *{name}*\nPrecio: {price} {currency}\nDuración: {duration} {unit}\n\nSelecciona método de pago:', reply_markup=key, parse_mode='Markdown')
-                with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', 'w', encoding='utf-8') as f:
-                    f.write(f'SUB:{sub_id}')
-                with open('data/Temp/' + str(callback.message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
-                    f.write('1\n')
-                    f.write(str(price) + '\n')
 
         elif callback.data == 'Volver al inicio':
             if callback.message.chat.username:
@@ -404,7 +326,6 @@ def inline(callback):
                             del bd[str(callback.message.chat.id)]
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
-                key.add(telebot.types.InlineKeyboardButton(text='🌀 Suscripciones', callback_data='Ir al catálogo de suscripciones'))
                 if dop.check_message('start'):
                     with shelve.open(files.bot_message_bd) as bd:
                         start_message = bd['start']
@@ -417,34 +338,18 @@ def inline(callback):
         elif callback.data == 'Comprar':
             with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
                 name_good = f.read()
-            if not name_good.startswith('SUB:') and dop.amount_of_goods(name_good) == 0:
+            if dop.amount_of_goods(name_good) == 0:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Producto agotado - No disponible para compra')
             elif dop.payments_checkvkl() == None:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='💳 Los pagos están temporalmente desactivados')
             else:
                 key = telebot.types.InlineKeyboardMarkup()
-                back_cb = name_good if not name_good.startswith('SUB:') else f'SUBP_{name_good.split(":")[1]}'
-                key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=back_cb))
+                key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=name_good))
                 key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-                
-                if name_good.startswith('SUB:'):
-                    sub_id = int(name_good.split(':')[1])
-                    plan = subscriptions.get_subscription_product(sub_id)
-                    if plan:
-                        _, name, desc, price, currency, duration, unit, *_ = plan
-                        purchase_text = f"🌀 *{name}*\nPrecio: {price} {currency}\nDuración: {duration} {unit}"
-                        dop.safe_edit_message(bot, callback.message, purchase_text, reply_markup=key, parse_mode='Markdown')
-                        with open('data/Temp/' + str(callback.message.chat.id) + '.txt', 'w', encoding='utf-8') as f:
-                            f.write('1\n')
-                            f.write(str(price) + '\n')
-                    else:
-                        bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='Plan no disponible')
-                        return
-                else:
-                    purchase_text = f"""🛒 **REALIZAR COMPRA**\n{'-'*25}\n\n📦 **Producto:** {name_good}\n\n🔢 **Ingresa la cantidad** que deseas comprar:\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades\n\n💡 **Tip:** Envía solo el número (ej: 5)"""
-                    dop.safe_edit_message(bot, callback.message, purchase_text, reply_markup=key, parse_mode='Markdown')
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(callback.message.chat.id)] = 22
+                purchase_text = f"""🛒 **REALIZAR COMPRA**\n{'-'*25}\n\n📦 **Producto:** {name_good}\n\n🔢 **Ingresa la cantidad** que deseas comprar:\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good))} unidades\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good))} unidades\n\n💡 **Tip:** Envía solo el número (ej: 5)"""
+                dop.safe_edit_message(bot, callback.message, purchase_text, reply_markup=key, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(callback.message.chat.id)] = 22
 
         # Callbacks de pagos
         elif callback.data == 'PayPal' or callback.data == 'Binance':

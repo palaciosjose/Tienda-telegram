@@ -1,5 +1,5 @@
 import telebot, sqlite3, shelve, os
-import config, dop, files, subscriptions
+import config, dop, files
 from bot_instance import bot
 
 def in_adminka(chat_id, message_text, username, name_user):
@@ -14,35 +14,11 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('💬 Respuestas')
             user_markup.row('📦 Surtido', '➕ Producto')
-            user_markup.row('💼 Suscripciones')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
             user_markup.row('⚙️ Otros')
             bot.send_message(chat_id, '¡Panel de administración!\nPara salir: /start', reply_markup=user_markup)
-        
-        elif message_text == '💼 Suscripciones':
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Crear plan de suscripción')
-            user_markup.row('Lista de planes')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, 'Gestión de suscripciones:', reply_markup=user_markup)
-        
-        elif message_text == 'Lista de planes':
-            try:
-                plans = subscriptions.get_all_subscription_products()
-                if plans:
-                    text = '📋 *Planes disponibles:*\n\n'
-                    for plan in plans:
-                        if len(plan) >= 7:
-                            pid, name, desc, price, currency, duration, unit = plan[:7]
-                            text += f'- {pid}. {name} - ${price} {currency}/{duration}{unit}\n'
-                        else:
-                            text += f'- Plan incompleto: {plan}\n'
-                else:
-                    text = 'No hay planes de suscripción.'
-                bot.send_message(chat_id, text, parse_mode='Markdown')
-            except Exception as e:
-                bot.send_message(chat_id, f'Error mostrando planes: {e}')
+
         
         elif message_text == '📊 Stats':
             try:
@@ -92,7 +68,6 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('💬 Respuestas')
         user_markup.row('📦 Surtido', '➕ Producto')
-        user_markup.row('💼 Suscripciones')
         user_markup.row('💰 Pagos')
         user_markup.row('⚙️ Otros')
         
@@ -110,13 +85,10 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 48):
+        if state != 32:
             return
 
-        if state == 32:
-            temp_path = f"data/Temp/{chat_id}media_product.txt"
-        else:
-            temp_path = f"data/Temp/{chat_id}media_plan.txt"
+        temp_path = f"data/Temp/{chat_id}media_product.txt"
 
         try:
             with open(temp_path, "r", encoding="utf-8") as f:
@@ -150,16 +122,10 @@ def handle_multimedia(message):
             media_type = "animation"
 
         if file_id and media_type:
-            if state == 32:
-                saved = dop.save_product_media(product_name, file_id, media_type, caption)
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row("🎬 Multimedia productos")
-                user_markup.row("Volver al menú principal")
-            else:
-                saved = subscriptions.save_plan_media(product_name, file_id, media_type, caption)
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row("🎬 Multimedia suscripciones")
-                user_markup.row("Volver al menú principal")
+            saved = dop.save_product_media(product_name, file_id, media_type, caption)
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row("🎬 Multimedia productos")
+            user_markup.row("Volver al menú principal")
 
             media_names = {
                 "photo": "📸 Imagen",
@@ -170,10 +136,9 @@ def handle_multimedia(message):
             }
 
             if saved:
-                target = "producto" if state == 32 else "plan"
                 bot.send_message(
                     chat_id,
-                    f"✅ {media_names.get(media_type, 'Archivo')} agregado al {target}: {product_name}",
+                    f"✅ {media_names.get(media_type, 'Archivo')} agregado al producto: {product_name}",
                     reply_markup=user_markup,
                 )
                 with shelve.open(files.sost_bd) as bd:

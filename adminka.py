@@ -1,5 +1,5 @@
 import telebot, sqlite3, shelve, os
-import config, dop, files, subscriptions
+import config, dop, files
 import db
 from advertising_system import AdvertisingManager
 from bot_instance import bot
@@ -42,7 +42,6 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('💬 Respuestas')
             user_markup.row('📦 Surtido', '➕ Producto')
-            user_markup.row('💼 Suscripciones')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
             user_markup.row('📢 Marketing')
@@ -522,236 +521,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                 except ValueError:
                     bot.send_message(chat_id, '❌ ID de campaña inválido')
 
-        elif '💼 Suscripciones' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Crear plan de suscripción', 'Eliminar plan')
-            user_markup.row('Cambiar descripción de plan', 'Cambiar precio de plan')  
-            user_markup.row('📝 Descripción adicional plan')
-            user_markup.row('🎬 Multimedia suscripciones', 'Cargar contenido a plan')
-            user_markup.row('Lista de planes')
-            user_markup.row('Volver al menú principal')
-            
-            # Mostrar resumen de planes
-            plans = subscriptions.get_all_subscription_products()
-            if plans:
-                resumen = 'Planes de suscripción disponibles:\n\n'
-                for plan in plans:
-                    # Desempaquetar de forma segura
-                    pid = plan[0] if len(plan) > 0 else 0
-                    name = plan[1] if len(plan) > 1 else 'Sin nombre'
-                    desc = plan[2] if len(plan) > 2 else 'Sin descripción'
-                    price = plan[3] if len(plan) > 3 else 0
-                    currency = plan[4] if len(plan) > 4 else 'USD'
-                    duration = plan[5] if len(plan) > 5 else 30
-                    unit = plan[6] if len(plan) > 6 else 'days'  # Solo primeros 7 campos
-                    try:
-                        contenido = subscriptions.count_plan_content_lines(name)
-                        formato = subscriptions.get_plan_format(name)
-                        resumen += f'*{name}*\n'
-                        resumen += f'Precio: ${price} {currency} / {duration} {unit}\n'
-                        resumen += f'Formato: {formato} | Contenido: {contenido} items\n\n'
-                    except:
-                        resumen += f'*{name}*\n'
-                        resumen += f'Precio: ${price} {currency} / {duration} {unit}\n\n'
-            else:
-                resumen = '¡No se han creado planes de suscripción todavía!'
-            
-            bot.send_message(chat_id, resumen, reply_markup=user_markup, parse_mode='Markdown')
-
-        elif 'Eliminar plan' == message_text:
-            plans = subscriptions.get_all_subscription_products()
-            if not plans:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('💼 Suscripciones')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡No hay planes para eliminar!', reply_markup=user_markup)
-            else:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name in [(p[0], p[1]) for p in plans]:
-                    user_markup.row(f"{pid}. {name}")
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¿Qué plan desea eliminar?', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 60
-
-        elif 'Cambiar descripción de plan' == message_text:
-            plans = subscriptions.get_all_subscription_products()
-            if not plans:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('💼 Suscripciones')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡No hay planes disponibles!', reply_markup=user_markup)
-            else:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name in [(p[0], p[1]) for p in plans]:
-                    user_markup.row(f"{pid}. {name}")
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¿Para qué plan desea cambiar la descripción?', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 61
-
-        elif 'Cambiar precio de plan' == message_text:
-            plans = subscriptions.get_all_subscription_products()
-            if not plans:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('💼 Suscripciones')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡No hay planes disponibles!', reply_markup=user_markup)
-            else:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name, desc, price, currency in [(p[0], p[1], p[2], p[3], p[4]) for p in plans]:
-                    user_markup.row(f"{pid}. {name} (${price} {currency})")
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¿Para qué plan desea cambiar el precio?', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 63
-
-        elif 'Cargar contenido a plan' == message_text:
-            plans = subscriptions.get_all_subscription_products()
-            if not plans:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('💼 Suscripciones')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡No hay planes disponibles!', reply_markup=user_markup)
-            else:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for pid, name in [(p[0], p[1]) for p in plans]:
-                    try:
-                        contenido_actual = subscriptions.count_plan_content_lines(name)
-                        user_markup.row(f"{name} ({contenido_actual} items)")
-                    except:
-                        user_markup.row(f"{name} (0 items)")
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¿A qué plan desea cargar contenido?', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 65
-
-        elif '💸 Descuentos' == message_text:
-            show_discount_menu(chat_id)
-
-        elif 'Activar descuentos' == message_text or 'Desactivar descuentos' == message_text:
-            current = dop.get_discount_config()['enabled']
-            dop.update_discount_config(enabled=not current)
-            bot.send_message(chat_id, '✅ Estado de descuentos actualizado')
-            show_discount_menu(chat_id)
-
-        elif 'Mostrar precios tachados' == message_text or 'Ocultar precios tachados' == message_text:
-            current = dop.get_discount_config()['show_fake_price']
-            dop.update_discount_config(show_fake_price=not current)
-            bot.send_message(chat_id, '✅ Configuración de precios actualizada')
-            show_discount_menu(chat_id)
-
-        elif 'Cambiar texto' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Envíe el nuevo texto para los descuentos:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 33
-
-        elif 'Cambiar multiplicador' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Envíe el nuevo multiplicador (ej. 1.5):', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 34
-
-        elif 'Crear plan de suscripción' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Ingrese el nombre del plan:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 40
-
-        elif 'Lista de planes' == message_text:
-            plans = subscriptions.get_all_subscription_products()
-            if plans:
-                text = '📋 *Planes disponibles:*\n\n'
-                for plan in plans:
-                    # Desempaquetar solo los campos que necesitamos de forma segura
-                    pid = plan[0]
-                    name = plan[1] 
-                    desc = plan[2]
-                    price = plan[3]
-                    currency = plan[4] if len(plan) > 4 else 'USD'
-                    duration = plan[5] if len(plan) > 5 else 30
-                    unit = plan[6] if len(plan) > 6 else 'days'
-                    text += f'- {pid}. {name} - {price} {currency}/{duration}{unit}\n'
-            else:
-                text = 'No hay planes de suscripción.'
-            bot.send_message(chat_id, text, parse_mode='Markdown')
-
-        elif '📝 Descripción adicional plan' == message_text:
-            plans = subscriptions.get_all_subscription_products()
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            for pid, name in [(p[0], p[1]) for p in plans]:
-                user_markup.row(name)
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, '¿Para qué plan desea editar la descripción adicional?', reply_markup=user_markup)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 44
-
-        elif '🎬 Multimedia suscripciones' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('📤 Agregar multimedia sub', '🗑️ Eliminar multimedia sub')
-            user_markup.row('📋 Ver planes con multimedia')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, '🎬 *Gestión de Multimedia de Suscripciones*\n\nSelecciona una opción:', reply_markup=user_markup, parse_mode='Markdown')
-
-        elif '📤 Agregar multimedia sub' == message_text:
-            try:
-                plans_without = subscriptions.get_plans_without_media()
-                if not plans_without:
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('🎬 Multimedia suscripciones')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, '✅ Todos los planes ya tienen multimedia asignada', reply_markup=user_markup)
-                else:
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    for plan in plans_without:
-                        user_markup.row(plan)
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, '📤 *Agregar Multimedia*\n\n¿A qué plan deseas agregar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 46
-            except:
-                bot.send_message(chat_id, '❌ Error accediendo a planes')
-
-        elif '🗑️ Eliminar multimedia sub' == message_text:
-            try:
-                plans_with = subscriptions.get_plans_with_media()
-                if not plans_with:
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('🎬 Multimedia suscripciones')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, 'ℹ️ No hay planes con multimedia asignada', reply_markup=user_markup)
-                else:
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    for plan, mtype in plans_with:
-                        emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵', 'animation': '🎬'}.get(mtype, '📎')
-                        user_markup.row(f'{emoji} {plan}')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, '🗑️ *Eliminar Multimedia*\n\n¿De qué plan deseas eliminar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 47
-            except:
-                bot.send_message(chat_id, '❌ Error accediendo a planes')
-
-        elif '📋 Ver planes con multimedia' == message_text:
-            try:
-                plans_with = subscriptions.get_plans_with_media()
-                if not plans_with:
-                    response = 'ℹ️ No hay planes con multimedia asignada'
-                else:
-                    response = '📋 *Planes con Multimedia:*\n\n'
-                    for plan, mtype in plans_with:
-                        emoji = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵', 'animation': '🎬'}.get(mtype, '📎')
-                        response += f'{emoji} **{plan}** - {mtype}\n'
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('🎬 Multimedia suscripciones')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, response, reply_markup=user_markup, parse_mode='Markdown')
-            except:
-                bot.send_message(chat_id, '❌ Error accediendo a planes')
 
         elif 'Vista previa' == message_text:
             preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog()}"
@@ -1291,335 +1060,6 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
             show_discount_menu(chat_id)
 
-        elif sost_num == 40:  # Nombre del plan de suscripción
-            # Validación de nombres únicos
-            try:
-                planes_existentes = subscriptions.get_all_subscription_products()
-                nombres_existentes = [plan[1] for plan in planes_existentes]
-                
-                if message_text in nombres_existentes:
-                    bot.send_message(chat_id, f'❌ Ya existe un plan llamado "{message_text}"\n\nPrueba con: {message_text} Pro, {message_text} 2024, etc.')
-                    return
-            except:
-                pass  # Si falla la validación, continuar
-            
-            with open('data/Temp/' + str(chat_id) + 'sub_name.txt', 'w', encoding='utf-8') as f:
-                f.write(message_text)
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Ingrese una descripción para el plan:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 41
-
-        elif sost_num == 41:  # Descripción del plan
-            with open('data/Temp/' + str(chat_id) + 'sub_desc.txt', 'w', encoding='utf-8') as f:
-                f.write(message_text)
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Precio en USD del plan:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 42
-
-        elif sost_num == 42:  # Precio del plan
-            with open('data/Temp/' + str(chat_id) + 'sub_price.txt', 'w', encoding='utf-8') as f:
-                f.write(message_text)
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Duración en días de la suscripción:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 43
-
-        elif sost_num == 43:  # Duración del plan
-            try:
-                duration = int(message_text)
-                with open('data/Temp/' + str(chat_id) + 'sub_name.txt', encoding='utf-8') as f:
-                    name = f.read()
-                with open('data/Temp/' + str(chat_id) + 'sub_desc.txt', encoding='utf-8') as f:
-                    desc = f.read()
-                with open('data/Temp/' + str(chat_id) + 'sub_price.txt', encoding='utf-8') as f:
-                    price = f.read()
-                
-                subscriptions.add_subscription_product(name, desc, int(price), duration)
-                
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('💼 Suscripciones')
-                user_markup.row('Volver al menú principal')
-                
-                bot.send_message(chat_id, f'✅ Plan "{name}" creado con éxito\n\n'
-                               f'📋 Detalles:\n'
-                               f'• Precio: ${price} USD\n'
-                               f'• Duración: {duration} días\n'
-                               f'• Descripción: {desc}', 
-                               reply_markup=user_markup)
-                               
-            except ValueError as ve:
-                if "Ya existe un plan" in str(ve):
-                    bot.send_message(chat_id, f'❌ {ve}\n\n💡 Sugerencia: Agrega un número o palabra al final del nombre.')
-                else:
-                    bot.send_message(chat_id, '❌ La duración debe ser un número válido. Intenta de nuevo:')
-                    return  # No eliminar el estado, permitir reintento
-            except Exception as e:
-                bot.send_message(chat_id, f'❌ Error creando plan: {e}')
-
-            with shelve.open(files.sost_bd) as bd:
-                del bd[str(chat_id)]
-
-        elif sost_num == 44:  # Seleccionar plan para editar descripción adicional
-            try:
-                planes = [p[1] for p in subscriptions.get_all_subscription_products()]
-                if message_text in planes:
-                    with open('data/Temp/' + str(chat_id) + 'edit_sub_desc.txt', 'w', encoding='utf-8') as f:
-                        f.write(message_text)
-                    current = subscriptions.get_additional_description(message_text)
-                    if not current:
-                        current = 'Sin descripción adicional'
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                    bot.send_message(chat_id,
-                                     f'📝 **Editar descripción adicional para:** {message_text}\n\n'
-                                     f'**Descripción adicional actual:**\n{current}\n\n'
-                                     f'**Ingrese la nueva descripción adicional** (o escriba "ELIMINAR" para quitar la descripción):',
-                                     reply_markup=key, parse_mode='Markdown')
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 45
-                else:
-                    bot.send_message(chat_id, '¡El plan seleccionado no se encontró! Seleccione uno de la lista.')
-            except:
-                bot.send_message(chat_id, '❌ Error procesando planes')
-
-        elif sost_num == 45:  # Recibir nueva descripción adicional
-            try:
-                with open('data/Temp/' + str(chat_id) + 'edit_sub_desc.txt', encoding='utf-8') as f:
-                    plan_name = f.read()
-                if message_text.upper() == 'ELIMINAR':
-                    new_desc = ''
-                    success_message = 'La descripción adicional ha sido eliminada.'
-                else:
-                    new_desc = message_text
-                    success_message = 'La descripción adicional ha sido actualizada.'
-                if subscriptions.set_additional_description(plan_name, new_desc):
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('💼 Suscripciones')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, f'✅ {success_message}\n\nPlan: {plan_name}', reply_markup=user_markup)
-                    with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-                else:
-                    bot.send_message(chat_id, '❌ Error al actualizar la descripción adicional.')
-            except:
-                bot.send_message(chat_id, '❌ Error procesando descripción')
-
-        elif sost_num == 46:  # Seleccionar plan para agregar multimedia
-            try:
-                if message_text in subscriptions.get_plans_without_media():
-                    with open('data/Temp/' + str(chat_id) + 'media_plan.txt', 'w', encoding='utf-8') as f:
-                        f.write(message_text)
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-                    bot.send_message(chat_id,
-                                     f'📤 **Agregar multimedia a:** {message_text}\n\nEnvía el archivo multimedia (foto, video, documento, audio, GIF)\n💡 Tip: Puedes añadir un texto descriptivo junto al archivo',
-                                     reply_markup=key, parse_mode='Markdown')
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 48
-                else:
-                    bot.send_message(chat_id, '❌ Plan no válido o ya tiene multimedia asignada')
-            except:
-                bot.send_message(chat_id, '❌ Error procesando plan')
-
-        elif sost_num == 47:  # Seleccionar plan para eliminar multimedia
-            try:
-                clean_name = message_text
-                for emoji in ['📸 ', '🎥 ', '📄 ', '🎵 ', '🎬 ', '📎 ']:
-                    clean_name = clean_name.replace(emoji, '')
-                if subscriptions.has_plan_media(clean_name):
-                    if subscriptions.remove_plan_media(clean_name):
-                        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                        user_markup.row('🎬 Multimedia suscripciones')
-                        user_markup.row('Volver al menú principal')
-                        bot.send_message(chat_id, f'✅ Multimedia eliminada del plan: {clean_name}', reply_markup=user_markup)
-                    else:
-                        bot.send_message(chat_id, '❌ Error eliminando multimedia')
-                else:
-                    bot.send_message(chat_id, '❌ El plan no tiene multimedia asignada')
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-            except:
-                bot.send_message(chat_id, '❌ Error procesando multimedia')
-
-        elif sost_num == 60:  # Eliminar plan
-            try:
-                plan_id = int(message_text.split('.')[0])
-                plan = subscriptions.get_subscription_product(plan_id)
-                if plan:
-                    plan_name = plan[1]
-                    if subscriptions.delete_subscription_product(plan_id):
-                        user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                        user_markup.row('💼 Suscripciones')
-                        user_markup.row('Volver al menú principal')
-                        bot.send_message(chat_id, f'✅ Plan "{plan_name}" eliminado exitosamente', reply_markup=user_markup)
-                    else:
-                        bot.send_message(chat_id, '❌ Error eliminando el plan')
-                else:
-                    bot.send_message(chat_id, '❌ Plan no encontrado')
-                
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-            except ValueError:
-                bot.send_message(chat_id, '❌ Selección inválida. Use los botones.')
-
-        elif sost_num == 61:  # Seleccionar plan para cambiar descripción
-            try:
-                plan_id = int(message_text.split('.')[0])
-                plan = subscriptions.get_subscription_product(plan_id)
-                if plan:
-                    plan_name = plan[1]
-                    current_desc = plan[2]
-                    
-                    with open('data/Temp/' + str(chat_id) + 'edit_plan_desc.txt', 'w', encoding='utf-8') as f:
-                        f.write(str(plan_id))
-                    
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-                    
-                    bot.send_message(chat_id,
-                                   f'📝 **Cambiar descripción para:** {plan_name}\n\n'
-                                   f'**Descripción actual:**\n{current_desc}\n\n'
-                                   f'**Ingrese la nueva descripción:**',
-                                   reply_markup=key, parse_mode='Markdown')
-                    
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 62
-                else:
-                    bot.send_message(chat_id, '❌ Plan no encontrado')
-                    with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-            except ValueError:
-                bot.send_message(chat_id, '❌ Selección inválida. Use los botones.')
-
-        elif sost_num == 62:  # Recibir nueva descripción del plan
-            try:
-                with open('data/Temp/' + str(chat_id) + 'edit_plan_desc.txt', encoding='utf-8') as f:
-                    plan_id = int(f.read())
-                
-                if subscriptions.update_plan_description(plan_id, message_text):
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('💼 Suscripciones')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, '✅ Descripción del plan actualizada exitosamente', reply_markup=user_markup)
-                else:
-                    bot.send_message(chat_id, '❌ Error actualizando la descripción')
-                
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-            except Exception as e:
-                print(f"Error en estado 62: {e}")
-                bot.send_message(chat_id, '❌ Error procesando la descripción')
-
-        elif sost_num == 63:  # Seleccionar plan para cambiar precio
-            try:
-                plan_id = int(message_text.split('.')[0])
-                plan = subscriptions.get_subscription_product(plan_id)
-                if plan:
-                    plan_name = plan[1]
-                    current_price = plan[3]
-                    current_currency = plan[4]
-                    
-                    with open('data/Temp/' + str(chat_id) + 'edit_plan_price.txt', 'w', encoding='utf-8') as f:
-                        f.write(str(plan_id))
-                    
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-                    
-                    bot.send_message(chat_id,
-                                   f'💰 **Cambiar precio para:** {plan_name}\n\n'
-                                   f'**Precio actual:** ${current_price} {current_currency}\n\n'
-                                   f'**Ingrese el nuevo precio (solo número):**',
-                                   reply_markup=key, parse_mode='Markdown')
-                    
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 64
-                else:
-                    bot.send_message(chat_id, '❌ Plan no encontrado')
-                    with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-            except ValueError:
-                bot.send_message(chat_id, '❌ Selección inválida. Use los botones.')
-
-        elif sost_num == 64:  # Recibir nuevo precio del plan
-            try:
-                with open('data/Temp/' + str(chat_id) + 'edit_plan_price.txt', encoding='utf-8') as f:
-                    plan_id = int(f.read())
-                
-                new_price = int(message_text)
-                
-                if subscriptions.update_plan_price(plan_id, new_price):
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('💼 Suscripciones')
-                    user_markup.row('Volver al menú principal')
-                    bot.send_message(chat_id, f'✅ Precio del plan actualizado a ${new_price} USD', reply_markup=user_markup)
-                else:
-                    bot.send_message(chat_id, '❌ Error actualizando el precio')
-                
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-            except ValueError:
-                bot.send_message(chat_id, '❌ El precio debe ser un número válido')
-            except Exception as e:
-                print(f"Error en estado 64: {e}")
-                bot.send_message(chat_id, '❌ Error procesando el precio')
-
-        elif sost_num == 65:  # Seleccionar plan para cargar contenido
-            try:
-                plan_name = message_text.split(' (')[0]
-                plan = subscriptions.get_plan_by_name(plan_name)
-                
-                if plan:
-                    contenido_actual = subscriptions.get_plan_content(plan_name)
-                    
-                    with open('data/Temp/' + str(chat_id) + 'load_plan_content.txt', 'w', encoding='utf-8') as f:
-                        f.write(plan_name)
-                    
-                    key = telebot.types.InlineKeyboardMarkup()
-                    key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
-                    
-                    if contenido_actual:
-                        mensaje = f'📦 **Cargar contenido a:** {plan_name}\n\n**Contenido actual:**\n{contenido_actual[:500]}{"..." if len(contenido_actual) > 500 else ""}\n\n**Envíe el nuevo contenido** (cada línea será un item):'
-                    else:
-                        mensaje = f'📦 **Cargar contenido a:** {plan_name}\n\nEste plan no tiene contenido aún.\n\n**Envíe el contenido** (cada línea será un item):'
-                    
-                    bot.send_message(chat_id, mensaje, reply_markup=key, parse_mode='Markdown')
-                    
-                    with shelve.open(files.sost_bd) as bd:
-                        bd[str(chat_id)] = 66
-                else:
-                    bot.send_message(chat_id, '❌ Plan no encontrado')
-            except:
-                bot.send_message(chat_id, '❌ Error procesando plan')
-
-        elif sost_num == 66:  # Recibir contenido del plan
-            try:
-                with open('data/Temp/' + str(chat_id) + 'load_plan_content.txt', encoding='utf-8') as f:
-                    plan_name = f.read()
-                
-                if subscriptions.add_content_to_plan(plan_name, message_text):
-                    lines_count = len([line for line in message_text.split('\n') if line.strip()])
-                    
-                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                    user_markup.row('💼 Suscripciones')
-                    user_markup.row('Volver al menú principal')
-                    
-                    bot.send_message(chat_id, 
-                                   f'✅ Contenido cargado exitosamente al plan "{plan_name}"\n\n'
-                                   f'📊 Items agregados: {lines_count}',
-                                   reply_markup=user_markup)
-                else:
-                    bot.send_message(chat_id, '❌ Error cargando contenido al plan')
-                
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-            except Exception as e:
-                print(f"Error en estado 66: {e}")
-                bot.send_message(chat_id, '❌ Error procesando el contenido')
 
         elif sost_num == 160:  # Nombre de campaña
             with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', 'w', encoding='utf-8') as f:
@@ -1726,7 +1166,6 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('💬 Respuestas')
         user_markup.row('📦 Surtido', '➕ Producto')
-        user_markup.row('💼 Suscripciones')
         user_markup.row('💰 Pagos')
         user_markup.row('📊 Stats', '📣 Difusión')
         user_markup.row('💸 Descuentos')
@@ -1767,10 +1206,9 @@ def ad_inline(callback_data, chat_id, message_id):
 
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('💬 Respuestas')
-            user_markup.row('📦 Surtido', '➕ Producto')
-            user_markup.row('💼 Suscripciones')
-            user_markup.row('💰 Pagos')
-            user_markup.row('📊 Stats', '📣 Difusión')
+        user_markup.row('📦 Surtido', '➕ Producto')
+        user_markup.row('💰 Pagos')
+        user_markup.row('📊 Stats', '📣 Difusión')
             user_markup.row('💸 Descuentos')
             user_markup.row('⚙️ Otros')
             bot.delete_message(chat_id, message_id)
@@ -1857,18 +1295,16 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 48, 200):
+        if state not in (32, 200):
             return
 
         if state == 32:
             temp_path = 'data/Temp/' + str(chat_id) + 'media_product.txt'
-        elif state == 48:
-            temp_path = 'data/Temp/' + str(chat_id) + 'media_plan.txt'
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
 
         product_name = None
-        if state in (32, 48):
+        if state == 32:
             try:
                 with open(temp_path, 'r', encoding='utf-8') as f:
                     product_name = f.read()
@@ -1906,11 +1342,6 @@ def handle_multimedia(message):
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
-            elif state == 48:
-                saved = subscriptions.save_plan_media(product_name, file_id, media_type, caption)
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('🎬 Multimedia suscripciones')
-                user_markup.row('Volver al menú principal')
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
                     f.write(file_id + '\n')
@@ -1933,10 +1364,11 @@ def handle_multimedia(message):
             }
 
             if saved:
-                target = 'producto' if state == 32 else 'plan'
-                bot.send_message(chat_id,
-                               f'✅ {media_names.get(media_type, "Archivo")} agregado al {target}: {product_name}',
-                               reply_markup=user_markup)
+                bot.send_message(
+                    chat_id,
+                    f'✅ {media_names.get(media_type, "Archivo")} agregado al producto: {product_name}',
+                    reply_markup=user_markup,
+                )
                 with shelve.open(files.sost_bd) as bd:
                     if str(chat_id) in bd:
                         del bd[str(chat_id)]
