@@ -1027,18 +1027,28 @@ def text_analytics(message_text, chat_id):
 
         elif sost_num == 10:
             file_path = 'data/goods/' + message_text + '.txt'
-            if os.path.exists(file_path):
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    content = f.read()
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                bot.send_message(chat_id, f'Contenido actual del archivo {message_text}:\n\n{content}\n\nEnvíe el nuevo contenido (cada línea será un producto):')
-                with open('data/Temp/' + str(chat_id) + 'upload_file.txt', 'w', encoding='utf-8') as f: 
-                    f.write(message_text)
-                with shelve.open(files.sost_bd) as bd: 
-                    bd[str(chat_id)] = 11
-            else:
-                bot.send_message(chat_id, 'Error: archivo no encontrado')
+            if not os.path.exists(file_path):
+                open(file_path, 'w', encoding='utf-8').close()
+
+            with open(file_path, 'r', encoding='utf-8') as f:
+                content = f.read()
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(
+                text='Cancelar y volver al menú principal de administración',
+                callback_data='Volver al menú principal de administración'))
+            bot.send_message(
+                chat_id,
+                f'Contenido actual del archivo {message_text}:\n\n{content}\n\nEnvíe el nuevo contenido (cada línea será un producto):')
+
+            with open(
+                'data/Temp/' + str(chat_id) + 'upload_file.txt',
+                'w',
+                encoding='utf-8') as f:
+                f.write(message_text)
+
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 11
 
         elif sost_num == 11:
             with open('data/Temp/' + str(chat_id) + 'upload_file.txt', encoding='utf-8') as f: 
