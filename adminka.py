@@ -808,18 +808,25 @@ def text_analytics(message_text, chat_id):
             cursor = con.cursor()
             a = 0
             cursor.execute("SELECT description FROM goods WHERE name = ?", (message_text,))
-            for i in cursor.fetchall(): 
+            for i in cursor.fetchall():
                 a += 1
 
-            if a == 0: 
+            if a == 0:
                 bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!')
             else:
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
                     f.write(message_text)
-                bot.send_message(chat_id, 'Ahora escriba la nueva descripción', reply_markup=key)
-                with shelve.open(files.sost_bd) as bd: 
+
+                info = (
+                    dop.format_product_with_media(message_text)
+                    if dop.has_product_media(message_text)
+                    else dop.format_product_basic_info(message_text)
+                )
+                reply = telebot.types.ReplyKeyboardMarkup(True, False)
+                reply.row('Volver al menú principal')
+                bot.send_message(chat_id, info, parse_mode='Markdown', reply_markup=reply)
+                bot.send_message(chat_id, 'Ahora escriba la nueva descripción', parse_mode='Markdown', reply_markup=reply)
+                with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 8
 
         elif sost_num == 8:
@@ -844,29 +851,50 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
 
         elif sost_num == 9:
-            try:
-                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
-                    name_good = f.read()
-            except FileNotFoundError:
-                session_expired(chat_id)
-                return
-            try:
-                price = int(message_text)
-                con = db.get_db_connection()
-                cursor = con.cursor()
-                cursor.execute("UPDATE goods SET price = ? WHERE name = ?", (price, name_good))
-                con.commit()
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
-                user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
-                user_markup.row('📝 Descripción adicional')
-                user_markup.row('🎬 Multimedia productos')
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '¡Precio cambiado con éxito!', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd: 
-                    del bd[str(chat_id)]
-            except:
-                bot.send_message(chat_id, 'Error: ingrese un número válido')
+            temp_path = 'data/Temp/' + str(chat_id) + '.txt'
+            if not os.path.exists(temp_path):
+                product = message_text
+                if product not in dop.get_goods():
+                    bot.send_message(chat_id, '❌ Producto no válido')
+                    return
+
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    f.write(product)
+
+                info = (
+                    dop.format_product_with_media(product)
+                    if dop.has_product_media(product)
+                    else dop.format_product_basic_info(product)
+                )
+                reply = telebot.types.ReplyKeyboardMarkup(True, False)
+                reply.row('Volver al menú principal')
+                bot.send_message(chat_id, info, parse_mode='Markdown', reply_markup=reply)
+                bot.send_message(chat_id, 'Ahora ingrese el nuevo precio', parse_mode='Markdown', reply_markup=reply)
+            else:
+                try:
+                    with open(temp_path, encoding='utf-8') as f:
+                        name_good = f.read()
+                except FileNotFoundError:
+                    session_expired(chat_id)
+                    return
+                try:
+                    price = int(message_text)
+                    con = db.get_db_connection()
+                    cursor = con.cursor()
+                    cursor.execute("UPDATE goods SET price = ? WHERE name = ?", (price, name_good))
+                    con.commit()
+                    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                    user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
+                    user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                    user_markup.row('📝 Descripción adicional')
+                    user_markup.row('🎬 Multimedia productos')
+                    user_markup.row('Volver al menú principal')
+                    bot.send_message(chat_id, '¡Precio cambiado con éxito!', reply_markup=user_markup, parse_mode='Markdown')
+                    with shelve.open(files.sost_bd) as bd:
+                        del bd[str(chat_id)]
+                    os.remove(temp_path)
+                except ValueError:
+                    bot.send_message(chat_id, 'Error: ingrese un número válido')
 
         elif sost_num == 10:
             product = message_text
@@ -877,11 +905,18 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + '_product.txt', 'w', encoding='utf-8') as f:
                 f.write(product)
 
+            info = (
+                dop.format_product_with_media(product)
+                if dop.has_product_media(product)
+                else dop.format_product_basic_info(product)
+            )
+            bot.send_message(chat_id, info, parse_mode='Markdown')
+
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             user_markup.row('Añadir unidades')
             user_markup.row('Editar unidades', 'Eliminar unidades')
             user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, f'Producto seleccionado: {product}\nElija una acción:', reply_markup=user_markup)
+            bot.send_message(chat_id, f'*Producto seleccionado:* {product}\nSeleccione una acción:', reply_markup=user_markup, parse_mode='Markdown')
 
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 179
