@@ -456,10 +456,10 @@ def handle_media_files(message):
 
 if __name__ == '__main__':
     print("✅ Bot iniciando polling optimizado...")
-    # Polling optimizado para máximo rendimiento
+    # Polling optimizado configurable mediante variables de entorno
     bot.polling(
-        none_stop=True, 
-        interval=8,               # Reducido de 10 a 8 para mejor respuesta
-        timeout=25,               # Aumentado para mayor eficiencia
-        long_polling_timeout=20   # Optimizado
+        none_stop=True,
+        interval=config.POLL_INTERVAL,
+        timeout=config.POLL_TIMEOUT,
+        long_polling_timeout=config.LONG_POLLING_TIMEOUT
     )
