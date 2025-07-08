@@ -2,13 +2,14 @@ import sqlite3
 import telebot
 import files
 import config
+import db
 from datetime import datetime
 from bot_instance import bot
 
 def validate_purchase_by_user(user_id=None, username=None):
     """Valida las compras de un usuario específico"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         if user_id:
@@ -75,7 +76,7 @@ def validate_purchase_by_user(user_id=None, username=None):
 def get_purchase_stats():
     """Obtiene estadísticas de compras"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Estadísticas generales
@@ -128,7 +129,7 @@ def get_purchase_stats():
 def search_recent_purchases(hours=24):
     """Busca compras recientes"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Para SQLite, usamos una aproximación con rowid

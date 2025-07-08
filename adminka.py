@@ -1,5 +1,6 @@
 import telebot, sqlite3, shelve, os
 import config, dop, files
+import db
 from advertising_system import AdvertisingManager
 from bot_instance import bot
 
@@ -100,7 +101,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('🎬 Multimedia productos')
             user_markup.row('Volver al menú principal')
 
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             goodz = 'Productos creados:\n\n'
             a = 0
@@ -122,7 +123,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 2
 
         elif 'Eliminar posición' == message_text:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name FROM goods;")
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
@@ -145,7 +146,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             con.close()
 
         elif 'Cambiar descripción de posición' == message_text:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name FROM goods;")
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
@@ -168,7 +169,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             con.close()
 
         elif 'Cambiar precio' == message_text:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name FROM goods;")
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
@@ -191,7 +192,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             con.close()
 
         elif '📝 Descripción adicional' == message_text:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name FROM goods;")
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
@@ -274,7 +275,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 telebot.types.InlineKeyboardButton(
                     text='Cancelar y volver al menú principal de administración',
                     callback_data='Volver al menú principal de administración'))
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
             a = 0
@@ -406,7 +407,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 172
 
         elif message_text == '📋 Listar grupos':
-            conn = sqlite3.connect(files.main_db)
+            conn = db.get_db_connection()
             cur = conn.cursor()
             cur.execute("SELECT platform, group_id, group_name FROM target_groups")
             rows = cur.fetchall()
@@ -853,7 +854,7 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
 
         elif sost_num == 6:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             a = 0
             cursor.execute("SELECT description FROM goods WHERE name = ?", (message_text,))
@@ -876,7 +877,7 @@ def text_analytics(message_text, chat_id):
             con.close()
 
         elif sost_num == 7:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             a = 0
             cursor.execute("SELECT description FROM goods WHERE name = ?", (message_text,))
@@ -898,7 +899,7 @@ def text_analytics(message_text, chat_id):
         elif sost_num == 8:
             with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
                 name_good = f.read()
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("UPDATE goods SET description = ? WHERE name = ?", (message_text, name_good))
             con.commit()
@@ -918,7 +919,7 @@ def text_analytics(message_text, chat_id):
                 name_good = f.read()
             try:
                 price = int(message_text)
-                con = sqlite3.connect(files.main_db)
+                con = db.get_db_connection()
                 cursor = con.cursor()
                 cursor.execute("UPDATE goods SET price = ? WHERE name = ?", (price, name_good))
                 con.commit()
@@ -985,7 +986,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', encoding='utf-8') as f: 
                     client_id = f.read()
                 
-                con = sqlite3.connect(files.main_db)
+                con = db.get_db_connection()
                 cursor = con.cursor()
                 cursor.execute("INSERT OR REPLACE INTO paypal_data VALUES(?, ?, ?)", (client_id, message_text, 1))
                 con.commit()
@@ -1032,7 +1033,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + 'binance_secret.txt', encoding='utf-8') as f: 
                     api_secret = f.read()
                 
-                con = sqlite3.connect(files.main_db)
+                con = db.get_db_connection()
                 cursor = con.cursor()
                 cursor.execute("INSERT OR REPLACE INTO binance_data VALUES(?, ?, ?)", (api_key, api_secret, message_text))
                 con.commit()
@@ -1069,7 +1070,7 @@ def text_analytics(message_text, chat_id):
                         bd[str(chat_id)] = 22
 
         elif sost_num == 28:  # Seleccionar producto para editar descripción adicional
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             a = 0
             cursor.execute("SELECT name FROM goods WHERE name = ?", (message_text,))
@@ -1645,7 +1646,7 @@ def ad_inline(callback_data, chat_id, message_id):
         with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f: 
             price = f.read()
 
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption)
