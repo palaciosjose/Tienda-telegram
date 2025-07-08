@@ -812,8 +812,16 @@ def text_analytics(message_text, chat_id):
             sost_num = bd[str(chat_id)]
         
         if sost_num == 1:
-            with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
-                message = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
+                    message = f.read()
+            except FileNotFoundError:
+                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
+                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                return
             try:
                 with shelve.open(files.bot_message_bd) as bd:
                     bd[message] = message_text
@@ -962,8 +970,16 @@ def text_analytics(message_text, chat_id):
                     bd[str(chat_id)] = 8
 
         elif sost_num == 8:
-            with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
-                name_good = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
+                    name_good = f.read()
+            except FileNotFoundError:
+                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
+                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                return
             con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("UPDATE goods SET description = ? WHERE name = ?", (message_text, name_good))
@@ -979,8 +995,16 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
 
         elif sost_num == 9:
-            with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
-                name_good = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
+                    name_good = f.read()
+            except FileNotFoundError:
+                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
+                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                return
             try:
                 price = int(message_text)
                 con = db.get_db_connection()
