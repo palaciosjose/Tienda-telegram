@@ -34,9 +34,10 @@ def show_discount_menu(chat_id):
 
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
-        if message_text == 'Volver al menú principal' or message_text == '/adm':
-            if dop.get_sost(chat_id) is True: 
-                with shelve.open(files.sost_bd) as bd: 
+        normalized = message_text.strip().lower()
+        if normalized in ('volver al menú principal', 'volver al menu principal', '/adm'):
+            if dop.get_sost(chat_id) is True:
+                with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('💬 Respuestas')
