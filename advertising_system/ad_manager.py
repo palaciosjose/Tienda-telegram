@@ -6,6 +6,8 @@ from .scheduler import CampaignScheduler
 from .telegram_multi import TelegramMultiBot
 from .whaticket_api import WHATicketAPI
 import os
+import files
+import db
 
 class AdvertisingManager:
     """Gestión de campañas publicitarias"""
@@ -14,6 +16,11 @@ class AdvertisingManager:
         self.db = CampaignDB(db_path)
         self.scheduler = CampaignScheduler(db_path)
         self.db_path = db_path
+
+    def _get_connection(self):
+        if self.db_path == files.main_db:
+            return db.get_db_connection(), True
+        return sqlite3.connect(self.db_path), False
 
     def create_campaign(self, data):
         """Crear una nueva campaña"""
@@ -25,7 +32,7 @@ class AdvertisingManager:
 
     def get_today_stats(self):
         """Obtener estadísticas rápidas del día"""
-        conn = sqlite3.connect(self.db.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute(
@@ -37,7 +44,8 @@ class AdvertisingManager:
             "SELECT COUNT(*) FROM target_groups WHERE status = 'active'",
         )
         groups = cursor.fetchone()[0]
-        conn.close()
+        if not shared:
+            conn.close()
         return {
             'sent': sent,
             'success_rate': 100,
@@ -52,11 +60,12 @@ class AdvertisingManager:
         if not re.match(r'^\d{2}:\d{2}$', send_time):
             return False, 'Formato de hora inválido'
 
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cur = conn.cursor()
         cur.execute('SELECT 1 FROM campaigns WHERE id = ?', (campaign_id,))
         if not cur.fetchone():
-            conn.close()
+            if not shared:
+                conn.close()
             return False, 'Campaña no encontrada'
 
         try:
@@ -75,10 +84,12 @@ class AdvertisingManager:
                 ),
             )
             conn.commit()
-            conn.close()
+            if not shared:
+                conn.close()
             return True, 'Programación creada'
         except Exception as e:
-            conn.close()
+            if not shared:
+                conn.close()
             return False, str(e)
 
     def add_target_group(self, platform, group_id, group_name=None):
@@ -89,7 +100,7 @@ class AdvertisingManager:
         if not re.match(r'^-?\d+$', str(group_id)):
             return False, 'ID de grupo inválido'
 
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cur = conn.cursor()
         try:
             cur.execute(
@@ -104,31 +115,35 @@ class AdvertisingManager:
                 ),
             )
             conn.commit()
-            conn.close()
+            if not shared:
+                conn.close()
             return True, 'Grupo agregado'
         except Exception as e:
-            conn.close()
+            if not shared:
+                conn.close()
             return False, str(e)
 
     def remove_target_group(self, group_id):
         """Eliminar un grupo objetivo por su ID."""
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cur = conn.cursor()
         cur.execute('DELETE FROM target_groups WHERE group_id = ?', (str(group_id),))
         conn.commit()
         removed = cur.rowcount
-        conn.close()
+        if not shared:
+            conn.close()
         if removed:
             return True, 'Grupo eliminado'
         return False, 'Grupo no encontrado'
 
     def get_platform_configs(self):
         """Obtener la configuración de plataformas."""
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cur = conn.cursor()
         cur.execute('SELECT platform, config_data, is_active FROM platform_config')
         rows = cur.fetchall()
-        conn.close()
+        if not shared:
+            conn.close()
         return [
             {'platform': r[0], 'config_data': r[1], 'is_active': bool(r[2])}
             for r in rows
@@ -136,7 +151,7 @@ class AdvertisingManager:
 
     def update_platform_config(self, platform, config_data=None, is_active=None):
         """Actualizar o crear la configuración de una plataforma."""
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cur = conn.cursor()
         cur.execute('SELECT 1 FROM platform_config WHERE platform = ?', (platform,))
         exists = cur.fetchone() is not None
@@ -166,7 +181,8 @@ class AdvertisingManager:
                 ),
             )
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
         return True
 
     def send_campaign_now(self, campaign_id, platforms=None):
@@ -174,7 +190,7 @@ class AdvertisingManager:
         if platforms is None:
             platforms = ['telegram']
 
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cur = conn.cursor()
         cur.execute(
             """SELECT name, message_text, media_file_id, media_type,
@@ -184,7 +200,8 @@ class AdvertisingManager:
         )
         campaign = cur.fetchone()
         if not campaign:
-            conn.close()
+            if not shared:
+                conn.close()
             return False, 'Campaña no encontrada'
 
         telegram_tokens = [t.strip() for t in os.getenv('TELEGRAM_TOKEN', '').split(',') if t.strip()]
@@ -240,5 +257,6 @@ class AdvertisingManager:
                 )
 
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
         return True, 'Campaña enviada'

@@ -2,6 +2,8 @@ import time
 import sqlite3
 from collections import defaultdict
 from datetime import datetime
+import files
+import db
 
 class IntelligentRateLimiter:
     def __init__(self, db_path):
@@ -22,6 +24,11 @@ class IntelligentRateLimiter:
         }
         self.counters = defaultdict(lambda: defaultdict(int))
         self.last_reset = defaultdict(datetime.now)
+
+    def _get_connection(self):
+        if self.db_path == files.main_db:
+            return db.get_db_connection(), True
+        return sqlite3.connect(self.db_path), False
 
     def can_send(self, platform):
         now = datetime.now()
@@ -49,11 +56,12 @@ class IntelligentRateLimiter:
         return base_delay
 
     def log_send_attempt(self, platform, success):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
             "INSERT INTO rate_limit_logs (platform, success, timestamp) VALUES (?, ?, ?)",
             (platform, int(success), datetime.now().isoformat())
         )
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
