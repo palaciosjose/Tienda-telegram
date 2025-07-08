@@ -1,6 +1,8 @@
 import sqlite3
 from datetime import datetime, timedelta
 import json
+import files
+import db
 
 class CampaignScheduler:
     def __init__(self, db_path):
@@ -11,8 +13,13 @@ class CampaignScheduler:
             'whatsapp': 90
         }
 
+    def _get_connection(self):
+        if self.db_path == files.main_db:
+            return db.get_db_connection(), True
+        return sqlite3.connect(self.db_path), False
+
     def create_daily_schedule(self, campaign_id, platforms=['telegram', 'whatsapp']):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
 
         for platform in platforms:
@@ -39,10 +46,11 @@ class CampaignScheduler:
                 }
                 self.save_schedule(schedule_data)
 
-        conn.close()
+        if not shared:
+            conn.close()
 
     def save_schedule(self, data):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO campaign_schedules
@@ -53,12 +61,13 @@ class CampaignScheduler:
             )
         )
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
 
     def get_pending_sends(self):
         now = datetime.now()
         current_time = now.strftime('%H:%M')
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
             """SELECT cs.*, c.name, c.message_text, c.media_file_id, c.media_type,
@@ -69,16 +78,18 @@ class CampaignScheduler:
             (f'%{current_time}%',)
         )
         pending = cursor.fetchall()
-        conn.close()
+        if not shared:
+            conn.close()
         return pending
 
     def update_next_send(self, schedule_id, platform):
         next_send = datetime.now() + timedelta(days=1)
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         if platform == 'telegram':
             cursor.execute("UPDATE campaign_schedules SET next_send_telegram = ? WHERE id = ?", (next_send.isoformat(), schedule_id))
         else:
             cursor.execute("UPDATE campaign_schedules SET next_send_whatsapp = ? WHERE id = ?", (next_send.isoformat(), schedule_id))
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()

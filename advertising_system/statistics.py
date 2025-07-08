@@ -1,12 +1,19 @@
 import sqlite3
 from datetime import datetime
+import files
+import db
 
 class StatisticsManager:
     def __init__(self, db_path):
         self.db_path = db_path
 
+    def _get_connection(self):
+        if self.db_path == files.main_db:
+            return db.get_db_connection(), True
+        return sqlite3.connect(self.db_path), False
+
     def log_send(self, campaign_id, group_id, platform, success, result):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO send_logs (campaign_id, group_id, platform, status, sent_date, error_message)
@@ -21,10 +28,11 @@ class StatisticsManager:
             )
         )
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
 
     def get_real_time_dashboard(self):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute(
@@ -43,5 +51,6 @@ class StatisticsManager:
             f"❌ **Fallidos:** {stats[0] - stats[1]}\n\n"
             f"📱 **Por plataforma:**\n- Telegram: {stats[2]}\n- WhatsApp: {stats[3]}"
         )
-        conn.close()
+        if not shared:
+            conn.close()
         return dashboard

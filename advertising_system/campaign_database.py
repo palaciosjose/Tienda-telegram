@@ -1,12 +1,19 @@
 import sqlite3
 from datetime import datetime
+import files
+import db
 
 class CampaignDB:
     def __init__(self, db_path):
         self.db_path = db_path
 
+    def _get_connection(self):
+        if self.db_path == files.main_db:
+            return db.get_db_connection(), True
+        return sqlite3.connect(self.db_path), False
+
     def insert_campaign(self, data):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO campaigns 
@@ -23,15 +30,17 @@ class CampaignDB:
         )
         campaign_id = cursor.lastrowid
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
         return campaign_id
 
     def fetch_all_campaigns(self):
-        conn = sqlite3.connect(self.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT id, name, status FROM campaigns")
         rows = cursor.fetchall()
-        conn.close()
+        if not shared:
+            conn.close()
         result = []
         for r in rows:
             result.append({'id': r[0], 'name': r[1], 'status': r[2], 'sent_count': 0, 'last_sent': ''})
