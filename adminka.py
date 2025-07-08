@@ -1,5 +1,5 @@
 import telebot, sqlite3, shelve, os
-import config, dop, files
+import config, dop, files, subscriptions
 import db
 from advertising_system import AdvertisingManager
 from bot_instance import bot
