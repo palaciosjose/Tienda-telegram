@@ -63,23 +63,6 @@ def create_database():
     ''')
     print("✓ Tabla 'buyers' creada")
     
-    # Crear tabla de datos QIWI
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS qiwi_data (
-            number TEXT PRIMARY KEY,
-            token TEXT
-        )
-    ''')
-    print("✓ Tabla 'qiwi_data' creada")
-    
-    # Crear tabla de datos Coinbase
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS coinbase_data (
-            api_key TEXT,
-            private_key TEXT
-        )
-    ''')
-    print("✓ Tabla 'coinbase_data' creada")
 
 
 
@@ -203,7 +186,7 @@ def create_database():
     print("\n🎉 ¡Base de datos y estructura creada exitosamente!")
     print("\nPróximos pasos:")
     print("1. Verifica que tu token en config.py sea correcto")
-    print("2. Instala las dependencias: pip install pyTelegramBotAPI SimpleQIWI coinbase")
+    print("2. Instala las dependencias: pip install pyTelegramBotAPI paypalrestsdk python-binance")
     print("3. Ejecuta: python main.py")
     print("4. Envía /start al bot para configuración inicial")
 
