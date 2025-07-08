@@ -656,26 +656,53 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 15
 
         elif sost_num == 15:
-            with open('data/Temp/' + str(chat_id) + 'good_price.txt', 'w', encoding='utf-8') as f: 
+            with open('data/Temp/' + str(chat_id) + 'good_price.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text)
-            
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(
+                text='Cancelar y volver al menú principal de administración',
+                callback_data='Volver al menú principal de administración'
+            ))
+
+            bot.send_message(
+                chat_id,
+                'Ingrese la duración en días del producto (0 para indefinido):',
+                reply_markup=key
+            )
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 16
+
+        elif sost_num == 16:
+            with open('data/Temp/' + str(chat_id) + 'good_duration.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Añadir producto a la tienda', callback_data='Añadir producto a la tienda'))
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            
-            with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: 
+
+            with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f:
                 name = f.read()
-            with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f: 
+            with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f:
                 description = f.read()
             with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
                 format_type = f.read()
             format_display = 'Texto' if format_type == 'text' else 'Archivo'
-            with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f: 
+            with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f:
                 minimum = f.read()
-            
+            with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
+                price = f.read()
+            duration_display = ''
+            try:
+                duration_int = int(message_text)
+                if duration_int > 0:
+                    duration_display = f'\n*Duración:* {duration_int} días'
+            except ValueError:
+                pass
+
             summary = (
                 f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}'
-                f'\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${message_text} USD'
+                f'\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${price} USD{duration_display}'
             )
 
             media_temp = 'data/Temp/' + str(chat_id) + 'new_media.txt'
@@ -696,7 +723,7 @@ def text_analytics(message_text, chat_id):
                         bot.send_message(chat_id, summary, parse_mode='MarkDown', reply_markup=key)
             else:
                 bot.send_message(chat_id, summary, parse_mode='MarkDown', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd: 
+            with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 
         elif sost_num == 6:
@@ -1198,6 +1225,8 @@ def ad_inline(callback_data, chat_id, message_id):
                 minimum = f.read()
             with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
                 price = f.read()
+            with open('data/Temp/' + str(chat_id) + 'good_duration.txt', encoding='utf-8') as f:
+                duration_days = f.read()
         except FileNotFoundError:
             bot.send_message(chat_id, '❌ La sesión expiró. Vuelva a intentarlo.')
             with shelve.open(files.sost_bd) as bd:
@@ -1235,8 +1264,8 @@ def ad_inline(callback_data, chat_id, message_id):
 
         cursor.execute(
             """
-            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption, duration_days)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
@@ -1249,6 +1278,7 @@ def ad_inline(callback_data, chat_id, message_id):
                 media_id,
                 media_type,
                 media_caption,
+                duration_days,
             ),
         )
         con.commit()
