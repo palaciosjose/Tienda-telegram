@@ -64,8 +64,6 @@ in_admin = []
 
 @bot.message_handler(content_types=["text"])
 def message_send(message):
-    # Permitir que adminka.py procese archivos multimedia cuando corresponde
-    adminka.handle_multimedia(message)
     
     if '/start' == message.text:
         if message.chat.username:
