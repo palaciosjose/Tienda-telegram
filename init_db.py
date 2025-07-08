@@ -157,6 +157,26 @@ def create_database():
             timestamp TEXT
         )
     ''')
+
+    # Crear tabla para datos de PayPal
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS paypal_data (
+            client_id TEXT,
+            client_secret TEXT,
+            sandbox INTEGER DEFAULT 1
+        )
+    ''')
+    print("✓ Tabla 'paypal_data' creada")
+
+    # Crear tabla para datos de Binance
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS binance_data (
+            api_key TEXT,
+            api_secret TEXT,
+            merchant_id TEXT
+        )
+    ''')
+    print("✓ Tabla 'binance_data' creada")
     
     conn.commit()
     conn.close()
