@@ -236,6 +236,24 @@ def amount_of_goods(name_good):
     except:
         return 0
 
+def get_stock_overview():
+    """Return a list with stock summary lines for all products."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("SELECT name, price FROM goods;")
+        goods = cursor.fetchall()
+
+        overview = []
+        for i, (name, price) in enumerate(goods, start=1):
+            count = amount_of_goods(name)
+            overview.append(f"{i}. {name} — {count} unidades (${price} USD)")
+
+        return overview
+    except Exception as e:
+        print(f"Error generando resumen de stock: {e}")
+        return []
+
 def get_minimum(name_good):
     try:
         con = db.get_db_connection()
