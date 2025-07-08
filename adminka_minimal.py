@@ -118,8 +118,16 @@ def handle_multimedia(message):
         else:
             temp_path = f"data/Temp/{chat_id}media_plan.txt"
 
-        with open(temp_path, "r", encoding="utf-8") as f:
-            product_name = f.read()
+        try:
+            with open(temp_path, "r", encoding="utf-8") as f:
+                product_name = f.read()
+        except FileNotFoundError:
+            bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+            with shelve.open(files.sost_bd) as bd:
+                if str(chat_id) in bd:
+                    del bd[str(chat_id)]
+            in_adminka(chat_id, 'Volver al menú principal', None, None)
+            return
 
         file_id = None
         media_type = None
