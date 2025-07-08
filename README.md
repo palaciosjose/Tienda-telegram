@@ -1,6 +1,7 @@
 # Tienda Telegram
 
 Tienda Telegram es un bot de Telegram para gestionar un pequeño catálogo de productos digitales con pagos a través de PayPal o Binance. Los archivos de base de datos y configuración se mantienen en el directorio `data`.
+Cada producto puede incluir un campo opcional `duración en días` que define su vigencia tras la compra. Las suscripciones como característica independiente dejaron de estar soportadas.
 
 ## Instalación
 
@@ -47,34 +48,6 @@ detendrá con una advertencia.  El archivo se elimina automáticamente al cerrar
 el bot.
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.
-
-## Suscripciones
-
-El proyecto incluye un sistema básico de **productos por suscripción**. Las tablas
-`subscription_products` y `user_subscriptions` se crean automáticamente al
-ejecutar `init_db.py`. A partir de esta versión se añaden índices en la fecha de
-vencimiento para consultas más rápidas y se amplían los niveles de notificación
-por defecto a `30,15,7,1` días.
-
-Con el módulo `subscriptions.py` puedes:
-
-1. Registrar nuevos planes con `add_subscription_product()` indicando duración,
-   periodo de gracia y niveles de notificación.
-2. Crear suscripciones para los usuarios con `create_user_subscription()` una
-   vez que se complete un pago.
-3. Ejecutar `check_subscriptions()` de forma diaria (por ejemplo mediante cron)
-   para enviar recordatorios, renovar automáticamente si está configurado y
-   suspender las suscripciones vencidas.
-4. Cancelar suscripciones con `cancel_subscription()` y consultar todas las de
-   un usuario mediante `get_user_subscriptions()`.
-5. Consultar vencimientos próximos con `get_upcoming_subscriptions()` para
-   mostrar un dashboard o generar reportes.
-
-Para ejecutar el proceso diario de forma sencilla puedes programar `subscription_cron.py` con tu gestor de tareas preferido:
-
-```bash
-python subscription_cron.py
-```
 
 ## Marketing/Advertising
 
