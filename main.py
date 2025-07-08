@@ -191,7 +191,6 @@ def inline(callback):
                 key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
             
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            con.close()
 
             if dop.get_productcatalog() == None:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')

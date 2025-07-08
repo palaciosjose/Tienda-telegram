@@ -110,7 +110,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                 a += 1
                 amount = dop.amount_of_goods(name)
                 goodz += '*Nombre:* ' + name + '\n*Descripción:* ' + description + '\n*Formato del producto:* ' + format + '\n*Cantidad mínima para comprar:* ' + str(minimum) + '\n*Precio por unidad:* $' + str(price) + ' USD' + '\n*Unidades restantes:* ' + str(amount) + '\n\n'
-            con.close()
             if a == 0: 
                 goodz = '¡No se han creado posiciones todavía!'
             bot.send_message(chat_id, goodz, reply_markup=user_markup, parse_mode='MarkDown')
@@ -143,7 +142,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, '¿Qué posición desea eliminar?', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 6
-            con.close()
 
         elif 'Cambiar descripción de posición' == message_text:
             con = db.get_db_connection()
@@ -166,7 +164,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, '¿Para qué posición desea cambiar la descripción?', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 7
-            con.close()
 
         elif 'Cambiar precio' == message_text:
             con = db.get_db_connection()
@@ -189,7 +186,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, '¿Para qué posición desea cambiar el precio?', parse_mode='Markdown', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 9
-            con.close()
 
         elif '📝 Descripción adicional' == message_text:
             con = db.get_db_connection()
@@ -212,7 +208,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, '¿Para qué producto desea editar la descripción adicional?', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 28
-            con.close()
 
         elif '🎬 Multimedia productos' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
@@ -297,7 +292,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                     parse_mode='MarkDown')
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 10
-            con.close()
 
         elif '💰 Pagos' == message_text:
             with shelve.open(files.payments_bd) as bd:
@@ -411,7 +405,6 @@ def in_adminka(chat_id, message_text, username, name_user):
             cur = conn.cursor()
             cur.execute("SELECT platform, group_id, group_name FROM target_groups")
             rows = cur.fetchall()
-            conn.close()
             if rows:
                 txt = '🎯 *Grupos registrados:*\n'
                 for r in rows:
@@ -874,7 +867,6 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, '¡Posición eliminada con éxito!', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd: 
                     del bd[str(chat_id)]
-            con.close()
 
         elif sost_num == 7:
             con = db.get_db_connection()
@@ -894,7 +886,6 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, 'Ahora escriba la nueva descripción', reply_markup=key)
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 8
-            con.close()
 
         elif sost_num == 8:
             with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f: 
@@ -903,7 +894,6 @@ def text_analytics(message_text, chat_id):
             cursor = con.cursor()
             cursor.execute("UPDATE goods SET description = ? WHERE name = ?", (message_text, name_good))
             con.commit()
-            con.close()
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
             user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -923,7 +913,6 @@ def text_analytics(message_text, chat_id):
                 cursor = con.cursor()
                 cursor.execute("UPDATE goods SET price = ? WHERE name = ?", (price, name_good))
                 con.commit()
-                con.close()
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -990,7 +979,6 @@ def text_analytics(message_text, chat_id):
                 cursor = con.cursor()
                 cursor.execute("INSERT OR REPLACE INTO paypal_data VALUES(?, ?, ?)", (client_id, message_text, 1))
                 con.commit()
-                con.close()
                 
                 with shelve.open(files.payments_bd) as bd:
                     bd['paypal'] = '✅'
@@ -1037,7 +1025,6 @@ def text_analytics(message_text, chat_id):
                 cursor = con.cursor()
                 cursor.execute("INSERT OR REPLACE INTO binance_data VALUES(?, ?, ?)", (api_key, api_secret, message_text))
                 con.commit()
-                con.close()
                 
                 with shelve.open(files.payments_bd) as bd:
                     bd['binance'] = '✅'
@@ -1098,7 +1085,6 @@ def text_analytics(message_text, chat_id):
 
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 29
-            con.close()
 
         elif sost_num == 29:  # Recibir nueva descripción adicional
             try:
@@ -1653,7 +1639,6 @@ def ad_inline(callback_data, chat_id, message_id):
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (name, description, format_type, minimum, price, 'data/goods/' + name + '.txt', '', None, None, None))
         con.commit()
-        con.close()
         
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
