@@ -225,25 +225,30 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif '🎬 Multimedia productos' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('📤 Agregar multimedia', '🗑️ Eliminar multimedia')
+            user_markup.row('📤 Agregar o cambiar multimedia', '🗑️ Eliminar multimedia')
             user_markup.row('📋 Ver productos con multimedia')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, '🎬 **Gestión de Multimedia**\n\nSelecciona una opción:', reply_markup=user_markup, parse_mode='Markdown')
 
-        elif '📤 Agregar multimedia' == message_text:
-            products_without_media = dop.get_products_without_media()
-            if not products_without_media:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+        elif '📤 Agregar o cambiar multimedia' == message_text:
+            products = dop.get_goods()
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            if not products:
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '✅ Todos los productos ya tienen multimedia asignada', reply_markup=user_markup)
+                bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
             else:
-                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for product in products_without_media:
-                    user_markup.row(product)
+                products_with_media = {name: mtype for name, mtype in dop.get_products_with_media()}
+                emoji_map = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵'}
+                for product in products:
+                    if product in products_with_media:
+                        emoji = emoji_map.get(products_with_media[product], '📎')
+                        user_markup.row(f"{emoji} {product}")
+                    else:
+                        user_markup.row(product)
                 user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, '📤 **Agregar Multimedia**\n\n¿A qué producto deseas agregar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
-                with shelve.open(files.sost_bd) as bd: 
+                bot.send_message(chat_id, '📤 **Agregar o cambiar Multimedia**\n\n¿A qué producto deseas agregar o cambiar multimedia?', reply_markup=user_markup, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 30
 
         elif '🗑️ Eliminar multimedia' == message_text:
@@ -1178,23 +1183,27 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, '❌ Error procesando la descripción adicional. Inténtelo de nuevo.')
 
         elif sost_num == 30:  # Seleccionar producto para agregar multimedia
-            if message_text in dop.get_products_without_media():
+            clean_name = message_text
+            for emoji in ['📸 ', '🎥 ', '📄 ', '🎵 ', '📎 ']:
+                clean_name = clean_name.replace(emoji, '')
+
+            if clean_name in dop.get_goods():
                 with open('data/Temp/' + str(chat_id) + 'media_product.txt', 'w', encoding='utf-8') as f:
-                    f.write(message_text)
+                    f.write(clean_name)
                 
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
                 
-                bot.send_message(chat_id, 
-                                f'📤 **Agregar multimedia a:** {message_text}\n\n'
+                bot.send_message(chat_id,
+                                f'📤 **Agregar o cambiar multimedia a:** {clean_name}\n\n'
                                 f'Envía el archivo multimedia (foto, video, documento, audio, GIF)\n'
-                                f'💡 Tip: También puedes agregar un texto descriptivo junto al archivo',
+                                f'💡 Tip: Puedes añadir un texto descriptivo junto al archivo',
                                 reply_markup=key, parse_mode='Markdown')
                 
                 with shelve.open(files.sost_bd) as bd: 
                     bd[str(chat_id)] = 32
             else:
-                bot.send_message(chat_id, '❌ Producto no válido o ya tiene multimedia asignada')
+                bot.send_message(chat_id, '❌ Producto no válido')
 
         elif sost_num == 31:  # Seleccionar producto para eliminar multimedia
             clean_name = message_text
