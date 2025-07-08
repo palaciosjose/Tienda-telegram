@@ -49,7 +49,30 @@ def remove_pid_file():
     except Exception:
         pass
 
+
 atexit.register(remove_pid_file)
+
+def send_main_menu(chat_id, username, name):
+    """Enviar el mensaje de inicio con el teclado principal"""
+    key = telebot.types.InlineKeyboardMarkup()
+    key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
+    if dop.check_message('start'):
+        with shelve.open(files.bot_message_bd) as bd:
+            start_message = bd['start']
+        start_message = start_message.replace('username', username or '')
+        start_message = start_message.replace('name', name or '')
+        bot.send_message(chat_id, start_message, reply_markup=key)
+    else:
+        bot.send_message(chat_id, '🏠 Inicio', reply_markup=key)
+
+
+def session_expired(chat_id, username, name):
+    """Informar expiración de sesión y volver al menú principal"""
+    bot.send_message(chat_id, '❌ La sesión expiró.')
+    with shelve.open(files.sost_bd) as bd:
+        if str(chat_id) in bd:
+            del bd[str(chat_id)]
+    send_main_menu(chat_id, username, name)
 
 # Solo log crítico
 print("🚀 Bot iniciado.")
@@ -125,8 +148,12 @@ def message_send(message):
                 key = telebot.types.InlineKeyboardMarkup()
                 try:
                     amount = int(message.text)
-                    with open('data/Temp/' + str(message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
-                        name_good = f.read()
+                    try:
+                        with open('data/Temp/' + str(message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
+                            name_good = f.read()
+                    except FileNotFoundError:
+                        session_expired(message.chat.id, message.chat.username, message.from_user.first_name)
+                        return
                     if dop.get_minimum(name_good) <= amount <= dop.amount_of_goods(name_good):
                         sum_price = dop.order_sum(name_good, amount)
                         # Optimización: verificar pagos una sola vez
@@ -338,8 +365,12 @@ def inline(callback):
                         dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
 
         elif callback.data == 'Comprar':
-            with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
-                name_good = f.read()
+            try:
+                with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
+                    name_good = f.read()
+            except FileNotFoundError:
+                session_expired(callback.message.chat.id, callback.message.chat.username, callback.message.from_user.first_name)
+                return
             if dop.amount_of_goods(name_good) == 0:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Producto agotado - No disponible para compra')
             elif dop.payments_checkvkl() == None:
@@ -356,15 +387,23 @@ def inline(callback):
         # Callbacks de pagos
         elif callback.data == 'PayPal' or callback.data == 'Binance':
             if callback.data == 'PayPal':
-                with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
-                    name_good = f.read()
+                try:
+                    with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
+                        name_good = f.read()
+                except FileNotFoundError:
+                    session_expired(callback.message.chat.id, callback.message.chat.username, callback.message.from_user.first_name)
+                    return
                 amount = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 0)
                 sum_price = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 1)
                 payments.creat_bill_paypal(callback.message.chat.id, callback.id, callback.message.message_id, sum_price, name_good, amount)
             elif callback.data == 'Binance':
                 sum_price = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 1)
-                with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 
-                    name_good = f.read()
+                try:
+                    with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f:
+                        name_good = f.read()
+                except FileNotFoundError:
+                    session_expired(callback.message.chat.id, callback.message.chat.username, callback.message.from_user.first_name)
+                    return
                 amount = dop.normal_read_line('data/Temp/' + str(callback.message.chat.id) + '.txt', 0)
                 if int(sum_price) < 5:
                     bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='⚠️ Binance Pay requiere un mínimo de $5 USD')
