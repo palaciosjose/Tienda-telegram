@@ -116,10 +116,24 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif 'Añadir nueva posición en el escaparate' == message_text:
             key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Ingrese el nombre del nuevo producto', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd: 
-                bd[str(chat_id)] = 2
+            key.add(
+                telebot.types.InlineKeyboardButton(
+                    text='Omitir', callback_data='SKIP_NEW_MEDIA'
+                )
+            )
+            key.add(
+                telebot.types.InlineKeyboardButton(
+                    text='Cancelar y volver al menú principal de administración',
+                    callback_data='Volver al menú principal de administración'
+                )
+            )
+            bot.send_message(
+                chat_id,
+                'Envíe una imagen o video para el producto (opcional) o presione "Omitir"',
+                reply_markup=key
+            )
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 200
 
         elif 'Eliminar posición' == message_text:
             con = db.get_db_connection()
@@ -842,7 +856,29 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f: 
                 minimum = f.read()
             
-            bot.send_message(chat_id, f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${message_text} USD', parse_mode='MarkDown', reply_markup=key)
+            summary = (
+                f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}'
+                f'\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${message_text} USD'
+            )
+
+            media_temp = 'data/Temp/' + str(chat_id) + 'new_media.txt'
+            if os.path.exists(media_temp):
+                with open(media_temp, 'r', encoding='utf-8') as f:
+                    lines = f.read().splitlines()
+                    if len(lines) >= 2:
+                        file_id = lines[0]
+                        mtype = lines[1]
+                        caption = summary
+                        if mtype == 'photo':
+                            bot.send_photo(chat_id, file_id, caption=caption, reply_markup=key, parse_mode='Markdown')
+                        elif mtype == 'video':
+                            bot.send_video(chat_id, file_id, caption=caption, reply_markup=key, parse_mode='Markdown')
+                        else:
+                            bot.send_message(chat_id, summary, parse_mode='MarkDown', reply_markup=key)
+                    else:
+                        bot.send_message(chat_id, summary, parse_mode='MarkDown', reply_markup=key)
+            else:
+                bot.send_message(chat_id, summary, parse_mode='MarkDown', reply_markup=key)
             with shelve.open(files.sost_bd) as bd: 
                 del bd[str(chat_id)]
 
@@ -1620,6 +1656,19 @@ def ad_inline(callback_data, chat_id, message_id):
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
+    elif callback_data == 'SKIP_NEW_MEDIA':
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(
+            telebot.types.InlineKeyboardButton(
+                text='Cancelar y volver al menú principal de administración',
+                callback_data='Volver al menú principal de administración'
+            )
+        )
+        bot.edit_message_reply_markup(chat_id, message_id)
+        bot.send_message(chat_id, 'Ingrese el nombre del nuevo producto', reply_markup=key)
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(chat_id)] = 2
+
     elif callback_data == 'Añadir producto a la tienda':
         with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: 
             name = f.read()
@@ -1634,11 +1683,39 @@ def ad_inline(callback_data, chat_id, message_id):
 
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
+        media_temp = 'data/Temp/' + str(chat_id) + 'new_media.txt'
+        media_id = None
+        media_type = None
+        media_caption = None
+        if os.path.exists(media_temp):
+            with open(media_temp, 'r', encoding='utf-8') as f:
+                lines = f.read().splitlines()
+                if len(lines) >= 2:
+                    media_id = lines[0]
+                    media_type = lines[1]
+                    media_caption = lines[2] if len(lines) > 2 else None
+
+        cursor.execute(
+            """
             INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (name, description, format_type, minimum, price, 'data/goods/' + name + '.txt', '', None, None, None))
+            """,
+            (
+                name,
+                description,
+                format_type,
+                minimum,
+                price,
+                'data/goods/' + name + '.txt',
+                '',
+                media_id,
+                media_type,
+                media_caption,
+            ),
+        )
         con.commit()
+        if os.path.exists(media_temp):
+            os.remove(media_temp)
         
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
@@ -1657,16 +1734,20 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 48):
+        if state not in (32, 48, 200):
             return
 
         if state == 32:
             temp_path = 'data/Temp/' + str(chat_id) + 'media_product.txt'
-        else:
+        elif state == 48:
             temp_path = 'data/Temp/' + str(chat_id) + 'media_plan.txt'
+        else:
+            temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
 
-        with open(temp_path, 'r', encoding='utf-8') as f:
-            product_name = f.read()
+        product_name = None
+        if state in (32, 48):
+            with open(temp_path, 'r', encoding='utf-8') as f:
+                product_name = f.read()
 
         file_id = None
         media_type = None
@@ -1694,11 +1775,23 @@ def handle_multimedia(message):
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
-            else:
+            elif state == 48:
                 saved = subscriptions.save_plan_media(product_name, file_id, media_type, caption)
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('🎬 Multimedia suscripciones')
                 user_markup.row('Volver al menú principal')
+            else:
+                with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
+                    f.write(file_id + '\n')
+                    f.write(media_type + '\n')
+                    if caption:
+                        f.write(caption)
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+                bot.send_message(chat_id, 'Ingrese el nombre del nuevo producto', reply_markup=key)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 2
+                return
 
             media_names = {
                 'photo': '📸 Imagen',
