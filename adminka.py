@@ -906,7 +906,13 @@ def text_analytics(message_text, chat_id):
                 open(file_path, 'w', encoding='utf-8').close()
 
             with open(file_path, 'r', encoding='utf-8') as f:
-                content = f.read()
+                lines = [line.strip() for line in f.readlines() if line.strip()]
+                if lines:
+                    enumerated = "\n".join(
+                        f"{idx+1}. {line}" for idx, line in enumerate(lines)
+                    )
+                else:
+                    enumerated = 'Sin unidades cargadas'
 
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(
@@ -914,7 +920,7 @@ def text_analytics(message_text, chat_id):
                 callback_data='Volver al menú principal de administración'))
             bot.send_message(
                 chat_id,
-                f'Contenido actual del archivo {message_text}:\n\n{content}\n\nEnvíe el nuevo contenido (cada línea será un producto):')
+                f'Unidades actuales de {message_text}:\n\n{enumerated}\n\nEnvíe el nuevo contenido (cada línea será un producto):')
 
             with open(
                 'data/Temp/' + str(chat_id) + 'upload_file.txt',
