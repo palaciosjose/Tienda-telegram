@@ -173,3 +173,20 @@ def test_schedule_campaign_records_json(tmp_path):
     data = json.loads(row[0])
     assert data == {"lunes": ["10:00", "15:00"]}
 
+
+def test_update_campaign_updates_text(tmp_path):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "CampU", "message_text": "Hi", "created_by": 1})
+    ok = manager.update_campaign(camp_id, {"message_text": "Bye"})
+    assert ok
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT message_text FROM campaigns WHERE id = ?", (camp_id,))
+    row = cur.fetchone()
+    conn.close()
+    assert row[0] == "Bye"
+
