@@ -447,7 +447,7 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif '📣 Difusión' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('A todos los usuarios', 'Solo a los compradores')
+            user_markup.row('A todos los usuarios', 'Solo a compradores')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione a qué grupo de usuarios desea enviar el boletín', reply_markup=user_markup)
 
@@ -605,13 +605,13 @@ def in_adminka(chat_id, message_text, username, name_user):
             preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog()}"
             bot.send_message(chat_id, preview, parse_mode='Markdown')
 
-        elif 'A todos los usuarios' == message_text or 'Solo a los compradores' == message_text:
-            if 'A todos los usuarios' == message_text: 
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  
+        elif normalized in ('a todos los usuarios', 'solo a los compradores', 'solo a compradores'):
+            if normalized == 'a todos los usuarios':
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
                     f.write('all\n')
                 amount = dop.user_loger()
-            elif 'Solo a los compradores' == message_text: 
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:  
+            elif normalized in ('solo a los compradores', 'solo a compradores'):
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
                     f.write('buyers\n')
                 amount = dop.get_amountsbayers()
             key = telebot.types.InlineKeyboardMarkup()
