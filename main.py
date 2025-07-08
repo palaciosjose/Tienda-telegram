@@ -229,7 +229,9 @@ def inline(callback):
                 catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog()}"
                 if callback.message.content_type != 'text':
                     bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
+                    bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
+                else:
+                    dop.safe_edit_message(bot, callback.message, catalog_text, reply_markup=key, parse_mode='Markdown')
 
         # Mostrar información del producto
         elif the_goods and callback.data in the_goods:
@@ -333,7 +335,9 @@ def inline(callback):
                     start_message = start_message.replace('name', callback.message.from_user.first_name)
                     if callback.message.content_type != 'text':
                         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                    bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
+                        bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
+                    else:
+                        dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
 
         elif callback.data == 'Comprar':
             with open('data/Temp/' + str(callback.message.chat.id) + 'good_name.txt', encoding='utf-8') as f: 

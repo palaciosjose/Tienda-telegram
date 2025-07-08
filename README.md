@@ -53,6 +53,17 @@ Luego puedes iniciar el bot con:
 python main.py
 ```
 
+Para que los métodos de pago funcionen debes registrar tus credenciales
+después de crear la base de datos:
+
+```bash
+python config_paypal_simple.py
+python setup_binance_wallet.py
+```
+
+Estos scripts guardan la información en las tablas `paypal_data` y
+`binance_data` creadas por `init_db.py`.
+
 Al iniciar, el proceso guarda su ID en `data/bot.pid` para evitar ejecuciones
 duplicadas.  Si el archivo existe y corresponde a un proceso activo, el bot se
 detendrá con una advertencia.  El archivo se elimina automáticamente al cerrar

@@ -36,6 +36,14 @@ def ensure_database_schema():
             cursor.execute("ALTER TABLE goods ADD COLUMN duration_days INTEGER DEFAULT NULL")
             updated = True
 
+        # Tablas para métodos de pago (creación si no existen)
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS paypal_data (client_id TEXT, client_secret TEXT, sandbox INTEGER DEFAULT 1)"
+        )
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS binance_data (api_key TEXT, api_secret TEXT, merchant_id TEXT)"
+        )
+
         if updated:
             con.commit()
     except Exception as e:
