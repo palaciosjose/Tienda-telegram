@@ -1749,6 +1749,27 @@ def ad_inline(callback_data, chat_id, message_id):
             ),
         )
         con.commit()
+        # Mostrar información del producto con la multimedia que se haya adjuntado
+        media_info = dop.get_product_media(name)
+        caption = dop.format_product_with_media(name)
+        if media_info:
+            mtype = media_info['type']
+            file_id = media_info['file_id']
+            if mtype == 'photo':
+                bot.send_photo(chat_id, file_id, caption=caption, parse_mode='Markdown')
+            elif mtype == 'video':
+                bot.send_video(chat_id, file_id, caption=caption, parse_mode='Markdown')
+            elif mtype == 'document':
+                bot.send_document(chat_id, file_id, caption=caption, parse_mode='Markdown')
+            elif mtype == 'audio':
+                bot.send_audio(chat_id, file_id, caption=caption, parse_mode='Markdown')
+            elif mtype == 'animation':
+                bot.send_animation(chat_id, file_id, caption=caption, parse_mode='Markdown')
+            else:
+                bot.send_message(chat_id, caption, parse_mode='Markdown')
+        else:
+            bot.send_message(chat_id, caption or name, parse_mode='Markdown')
+
         if os.path.exists(media_temp):
             os.remove(media_temp)
         
