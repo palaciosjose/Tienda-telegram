@@ -93,7 +93,7 @@ def create_database():
             campaign_id INTEGER,
             schedule_name TEXT,
             frequency TEXT,
-            send_times TEXT,
+            schedule_json TEXT,
             target_platforms TEXT,
             is_active INTEGER DEFAULT 1,
             next_send_telegram TEXT,
