@@ -1243,9 +1243,9 @@ def ad_inline(callback_data, chat_id, message_id):
 
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('💬 Respuestas')
-        user_markup.row('📦 Surtido', '➕ Producto')
-        user_markup.row('💰 Pagos')
-        user_markup.row('📊 Stats', '📣 Difusión')
+            user_markup.row('📦 Surtido', '➕ Producto')
+            user_markup.row('💰 Pagos')
+            user_markup.row('📊 Stats', '📣 Difusión')
             user_markup.row('💸 Descuentos')
             user_markup.row('⚙️ Otros')
             bot.delete_message(chat_id, message_id)
