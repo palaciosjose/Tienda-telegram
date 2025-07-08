@@ -26,6 +26,17 @@ pip install -r requirements.txt
    y `LONG_POLLING_TIMEOUT`.  Si no las defines, el bot utiliza los valores
    por defecto `8`, `25` y `20` segundos respectivamente.
 
+### Actualización
+
+Si cuentas con una instalación previa y tu base de datos incluye las tablas
+`subscription_products` o `user_subscriptions`, ejecuta:
+
+```bash
+python migrate_drop_subscriptions.py
+```
+
+antes de iniciar la nueva versión del bot para eliminarlas de forma segura.
+
 ## Uso
 
 Antes de iniciar el bot por primera vez se debe crear la estructura de la base de datos. Ejecuta:
