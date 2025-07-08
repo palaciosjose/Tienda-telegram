@@ -1358,6 +1358,38 @@ def ad_inline(callback_data, chat_id, message_id):
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 2
 
+    elif callback_data == 'CONFIRM_BROADCAST':
+        try:
+            with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
+                lines = f.read().splitlines()
+            group = lines[0]
+            amount = int(lines[1])
+            text = lines[2]
+        except Exception:
+            bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+            return
+
+        media = None
+        media_path = f'data/Temp/{chat_id}_broadcast_media.txt'
+        if os.path.exists(media_path):
+            with open(media_path, 'r', encoding='utf-8') as f:
+                mlines = f.read().splitlines()
+                if len(mlines) >= 2:
+                    fid = mlines[0]
+                    mtype = mlines[1]
+                    cap = mlines[2] if len(mlines) > 2 else None
+                    media = {'file_id': fid, 'type': mtype, 'caption': cap}
+
+        result = dop.broadcast_message(group, amount, text, media)
+        bot.edit_message_reply_markup(chat_id, message_id)
+        bot.send_message(chat_id, result)
+        try:
+            os.remove('data/Temp/' + str(chat_id) + '.txt')
+            if os.path.exists(media_path):
+                os.remove(media_path)
+        except Exception:
+            pass
+
     elif callback_data == 'Añadir producto a la tienda':
         try:
             with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f:
@@ -1533,13 +1565,23 @@ def handle_multimedia(message):
                             del bd[str(chat_id)]
                     in_adminka(chat_id, 'Volver al menú principal', None, None)
                     return
-                media = {'file_id': file_id, 'type': media_type, 'caption': caption}
-                result = dop.broadcast_message(group, amount, text, media)
-                bot.send_message(chat_id, result)
-                try:
-                    os.remove('data/Temp/' + str(chat_id) + '.txt')
-                except Exception:
-                    pass
+
+                media_path = f"data/Temp/{chat_id}_broadcast_media.txt"
+                with open(media_path, 'w', encoding='utf-8') as f:
+                    f.write(file_id + '\n')
+                    f.write(media_type + '\n')
+                    if caption:
+                        f.write(caption)
+
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(
+                    telebot.types.InlineKeyboardButton(text='✅ Enviar boletín', callback_data='CONFIRM_BROADCAST')
+                )
+                key.add(
+                    telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración',
+                                                       callback_data='Volver al menú principal de administración')
+                )
+                bot.send_message(chat_id, 'Archivo recibido. ¿Desea enviar el mensaje ahora?', reply_markup=key)
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
                 return
