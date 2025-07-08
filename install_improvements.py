@@ -94,7 +94,6 @@ def upgrade_database():
             pass
         
         conn.commit()
-        conn.close()
         return True
         
     except Exception as e:
@@ -137,7 +136,6 @@ def validate_purchase_by_user(user_id=None, username=None):
             return "❌ Debes proporcionar user_id o username"
         
         purchases = cursor.fetchall()
-        con.close()
         
         if not purchases:
             return "❌ No se encontraron compras para este usuario"
@@ -209,7 +207,6 @@ def get_purchase_stats():
         """)
         payment_methods = cursor.fetchall()
         
-        con.close()
         
         response = "📊 **Estadísticas de Ventas:**\\n\\n"
         response += f"🛍️ **Total compras:** {total_purchases or 0}\\n"
@@ -247,7 +244,6 @@ def search_recent_purchases(hours=24):
         """)
         
         purchases = cursor.fetchall()
-        con.close()
         
         if not purchases:
             return f"❌ No hay compras recientes"
@@ -326,7 +322,6 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
             pass  # Si la tabla no existe, continuar
         
         con.commit()
-        con.close()
         return True
     except Exception as e:
         print(f"Error en new_buy_improved: {e}")
@@ -357,7 +352,6 @@ def get_daily_sales():
         """)
         
         products = cursor.fetchall()
-        con.close()
         
         response = "📊 **Estadísticas de Ventas:**\\n\\n"
         response += f"🛍️ **Transacciones recientes:** {count or 0}\\n"
@@ -398,7 +392,6 @@ def search_user_purchases(search_term):
             """, (f"%{clean_username}%",))
         
         purchases = cursor.fetchall()
-        con.close()
         
         if not purchases:
             return "❌ No se encontraron compras para este usuario"

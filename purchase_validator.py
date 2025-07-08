@@ -31,7 +31,6 @@ def validate_purchase_by_user(user_id=None, username=None):
             return "❌ Debes proporcionar user_id o username"
         
         purchases = cursor.fetchall()
-        con.close()
         
         if not purchases:
             return "❌ No se encontraron compras para este usuario"
@@ -103,7 +102,6 @@ def get_purchase_stats():
         """)
         payment_methods = cursor.fetchall()
         
-        con.close()
         
         response = "📊 **Estadísticas de Ventas:**\n\n"
         response += f"🛍️ **Total compras:** {total_purchases or 0}\n"
@@ -141,7 +139,6 @@ def search_recent_purchases(hours=24):
         """)
         
         purchases = cursor.fetchall()
-        con.close()
         
         if not purchases:
             return f"❌ No hay compras recientes"
