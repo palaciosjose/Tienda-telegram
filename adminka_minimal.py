@@ -5,9 +5,10 @@ from bot_instance import bot
 def in_adminka(chat_id, message_text, username, name_user):
     """Función principal de administración"""
     if chat_id in dop.get_adminlist():
-        if message_text == 'Volver al menú principal' or message_text == '/adm':
+        normalized = message_text.strip().lower()
+        if normalized in ('volver al menú principal', 'volver al menu principal', '/adm'):
             if dop.get_sost(chat_id):
-                with shelve.open(files.sost_bd) as bd: 
+                with shelve.open(files.sost_bd) as bd:
                     if str(chat_id) in bd:
                         del bd[str(chat_id)]
             
@@ -29,7 +30,8 @@ def in_adminka(chat_id, message_text, username, name_user):
 
 def text_analytics(message_text, chat_id):
     """Función para analizar texto del admin"""
-    if message_text in ('Volver al menú principal', '/adm'):
+    normalized = message_text.strip().lower()
+    if normalized in ('volver al menú principal', 'volver al menu principal', '/adm'):
         with shelve.open(files.sost_bd) as bd:
             if str(chat_id) in bd:
                 del bd[str(chat_id)]
