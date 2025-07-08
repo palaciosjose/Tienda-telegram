@@ -800,6 +800,13 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 22
 
 def text_analytics(message_text, chat_id):
+    if message_text in ('Volver al men\u00fa principal', '/adm'):
+        with shelve.open(files.sost_bd) as bd:
+            if str(chat_id) in bd:
+                del bd[str(chat_id)]
+        in_adminka(chat_id, 'Volver al men\u00fa principal', None, None)
+        return
+
     if dop.get_sost(chat_id) is True:
         with shelve.open(files.sost_bd) as bd: 
             sost_num = bd[str(chat_id)]

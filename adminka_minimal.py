@@ -53,6 +53,13 @@ def in_adminka(chat_id, message_text, username, name_user):
 
 def text_analytics(message_text, chat_id):
     """Función para analizar texto del admin"""
+    if message_text in ('Volver al menú principal', '/adm'):
+        with shelve.open(files.sost_bd) as bd:
+            if str(chat_id) in bd:
+                del bd[str(chat_id)]
+        in_adminka(chat_id, 'Volver al menú principal', None, None)
+        return
+
     if dop.get_sost(chat_id):
         with shelve.open(files.sost_bd) as bd:
             sost_num = bd.get(str(chat_id), 0)
