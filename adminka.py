@@ -1748,16 +1748,38 @@ def ad_inline(callback_data, chat_id, message_id):
             bd[str(chat_id)] = 2
 
     elif callback_data == 'Añadir producto a la tienda':
-        with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f: 
-            name = f.read()
-        with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f: 
-            description = f.read()
-        with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f: 
-            format_type = f.read()
-        with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f: 
-            minimum = f.read()
-        with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f: 
-            price = f.read()
+        try:
+            with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f:
+                name = f.read()
+            with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f:
+                description = f.read()
+            with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
+                format_type = f.read()
+            with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f:
+                minimum = f.read()
+            with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
+                price = f.read()
+        except FileNotFoundError:
+            bot.send_message(chat_id, '❌ La sesión expiró. Vuelva a intentarlo.')
+            with shelve.open(files.sost_bd) as bd:
+                if str(chat_id) in bd:
+                    del bd[str(chat_id)]
+
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('💬 Respuestas')
+            user_markup.row('📦 Surtido', '➕ Producto')
+            user_markup.row('💼 Suscripciones')
+            user_markup.row('💰 Pagos')
+            user_markup.row('📊 Stats', '📣 Difusión')
+            user_markup.row('💸 Descuentos')
+            user_markup.row('⚙️ Otros')
+            bot.delete_message(chat_id, message_id)
+            bot.send_message(
+                chat_id,
+                '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start',
+                reply_markup=user_markup,
+            )
+            return
 
         con = db.get_db_connection()
         cursor = con.cursor()
