@@ -1,10 +1,13 @@
 import telebot, sqlite3, shelve, os
 import config, dop, files
 import db
-from advertising_system import AdvertisingManager
+from advertising_system.admin_integration import (
+    manager as advertising,
+    create_campaign_from_admin,
+    list_campaigns_for_admin,
+    add_target_group_from_admin,
+)
 from bot_instance import bot
-
-advertising = AdvertisingManager(files.main_db)
 
 
 def session_expired(chat_id):
@@ -415,13 +418,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 160
 
         elif '📋 Ver campañas' == message_text:
-            campaigns = advertising.get_all_campaigns()
-            if campaigns:
-                response = '📋 *Campañas registradas:*\n'
-                for c in campaigns:
-                    response += f"- {c['id']}. {c['name']} ({c['status']})\n"
-            else:
-                response = 'ℹ️ No hay campañas registradas.'
+            response = list_campaigns_for_admin()
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('📢 Marketing')
             user_markup.row('Volver al menú principal')
@@ -1381,8 +1378,11 @@ def text_analytics(message_text, chat_id):
                 'button1_url': button1_url,
                 'created_by': chat_id,
             }
-            camp_id = advertising.create_campaign(data)
-            bot.send_message(chat_id, f'✅ Campaña creada con ID {camp_id}')
+            ok, msg = create_campaign_from_admin(data)
+            if ok:
+                bot.send_message(chat_id, '✅ ' + msg)
+            else:
+                bot.send_message(chat_id, '❌ ' + msg)
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 
@@ -1420,7 +1420,7 @@ def text_analytics(message_text, chat_id):
                 session_expired(chat_id)
                 return
             name = None if message_text.lower() == 'no' else message_text
-            ok, msg = advertising.add_target_group(platform, gid, name)
+            ok, msg = add_target_group_from_admin(platform, gid, name)
             bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
