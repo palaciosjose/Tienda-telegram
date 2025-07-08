@@ -89,7 +89,6 @@ def init_subscription_db():
     )
 
     conn.commit()
-    conn.close()
 
 
 # ---------------------------------------------------------------------------
@@ -126,7 +125,6 @@ def add_subscription_product(name, description, price, duration,
          media_caption, delivery_format, delivery_content)
     )
     conn.commit()
-    conn.close()
     return True
 
 
@@ -138,7 +136,6 @@ def get_subscription_product(product_id):
     cursor.execute(
         'SELECT * FROM subscription_products WHERE id = ?', (product_id,))
     row = cursor.fetchone()
-    conn.close()
     return row
 
 
@@ -149,7 +146,6 @@ def get_all_subscription_products():
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM subscription_products')
     rows = cursor.fetchall()
-    conn.close()
     return rows
 
 
@@ -163,7 +159,6 @@ def get_plan_media(plan_name):
         (plan_name,)
     )
     row = cur.fetchone()
-    conn.close()
     if row and row[0]:
         return {'file_id': row[0], 'type': row[1], 'caption': row[2]}
     return None
@@ -183,8 +178,6 @@ def save_plan_media(plan_name, file_id, media_type, caption=None):
         return True
     except Exception:
         return False
-    finally:
-        conn.close()
 
 
 def remove_plan_media(plan_name):
@@ -201,8 +194,6 @@ def remove_plan_media(plan_name):
         return True
     except Exception:
         return False
-    finally:
-        conn.close()
 
 
 def has_plan_media(plan_name):
@@ -218,7 +209,6 @@ def get_plans_with_media():
         "SELECT name, media_type FROM subscription_products WHERE media_file_id IS NOT NULL"
     )
     rows = cur.fetchall()
-    conn.close()
     return rows
 
 
@@ -231,7 +221,6 @@ def get_plans_without_media():
         "SELECT name FROM subscription_products WHERE media_file_id IS NULL"
     )
     rows = [r[0] for r in cur.fetchall()]
-    conn.close()
     return rows
 
 
@@ -259,8 +248,6 @@ def set_delivery_info(plan_name, delivery_format, delivery_content):
         return True
     except Exception:
         return False
-    finally:
-        conn.close()
 
 
 def get_additional_description(plan_name):
@@ -273,7 +260,6 @@ def get_additional_description(plan_name):
         (plan_name,),
     )
     row = cur.fetchone()
-    conn.close()
     if row and row[0]:
         return row[0]
     return ""
@@ -293,8 +279,6 @@ def set_additional_description(plan_name, desc):
         return True
     except Exception:
         return False
-    finally:
-        conn.close()
 
 
 def has_additional_description(plan_name):
@@ -378,7 +362,6 @@ def create_user_subscription(user_id, product_id, payment_method,
          'active', payment_method, '')
     )
     conn.commit()
-    conn.close()
     return True
 
 
@@ -397,13 +380,11 @@ def renew_subscription(subscription_id, apply_early_discount=False):
            WHERE id = ?''', (subscription_id,))
     result = cursor.fetchone()
     if not result:
-        conn.close()
         return False
 
     product_id, end_date_str, history = result
     product = get_subscription_product(product_id)
     if not product:
-        conn.close()
         return False
 
     _, _, _, _, _, duration, duration_unit, _, _, _, _, _, _ = product
@@ -424,7 +405,6 @@ def renew_subscription(subscription_id, apply_early_discount=False):
         (new_end.isoformat(), new_history, subscription_id)
     )
     conn.commit()
-    conn.close()
     return True
 
 
@@ -437,7 +417,6 @@ def suspend_subscription(subscription_id):
         'UPDATE user_subscriptions SET status = ? WHERE id = ?',
         ('suspended', subscription_id))
     conn.commit()
-    conn.close()
     log_action('suspended', subscription_id)
     return True
 
@@ -451,7 +430,6 @@ def cancel_subscription(subscription_id):
         'UPDATE user_subscriptions SET status = ? WHERE id = ?',
         ('canceled', subscription_id))
     conn.commit()
-    conn.close()
     log_action('canceled', subscription_id)
     return True
 
@@ -464,7 +442,6 @@ def get_user_subscriptions(user_id):
     cursor.execute(
         'SELECT * FROM user_subscriptions WHERE user_id = ?', (user_id,))
     rows = cursor.fetchall()
-    conn.close()
     return rows
 
 
@@ -476,7 +453,6 @@ def get_subscription_status(subscription_id):
     cursor.execute(
         'SELECT status FROM user_subscriptions WHERE id = ?', (subscription_id,))
     row = cursor.fetchone()
-    conn.close()
     return row[0] if row else None
 
 
@@ -497,7 +473,6 @@ def check_subscriptions():
     cursor.execute('SELECT id, user_id, product_id, end_date, status FROM '
                    'user_subscriptions')
     subs = cursor.fetchall()
-    conn.close()
 
     now = datetime.utcnow()
     for sub_id, user_id, product_id, end_date_str, status in subs:
@@ -537,7 +512,6 @@ def check_subscriptions():
                 'UPDATE user_subscriptions SET status = ? WHERE id = ?',
                 ('due', sub_id))
             conn.commit()
-            conn.close()
             status = 'due'
             log_action('due', sub_id)
 
@@ -562,7 +536,6 @@ def check_subscriptions():
                         'UPDATE user_subscriptions SET status = ? WHERE id = ?',
                         ('expired', sub_id))
                     conn.commit()
-                    conn.close()
                     log_action('expired', sub_id)
                 try:
                     bot.send_message(
@@ -595,7 +568,6 @@ def get_upcoming_subscriptions(days=30):
         (end_limit.isoformat(),)
     )
     rows = cursor.fetchall()
-    conn.close()
     return rows
 
 
@@ -613,7 +585,6 @@ def update_plan_description(plan_id, new_description):
         cursor.execute("UPDATE subscription_products SET description = ? WHERE id = ?", 
                       (new_description, plan_id))
         conn.commit()
-        conn.close()
         return True
     except Exception as e:
         print(f"Error actualizando descripción del plan: {e}")
@@ -628,7 +599,6 @@ def update_plan_price(plan_id, new_price):
         cursor.execute("UPDATE subscription_products SET price = ? WHERE id = ?", 
                       (new_price, plan_id))
         conn.commit()
-        conn.close()
         return True
     except Exception as e:
         print(f"Error actualizando precio del plan: {e}")
@@ -661,7 +631,6 @@ def delete_subscription_product(plan_id):
         cursor.execute("UPDATE user_subscriptions SET status = 'canceled' WHERE product_id = ?", (plan_id,))
         
         conn.commit()
-        conn.close()
         return True
         
     except Exception as e:
@@ -691,7 +660,6 @@ def add_content_to_plan(plan_name, content):
         cursor.execute("UPDATE subscription_products SET stored = ? WHERE name = ?", 
                       (content_file, plan_name))
         conn.commit()
-        conn.close()
         
         return True
         
@@ -719,7 +687,6 @@ def get_plan_by_name(plan_name):
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM subscription_products WHERE name = ?", (plan_name,))
         result = cursor.fetchone()
-        conn.close()
         return result
     except Exception as e:
         print(f"Error obteniendo plan por nombre: {e}")
@@ -784,7 +751,6 @@ def update_plan_format(plan_name, new_format):
         cursor.execute("UPDATE subscription_products SET format = ? WHERE name = ?", 
                       (new_format, plan_name))
         conn.commit()
-        conn.close()
         return True
     except Exception as e:
         print(f"Error actualizando formato del plan: {e}")
