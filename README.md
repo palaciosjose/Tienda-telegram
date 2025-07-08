@@ -60,6 +60,24 @@ el bot.
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.
 
+## Panel de administración
+
+Al entrar verás botones para gestionar las distintas funciones del bot. Entre
+ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **💰 Pagos**,
+**📊 Stats**, **📣 Difusión**, **📢 Marketing**, **💸 Descuentos** y **⚙️ Otros**.
+
+### Difusión
+
+La opción **📣 Difusión** permite enviar un anuncio de forma masiva. Tras
+seleccionarla puedes escoger entre **A todos los usuarios** o
+**Solo a compradores**, según quieras contactar a toda tu base de usuarios o
+únicamente a quienes ya han realizado compras.
+
+Indica cuántos destinatarios procesar y escribe el texto del mensaje. De forma
+opcional puedes adjuntar una foto, video o documento antes de confirmar.
+Finalizado el envío el bot mostrará un resumen con los aciertos y fallos
+obtenidos.
+
 ## Marketing/Advertising
 
 El sistema incluye un módulo de **marketing automatizado** para enviar
