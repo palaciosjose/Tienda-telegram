@@ -1,5 +1,6 @@
 import telebot, shelve, datetime, sqlite3, random, os
 import files, config
+import db
 from bot_instance import bot
 
 # ---------------------------------------------------------------------------
@@ -12,7 +13,7 @@ from bot_instance import bot
 def ensure_database_schema():
     """Agregar columnas faltantes a la tabla goods si es necesario."""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
 
         cursor.execute("PRAGMA table_info(goods)")
@@ -173,7 +174,7 @@ def user_loger(chat_id=0):
 def get_productcatalog():
     """Catálogo limpio - solo muestra texto de descuento"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT COUNT(*) FROM goods;")
         product_count = cursor.fetchone()[0]
@@ -202,7 +203,7 @@ def get_productcatalog():
 
 def get_goods():
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT name FROM goods;")
         goods = []
@@ -215,7 +216,7 @@ def get_goods():
 
 def get_stored(name_good):
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT stored FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
@@ -239,7 +240,7 @@ def amount_of_goods(name_good):
 
 def get_minimum(name_good):
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT minimum FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
@@ -252,7 +253,7 @@ def get_minimum(name_good):
 
 def order_sum(name_good, amount):
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT price FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
@@ -293,7 +294,7 @@ def check_vklpayments(name):
 
 def get_goodformat(name_good):
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT format FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
@@ -306,7 +307,7 @@ def get_goodformat(name_good):
 
 def get_profit():
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT price FROM purchases;")
         price_amount = 0
@@ -319,7 +320,7 @@ def get_profit():
 
 def get_amountsbayers():
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT COUNT(*) FROM buyers;")
         result = cursor.fetchone()
@@ -366,7 +367,7 @@ def rasl(group, amount, text):
     
     elif group == 'buyers':
         try:
-            con = sqlite3.connect(files.main_db)
+            con = db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT id FROM buyers LIMIT ?;", (int(amount),))
             buyers = cursor.fetchall()
@@ -412,7 +413,7 @@ def new_admin(his_id):
 def get_description(name_good):
     """Descripción del producto con sistema de descuentos"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT description, price FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
@@ -459,7 +460,7 @@ def get_description(name_good):
 
 def get_paypaldata():
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT client_id, client_secret, sandbox FROM paypal_data;")
         result = cursor.fetchone()
@@ -472,7 +473,7 @@ def get_paypaldata():
 
 def get_binancedata():
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT api_key, api_secret, merchant_id FROM binance_data;")
         result = cursor.fetchone()
@@ -590,7 +591,7 @@ def get_tovar(name_good):
 
 def new_buy(his_id, username, name_good, amount, price):
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("INSERT INTO purchases VALUES(?, ?, ?, ?, ?)", (his_id, username, name_good, amount, price))
         con.commit()
@@ -600,7 +601,7 @@ def new_buy(his_id, username, name_good, amount, price):
 
 def new_buyer(his_id, username, payed):
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         cursor.execute("SELECT payed FROM buyers WHERE id = ?;", (his_id,))
@@ -619,7 +620,7 @@ def new_buyer(his_id, username, payed):
 def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None):
     """Versión mejorada de new_buy que incluye método de pago y timestamp"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Usar timestamp actual
@@ -652,7 +653,7 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
 def get_daily_sales():
     """Obtiene las ventas del día actual"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Obtener ventas recientes (aproximación por rowid)
@@ -693,7 +694,7 @@ def get_daily_sales():
 def search_user_purchases(search_term):
     """Busca compras por ID de usuario o username"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Si es número, buscar por ID
@@ -759,7 +760,7 @@ def search_user_purchases(search_term):
 def get_discount_config():
     """Obtiene la configuración de descuentos"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT discount_enabled, discount_text, discount_multiplier, show_fake_price FROM discount_config WHERE id = 1;")
         result = cursor.fetchone()
@@ -792,7 +793,7 @@ def get_discount_config():
 def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_price=None):
     """Actualiza la configuración de descuentos"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         # Crear tabla si no existe
@@ -841,7 +842,7 @@ def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_p
 def setup_discount_system():
     """Configura el sistema de descuentos por primera vez"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         
         cursor.execute('''
@@ -878,7 +879,7 @@ def setup_discount_system():
 def get_additional_description(good_name):
     """Obtiene la descripción adicional de un producto"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (good_name,))
         result = cursor.fetchone()
@@ -895,7 +896,7 @@ def get_additional_description(good_name):
 def set_additional_description(good_name, additional_description):
     """Establece la descripción adicional de un producto"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("UPDATE goods SET additional_description = ? WHERE name = ?", 
                       (additional_description, good_name))
@@ -909,7 +910,7 @@ def set_additional_description(good_name, additional_description):
 def get_product_full_info(good_name):
     """Obtiene toda la información del producto incluyendo descripción adicional"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             SELECT name, description, additional_description, format, minimum, price 
@@ -988,7 +989,7 @@ def has_additional_description(good_name):
 def save_product_media(product_name, file_id, media_type, caption=None):
     """Guardar información multimedia de un producto"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             UPDATE goods 
@@ -1005,7 +1006,7 @@ def save_product_media(product_name, file_id, media_type, caption=None):
 def get_product_media(product_name):
     """Obtener información multimedia de un producto"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             SELECT media_file_id, media_type, media_caption 
@@ -1034,7 +1035,7 @@ def has_product_media(product_name):
 def remove_product_media(product_name):
     """Eliminar multimedia de un producto"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             UPDATE goods 
@@ -1051,7 +1052,7 @@ def remove_product_media(product_name):
 def get_products_with_media():
     """Obtener lista de productos que tienen multimedia"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             SELECT name, media_type 
@@ -1068,7 +1069,7 @@ def get_products_with_media():
 def get_products_without_media():
     """Obtener lista de productos que NO tienen multimedia"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             SELECT name 
@@ -1085,7 +1086,7 @@ def get_products_without_media():
 def format_product_with_media(product_name):
     """Formatear información del producto incluyendo multimedia"""
     try:
-        con = sqlite3.connect(files.main_db)
+        con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
             SELECT name, description, price, media_file_id, media_type, media_caption

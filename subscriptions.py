@@ -6,6 +6,7 @@ import files
 import telebot
 import config
 import dop
+import db
 import os
 from bot_instance import bot
 
@@ -19,7 +20,7 @@ DEFAULT_NOTIFICATION_DAYS = '30,15,7,1'
 
 def init_subscription_db():
     """Crear tablas necesarias para el sistema de suscripciones"""
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
 
     cursor.execute(
@@ -108,7 +109,7 @@ def add_subscription_product(name, description, price, duration,
                              delivery_content=None):
     """Agregar un nuevo producto de suscripción"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         '''INSERT INTO subscription_products
@@ -132,7 +133,7 @@ def add_subscription_product(name, description, price, duration,
 def get_subscription_product(product_id):
     """Obtener información de un producto de suscripción"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         'SELECT * FROM subscription_products WHERE id = ?', (product_id,))
@@ -144,7 +145,7 @@ def get_subscription_product(product_id):
 def get_all_subscription_products():
     """Obtener todos los planes de suscripción disponibles"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT * FROM subscription_products')
     rows = cursor.fetchall()
@@ -155,7 +156,7 @@ def get_all_subscription_products():
 def get_plan_media(plan_name):
     """Obtener información multimedia asociada a un plan"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     cur.execute(
         "SELECT media_file_id, media_type, media_caption FROM subscription_products WHERE name = ?",
@@ -171,7 +172,7 @@ def get_plan_media(plan_name):
 def save_plan_media(plan_name, file_id, media_type, caption=None):
     """Guardar multimedia para un plan"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute(
@@ -189,7 +190,7 @@ def save_plan_media(plan_name, file_id, media_type, caption=None):
 def remove_plan_media(plan_name):
     """Eliminar multimedia de un plan"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute(
@@ -211,7 +212,7 @@ def has_plan_media(plan_name):
 def get_plans_with_media():
     """Listar planes con multimedia"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     cur.execute(
         "SELECT name, media_type FROM subscription_products WHERE media_file_id IS NOT NULL"
@@ -224,7 +225,7 @@ def get_plans_with_media():
 def get_plans_without_media():
     """Listar planes sin multimedia"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     cur.execute(
         "SELECT name FROM subscription_products WHERE media_file_id IS NULL"
@@ -247,7 +248,7 @@ def get_delivery_info(plan_id):
 def set_delivery_info(plan_name, delivery_format, delivery_content):
     """Actualizar información de entrega"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute(
@@ -265,7 +266,7 @@ def set_delivery_info(plan_name, delivery_format, delivery_content):
 def get_additional_description(plan_name):
     """Obtener descripción adicional de un plan"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     cur.execute(
         "SELECT additional_description FROM subscription_products WHERE name=?",
@@ -281,7 +282,7 @@ def get_additional_description(plan_name):
 def set_additional_description(plan_name, desc):
     """Actualizar descripción adicional de un plan"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cur = conn.cursor()
     try:
         cur.execute(
@@ -366,7 +367,7 @@ def create_user_subscription(user_id, product_id, payment_method,
         start_date = datetime.utcnow()
     end_date = start_date + timedelta(**{duration_unit: duration})
 
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         '''INSERT INTO user_subscriptions
@@ -389,7 +390,7 @@ def renew_subscription(subscription_id, apply_early_discount=False):
     de pagos externo.
     """
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         '''SELECT product_id, end_date, renewal_history FROM user_subscriptions
@@ -430,7 +431,7 @@ def renew_subscription(subscription_id, apply_early_discount=False):
 def suspend_subscription(subscription_id):
     """Suspender una suscripción"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         'UPDATE user_subscriptions SET status = ? WHERE id = ?',
@@ -444,7 +445,7 @@ def suspend_subscription(subscription_id):
 def cancel_subscription(subscription_id):
     """Cancelar una suscripción manualmente."""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         'UPDATE user_subscriptions SET status = ? WHERE id = ?',
@@ -458,7 +459,7 @@ def cancel_subscription(subscription_id):
 def get_user_subscriptions(user_id):
     """Obtener todas las suscripciones de un usuario."""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         'SELECT * FROM user_subscriptions WHERE user_id = ?', (user_id,))
@@ -470,7 +471,7 @@ def get_user_subscriptions(user_id):
 def get_subscription_status(subscription_id):
     """Devolver el estado actual de una suscripción."""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute(
         'SELECT status FROM user_subscriptions WHERE id = ?', (subscription_id,))
@@ -491,7 +492,7 @@ def log_action(action, subscription_id):
 def check_subscriptions():
     """Proceso diario: notificar y suspender suscripciones"""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     cursor.execute('SELECT id, user_id, product_id, end_date, status FROM '
                    'user_subscriptions')
@@ -530,7 +531,7 @@ def check_subscriptions():
                 log_action(f'notify {days}', sub_id)
 
         if 0 <= days_remaining <= max(notif_levels) and status == 'active':
-            conn = sqlite3.connect(files.main_db)
+            conn = db.get_db_connection()
             cur = conn.cursor()
             cur.execute(
                 'UPDATE user_subscriptions SET status = ? WHERE id = ?',
@@ -555,7 +556,7 @@ def check_subscriptions():
                     continue
             if grace_period and now <= end_date + timedelta(days=grace_period):
                 if status != 'expired':
-                    conn = sqlite3.connect(files.main_db)
+                    conn = db.get_db_connection()
                     cur = conn.cursor()
                     cur.execute(
                         'UPDATE user_subscriptions SET status = ? WHERE id = ?',
@@ -585,7 +586,7 @@ def check_subscriptions():
 def get_upcoming_subscriptions(days=30):
     """Obtener suscripciones que vencen en los próximos `days` días."""
     init_subscription_db()
-    conn = sqlite3.connect(files.main_db)
+    conn = db.get_db_connection()
     cursor = conn.cursor()
     end_limit = datetime.utcnow() + timedelta(days=days)
     cursor.execute(
@@ -607,7 +608,7 @@ def update_plan_description(plan_id, new_description):
     """Actualizar descripción principal del plan"""
     try:
         init_subscription_db()
-        conn = sqlite3.connect(files.main_db)
+        conn = db.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE subscription_products SET description = ? WHERE id = ?", 
                       (new_description, plan_id))
@@ -622,7 +623,7 @@ def update_plan_price(plan_id, new_price):
     """Actualizar precio del plan"""
     try:
         init_subscription_db()
-        conn = sqlite3.connect(files.main_db)
+        conn = db.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE subscription_products SET price = ? WHERE id = ?", 
                       (new_price, plan_id))
@@ -652,7 +653,7 @@ def delete_subscription_product(plan_id):
             print(f"✅ Archivo de contenido eliminado: {content_file}")
         
         # Eliminar de base de datos
-        conn = sqlite3.connect(files.main_db)
+        conn = db.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM subscription_products WHERE id = ?", (plan_id,))
         
@@ -685,7 +686,7 @@ def add_content_to_plan(plan_name, content):
         
         # Actualizar ruta en base de datos
         init_subscription_db()
-        conn = sqlite3.connect(files.main_db)
+        conn = db.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE subscription_products SET stored = ? WHERE name = ?", 
                       (content_file, plan_name))
@@ -714,7 +715,7 @@ def get_plan_by_name(plan_name):
     """Obtener plan por nombre"""
     try:
         init_subscription_db()
-        conn = sqlite3.connect(files.main_db)
+        conn = db.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM subscription_products WHERE name = ?", (plan_name,))
         result = cursor.fetchone()
@@ -778,7 +779,7 @@ def update_plan_format(plan_name, new_format):
     """Actualizar formato del plan (text/file)"""
     try:
         init_subscription_db()
-        conn = sqlite3.connect(files.main_db)
+        conn = db.get_db_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE subscription_products SET format = ? WHERE name = ?", 
                       (new_format, plan_name))

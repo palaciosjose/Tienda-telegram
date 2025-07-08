@@ -1,5 +1,6 @@
 import telebot, shelve, sqlite3, os
 import config, dop, payments, adminka, files, subscriptions
+import db
 from bot_instance import bot
 import atexit
 import glob
@@ -180,7 +181,7 @@ def inline(callback):
 
         elif callback.data == 'Ir al catálogo de productos':
             # Optimización: usar conexión eficiente
-            con = dop.get_db_connection() if hasattr(dop, 'get_db_connection') else sqlite3.connect(files.main_db)
+            con = dop.get_db_connection() if hasattr(dop, 'get_db_connection') else db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods;")
             key = telebot.types.InlineKeyboardMarkup()
