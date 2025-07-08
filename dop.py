@@ -32,6 +32,9 @@ def ensure_database_schema():
         if 'media_caption' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN media_caption TEXT")
             updated = True
+        if 'duration_days' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN duration_days INTEGER DEFAULT NULL")
+            updated = True
 
         if updated:
             con.commit()
@@ -399,13 +402,13 @@ def get_description(name_good):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT description, price FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute("SELECT description, price, duration_days FROM goods WHERE name = ?;", (name_good,))
         result = cursor.fetchone()
-        
+
         if not result:
             return "Producto no encontrado"
-        
-        description, price = result
+
+        description, price, duration = result
         good_amount = amount_of_goods(name_good)
         
         # Obtener configuración de descuentos
@@ -433,6 +436,8 @@ def get_description(name_good):
             product_description += f"💰 *Precio:* ${price} USD\n\n"
         
         product_description += f"📦 *Stock disponible:* {good_amount} unidades\n"
+        if duration:
+            product_description += f"⏳ *Duración:* {duration} días\n"
         product_description += f"🛒 *Mínimo de compra:* {get_minimum(name_good)} unidades"
         
         return product_description
@@ -878,26 +883,53 @@ def set_additional_description(good_name, additional_description):
         print(f"Error estableciendo descripción adicional: {e}")
         return False
 
+def get_duration_days(product_name):
+    """Devuelve la duración en días de un producto."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("SELECT duration_days FROM goods WHERE name = ?", (product_name,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+    except Exception as e:
+        print(f"Error obteniendo duración: {e}")
+        return None
+
+def set_duration_days(product_name, days):
+    """Establece la duración en días de un producto."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("UPDATE goods SET duration_days = ? WHERE name = ?", (days, product_name))
+        con.commit()
+        return True
+    except Exception as e:
+        print(f"Error estableciendo duración: {e}")
+        return False
+
 def get_product_full_info(good_name):
     """Obtiene toda la información del producto incluyendo descripción adicional"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
-            SELECT name, description, additional_description, format, minimum, price 
+            SELECT name, description, additional_description, format, minimum, price, duration_days
             FROM goods WHERE name = ?
         """, (good_name,))
         result = cursor.fetchone()
-        
+
         if result:
-            name, description, additional_desc, format, minimum, price = result
+            name, description, additional_desc, format, minimum, price, duration_days = result
             return {
                 'name': name,
                 'description': description,
                 'additional_description': additional_desc or '',
                 'format': format,
                 'minimum': minimum,
-                'price': price
+                'price': price,
+                'duration_days': duration_days
             }
         else:
             return None
@@ -926,6 +958,9 @@ def format_product_basic_info(good_name):
 📦 **Cantidad mínima:** {product_info['minimum']}
 📋 **Formato:** {format_display}
 📊 **Disponibles:** {amount}"""
+
+        if product_info.get('duration_days'):
+            info_text += f"\n⏳ **Duración:** {product_info['duration_days']} días"
         
         return info_text
     except Exception as e:
@@ -1054,8 +1089,8 @@ def format_product_with_media(product_name):
         con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
-            SELECT name, description, price, media_file_id, media_type, media_caption
-            FROM goods 
+            SELECT name, description, price, media_file_id, media_type, media_caption, duration_days
+            FROM goods
             WHERE name = ?
         """, (product_name,))
         result = cursor.fetchone()
@@ -1063,11 +1098,13 @@ def format_product_with_media(product_name):
         if not result:
             return None
             
-        name, description, price, file_id, media_type, caption = result
+        name, description, price, file_id, media_type, caption, duration = result
         
         info = f"🎯 **{name}**\n"
         info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"
+        if duration:
+            info += f"⏳ **Duración:** {duration} días\n"
         
         if file_id:
             media_types = {
