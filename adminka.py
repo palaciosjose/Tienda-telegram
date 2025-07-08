@@ -1,4 +1,4 @@
-import telebot, sqlite3, shelve, os
+import telebot, sqlite3, shelve, os, json
 import config, dop, files
 import db
 from advertising_system.admin_integration import (
@@ -6,6 +6,7 @@ from advertising_system.admin_integration import (
     create_campaign_from_admin,
     list_campaigns_for_admin,
     add_target_group_from_admin,
+    get_admin_telegram_groups,
 )
 from bot_instance import bot
 
@@ -483,12 +484,21 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, msg, reply_markup=user_markup, parse_mode='Markdown')
 
         elif message_text == '➕ Agregar grupo':
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('telegram')
-            user_markup.row('Cancelar')
-            bot.send_message(chat_id, '¿Para qué plataforma es el grupo?', reply_markup=user_markup)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 170
+            groups = get_admin_telegram_groups(bot, chat_id)
+            if not groups:
+                bot.send_message(chat_id, 'No se encontraron grupos disponibles.')
+            else:
+                markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for g in groups:
+                    markup.row(f"{g['title']} ({g['id']})")
+                markup.row('Cancelar')
+                tmp = f'data/Temp/{chat_id}_group_choices.json'
+                os.makedirs('data/Temp', exist_ok=True)
+                with open(tmp, 'w', encoding='utf-8') as f:
+                    json.dump(groups, f)
+                bot.send_message(chat_id, 'Seleccione el grupo a agregar:', reply_markup=markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 170
 
         elif message_text == '➖ Eliminar grupo':
             bot.send_message(chat_id, 'Envía el ID del grupo a eliminar:')
@@ -1426,44 +1436,31 @@ def text_analytics(message_text, chat_id):
             except Exception:
                 pass
 
-        elif sost_num == 170:  # Plataforma para nuevo grupo
-            platform = message_text.lower()
-            if platform == 'telegram':
-                with open('data/Temp/' + str(chat_id) + 'group_platform.txt', 'w', encoding='utf-8') as f:
-                    f.write(platform)
-                bot.send_message(chat_id, 'Envíe el ID del grupo:')
+        elif sost_num == 170:  # Selección de grupo de Telegram
+            tmp = f'data/Temp/{chat_id}_group_choices.json'
+            if message_text == 'Cancelar':
                 with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 171
+                    del bd[str(chat_id)]
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+                bot.send_message(chat_id, 'Operación cancelada.')
             else:
-                bot.send_message(chat_id, 'Plataforma inválida. Use telegram.')
-
-        elif sost_num == 171:  # ID del grupo
-            try:
-                with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
-                    platform = f.read()
-            except FileNotFoundError:
-                session_expired(chat_id)
-                return
-            with open('data/Temp/' + str(chat_id) + 'group_id.txt', 'w', encoding='utf-8') as f:
-                f.write(message_text.strip())
-            bot.send_message(chat_id, 'Envíe un nombre opcional para el grupo o escriba "no":')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 173
-
-        elif sost_num == 173:  # Nombre opcional del grupo y creación
-            try:
-                with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
-                    platform = f.read()
-                with open('data/Temp/' + str(chat_id) + 'group_id.txt', encoding='utf-8') as f:
-                    gid = f.read()
-            except FileNotFoundError:
-                session_expired(chat_id)
-                return
-            name = None if message_text.lower() == 'no' else message_text
-            ok, msg = add_target_group_from_admin(platform, gid, name)
-            bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
-            with shelve.open(files.sost_bd) as bd:
-                del bd[str(chat_id)]
+                try:
+                    with open(tmp, 'r', encoding='utf-8') as f:
+                        groups = json.load(f)
+                except FileNotFoundError:
+                    session_expired(chat_id)
+                    return
+                selected = next((g for g in groups if f"{g['title']} ({g['id']})" == message_text), None)
+                if not selected:
+                    bot.send_message(chat_id, 'Selección inválida. Intente nuevamente.')
+                    return
+                ok, msg = add_target_group_from_admin('telegram', selected['id'], selected['title'])
+                bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                if os.path.exists(tmp):
+                    os.remove(tmp)
 
         elif sost_num == 172:  # Eliminar grupo
             gid = message_text.strip()

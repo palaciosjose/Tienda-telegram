@@ -3,6 +3,8 @@
 from .ad_manager import AdvertisingManager
 from .statistics import StatisticsManager
 import files
+import os
+import json
 
 # Instancia única usada por los helpers de este módulo
 _manager = AdvertisingManager(files.main_db)
@@ -46,6 +48,36 @@ def add_target_group_from_admin(platform, group_id, name=None):
         return ok, msg
     except Exception as exc:
         return False, f"Error al agregar grupo: {exc}"
+
+
+def get_admin_telegram_groups(bot, admin_id):
+    """Obtener grupos donde el usuario admin es miembro."""
+
+    try:
+        updates = bot.get_updates()
+    except Exception:
+        updates = []
+
+    groups = {}
+    for upd in updates:
+        chat = None
+        if getattr(upd, "message", None):
+            chat = upd.message.chat
+        elif getattr(upd, "channel_post", None):
+            chat = upd.channel_post.chat
+
+        if chat and chat.type in ("group", "supergroup"):
+            gid = chat.id
+            if gid in groups:
+                continue
+            try:
+                member = bot.get_chat_member(gid, admin_id)
+                if getattr(member, "status", "") not in ("left", "kicked"):
+                    groups[gid] = chat.title or str(gid)
+            except Exception:
+                continue
+
+    return [{"id": gid, "title": title} for gid, title in groups.items()]
 
 
 # Las funciones existentes en AdvertisingManager se siguen exponiendo si se
