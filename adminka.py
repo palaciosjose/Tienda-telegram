@@ -458,16 +458,17 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif message_text.startswith('⏰ Programar envíos'):
             params = message_text.replace('⏰ Programar envíos', '').strip()
             if not params:
-                bot.send_message(chat_id, 'Uso: ⏰ Programar envíos <ID> <HH:MM>')
+                bot.send_message(chat_id, 'Uso: ⏰ Programar envíos <ID> <dias> <HH:MM> <HH:MM>')
             else:
                 parts = params.split()
-                if len(parts) < 2:
-                    bot.send_message(chat_id, 'Uso: ⏰ Programar envíos <ID> <HH:MM>')
+                if len(parts) < 4:
+                    bot.send_message(chat_id, 'Uso: ⏰ Programar envíos <ID> <dias> <HH:MM> <HH:MM>')
                 else:
                     try:
                         camp_id = int(parts[0])
-                        time_str = parts[1]
-                        ok, msg = advertising.schedule_campaign(camp_id, time_str)
+                        days = parts[1].split(',')
+                        times = parts[2:4]
+                        ok, msg = advertising.schedule_campaign(camp_id, days, times)
                         bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
                     except ValueError:
                         bot.send_message(chat_id, '❌ ID de campaña inválido')

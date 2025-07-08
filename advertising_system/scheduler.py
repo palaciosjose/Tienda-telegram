@@ -1,4 +1,5 @@
 import sqlite3
+import json
 from datetime import datetime, timedelta
 import files
 import db
@@ -38,7 +39,7 @@ class CampaignScheduler:
                 schedule_data = {
                     'campaign_id': campaign_id,
                     'platform': platform,
-                    'send_time': send_time,
+                    'schedule_json': json.dumps({d: [send_time] for d in ['lunes','martes','miercoles','jueves','viernes','sabado','domingo']}),
                     'group_range': f'{start_groups}-{end_groups}',
                     'estimated_duration': estimated_duration
                 }
@@ -52,10 +53,10 @@ class CampaignScheduler:
         cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO campaign_schedules
-               (campaign_id, schedule_name, frequency, send_times, target_platforms, created_date)
+               (campaign_id, schedule_name, frequency, schedule_json, target_platforms, created_date)
                VALUES (?, ?, ?, ?, ?, ?)""",
             (
-                data['campaign_id'], 'auto', 'daily', data['send_time'], data['platform'], datetime.now().isoformat()
+                data['campaign_id'], 'auto', 'daily', data['schedule_json'], data['platform'], datetime.now().isoformat()
             )
         )
         conn.commit()
@@ -72,14 +73,23 @@ class CampaignScheduler:
                    c.button1_text, c.button1_url, c.button2_text, c.button2_url
                FROM campaign_schedules cs
                JOIN campaigns c ON cs.campaign_id = c.id
-               WHERE cs.is_active = 1 AND c.status = 'active' AND cs.send_times LIKE ?""",
-            (f'%{current_time}%',)
+               WHERE cs.is_active = 1 AND c.status = 'active'"""
         )
-        pending = cursor.fetchall()
+        rows = cursor.fetchall()
+        pending = []
+        day_map = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+        today = day_map[now.weekday()]
+        for row in rows:
+            try:
+                schedule = json.loads(row[4] or '{}')
+            except Exception:
+                continue
+            if current_time in schedule.get(today, []):
+                pending.append(row)
+
         if not shared:
             conn.close()
         return pending
-
     def update_next_send(self, schedule_id, platform):
         next_send = datetime.now() + timedelta(days=1)
         conn, shared = self._get_connection()

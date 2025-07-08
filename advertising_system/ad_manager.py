@@ -1,5 +1,6 @@
 import sqlite3
 import re
+import json
 from datetime import datetime
 from .campaign_database import CampaignDB
 from .scheduler import CampaignScheduler
@@ -90,13 +91,22 @@ class AdvertisingManager:
             'groups': groups
         }
 
-    def schedule_campaign(self, campaign_id, send_time, platforms=None):
-        """Programar una campaña para enviarse a una hora específica."""
+    def schedule_campaign(self, campaign_id, days, times, platforms=None):
+        """Programar una campaña para enviarse en días y horas específicas."""
         if platforms is None:
             platforms = ['telegram']
 
-        if not re.match(r'^\d{2}:\d{2}$', send_time):
-            return False, 'Formato de hora inválido'
+        valid_days = {'lunes','martes','miercoles','jueves','viernes','sabado','domingo'}
+        day_list = [d.strip().lower() for d in days]
+        if any(d not in valid_days for d in day_list):
+            return False, 'Día inválido'
+
+        for t in times:
+            if not re.match(r'^\d{2}:\d{2}$', t):
+                return False, 'Formato de hora inválido'
+
+        schedule = {d: times[:2] for d in day_list}
+        schedule_json = json.dumps(schedule)
 
         conn, shared = self._get_connection()
         cur = conn.cursor()
@@ -109,14 +119,14 @@ class AdvertisingManager:
         try:
             cur.execute(
                 """INSERT INTO campaign_schedules
-                   (campaign_id, schedule_name, frequency, send_times,
+                   (campaign_id, schedule_name, frequency, schedule_json,
                     target_platforms, created_date)
                    VALUES (?, ?, ?, ?, ?, ?)""",
                 (
                     campaign_id,
                     'manual',
-                    'once',
-                    send_time,
+                    'weekly',
+                    schedule_json,
                     ','.join(platforms),
                     datetime.now().isoformat(),
                 ),

@@ -1,6 +1,7 @@
 import sqlite3
 import sys
 import types
+import json
 
 sys.modules.setdefault(
     "telebot",
@@ -66,6 +67,19 @@ CREATE_TARGET_GROUPS_TABLE = """CREATE TABLE IF NOT EXISTS target_groups (
     notes TEXT
 )"""
 
+CREATE_SCHEDULES_TABLE = """CREATE TABLE IF NOT EXISTS campaign_schedules (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    campaign_id INTEGER,
+    schedule_name TEXT,
+    frequency TEXT,
+    schedule_json TEXT,
+    target_platforms TEXT,
+    is_active INTEGER DEFAULT 1,
+    next_send_telegram TEXT,
+    created_date TEXT,
+    FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
+)"""
+
 
 def init_ads_db(path):
     conn = sqlite3.connect(path)
@@ -73,6 +87,7 @@ def init_ads_db(path):
     cur.execute(CREATE_CAMPAIGNS_TABLE)
     cur.execute(CREATE_SEND_LOGS_TABLE)
     cur.execute(CREATE_TARGET_GROUPS_TABLE)
+    cur.execute(CREATE_SCHEDULES_TABLE)
     conn.commit()
     conn.close()
 
@@ -138,4 +153,23 @@ def test_send_campaign_now(tmp_path, monkeypatch):
     assert len(rows) == 1
     assert sent == [("tg", "111", "Hi")]
     assert all(r[1] == "sent" for r in rows)
+
+
+def test_schedule_campaign_records_json(tmp_path):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+    camp_id = manager.create_campaign({"name": "Camp2", "message_text": "Hi", "created_by": 1})
+
+    ok, msg = manager.schedule_campaign(camp_id, ["lunes"], ["10:00", "15:00"])
+    assert ok
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT schedule_json FROM campaign_schedules WHERE campaign_id = ?", (camp_id,))
+    row = cur.fetchone()
+    conn.close()
+    assert row is not None
+    data = json.loads(row[0])
+    assert data == {"lunes": ["10:00", "15:00"]}
 
