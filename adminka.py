@@ -7,6 +7,15 @@ from bot_instance import bot
 advertising = AdvertisingManager(files.main_db)
 
 
+def session_expired(chat_id):
+    """Informar al usuario que la sesión expiró y volver al menú principal"""
+    bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+    with shelve.open(files.sost_bd) as bd:
+        if str(chat_id) in bd:
+            del bd[str(chat_id)]
+    in_adminka(chat_id, 'Volver al menú principal', None, None)
+
+
 def show_discount_menu(chat_id):
     """Mostrar menú de configuración de descuentos"""
     config_dis = dop.get_discount_config()
@@ -666,11 +675,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                     message = f.read()
             except FileNotFoundError:
-                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                session_expired(chat_id)
                 return
             try:
                 with shelve.open(files.bot_message_bd) as bd:
@@ -769,17 +774,21 @@ def text_analytics(message_text, chat_id):
             key.add(telebot.types.InlineKeyboardButton(text='Añadir producto a la tienda', callback_data='Añadir producto a la tienda'))
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
 
-            with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f:
-                name = f.read()
-            with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f:
-                description = f.read()
-            with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
-                format_type = f.read()
-            format_display = 'Texto' if format_type == 'text' else 'Archivo'
-            with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f:
-                minimum = f.read()
-            with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
-                price = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f:
+                    name = f.read()
+                with open('data/Temp/' + str(chat_id) + 'good_description.txt', encoding='utf-8') as f:
+                    description = f.read()
+                with open('data/Temp/' + str(chat_id) + 'good_format.txt', encoding='utf-8') as f:
+                    format_type = f.read()
+                format_display = 'Texto' if format_type == 'text' else 'Archivo'
+                with open('data/Temp/' + str(chat_id) + 'good_minimum.txt', encoding='utf-8') as f:
+                    minimum = f.read()
+                with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
+                    price = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
             duration_display = ''
             if duration_val > 0:
                 duration_display = f'\n*Duración:* {duration_val} días'
@@ -856,11 +865,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                     name_good = f.read()
             except FileNotFoundError:
-                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                session_expired(chat_id)
                 return
             con = db.get_db_connection()
             cursor = con.cursor()
@@ -881,11 +886,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                     name_good = f.read()
             except FileNotFoundError:
-                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                session_expired(chat_id)
                 return
             try:
                 price = int(message_text)
@@ -931,8 +932,12 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 11
 
         elif sost_num == 11:
-            with open('data/Temp/' + str(chat_id) + 'upload_file.txt', encoding='utf-8') as f: 
-                file_name = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + 'upload_file.txt', encoding='utf-8') as f:
+                    file_name = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
             file_path = 'data/goods/' + file_name + '.txt'
             try:
                 with open(file_path, 'w', encoding='utf-8') as f:
@@ -962,9 +967,9 @@ def text_analytics(message_text, chat_id):
         elif sost_num == 25:
             # PayPal Client Secret
             try:
-                with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', encoding='utf-8') as f:
                     client_id = f.read()
-                
+            
                 con = db.get_db_connection()
                 cursor = con.cursor()
                 cursor.execute("INSERT OR REPLACE INTO paypal_data VALUES(?, ?, ?)", (client_id, message_text, 1))
@@ -976,6 +981,8 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, '¡Credenciales PayPal guardadas exitosamente!')
                 with shelve.open(files.sost_bd) as bd: 
                     del bd[str(chat_id)]
+            except FileNotFoundError:
+                session_expired(chat_id)
             except Exception as e:
                 bot.send_message(chat_id, f'Error guardando credenciales: {e}')
 
@@ -991,8 +998,12 @@ def text_analytics(message_text, chat_id):
 
         elif sost_num == 26:
             # Binance API Secret
-            with open('data/Temp/' + str(chat_id) + 'binance_api.txt', encoding='utf-8') as f: 
-                api_key = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + 'binance_api.txt', encoding='utf-8') as f:
+                    api_key = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, 'Finalmente, ingrese el Merchant ID de Binance:', reply_markup=key)
@@ -1006,11 +1017,11 @@ def text_analytics(message_text, chat_id):
         elif sost_num == 27:
             # Binance Merchant ID
             try:
-                with open('data/Temp/' + str(chat_id) + 'binance_api_temp.txt', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + 'binance_api_temp.txt', encoding='utf-8') as f:
                     api_key = f.read()
-                with open('data/Temp/' + str(chat_id) + 'binance_secret.txt', encoding='utf-8') as f: 
+                with open('data/Temp/' + str(chat_id) + 'binance_secret.txt', encoding='utf-8') as f:
                     api_secret = f.read()
-                
+            
                 con = db.get_db_connection()
                 cursor = con.cursor()
                 cursor.execute("INSERT OR REPLACE INTO binance_data VALUES(?, ?, ?)", (api_key, api_secret, message_text))
@@ -1022,6 +1033,8 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, '¡Credenciales Binance guardadas exitosamente!')
                 with shelve.open(files.sost_bd) as bd: 
                     del bd[str(chat_id)]
+            except FileNotFoundError:
+                session_expired(chat_id)
             except Exception as e:
                 bot.send_message(chat_id, f'Error guardando credenciales: {e}')
 
@@ -1080,7 +1093,7 @@ def text_analytics(message_text, chat_id):
             try:
                 with open('data/Temp/' + str(chat_id) + 'edit_additional_desc.txt', encoding='utf-8') as f:
                     product_name = f.read()
-
+            
                 if message_text.upper() == "ELIMINAR":
                     new_additional_desc = ""
                     success_message = "La descripción adicional ha sido eliminada."
@@ -1101,6 +1114,8 @@ def text_analytics(message_text, chat_id):
                         del bd[str(chat_id)]
                 else:
                     bot.send_message(chat_id, '❌ Error al actualizar la descripción adicional. Inténtelo de nuevo.')
+            except FileNotFoundError:
+                session_expired(chat_id)
             except Exception as e:
                 print(f"Error en estado 29: {e}")
                 bot.send_message(chat_id, '❌ Error procesando la descripción adicional. Inténtelo de nuevo.')
@@ -1193,11 +1208,7 @@ def text_analytics(message_text, chat_id):
                 amount = int(lines[1])
                 text = lines[2]
             except Exception:
-                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                session_expired(chat_id)
                 return
 
             if message_text.lower().strip() in ('no', 'skip', 'sin archivo'):
@@ -1266,10 +1277,14 @@ def text_analytics(message_text, chat_id):
                     button1_text = parts[0]
                     button1_url = parts[1]
 
-            with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', encoding='utf-8') as f:
-                name = f.read()
-            with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', encoding='utf-8') as f:
-                text = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', encoding='utf-8') as f:
+                    name = f.read()
+                with open('data/Temp/' + str(chat_id) + 'campaign_message.txt', encoding='utf-8') as f:
+                    text = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
 
             data = {
                 'name': name,
@@ -1295,8 +1310,12 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, 'Plataforma inválida. Use telegram o whatsapp.')
 
         elif sost_num == 171:  # ID del grupo
-            with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
-                platform = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
+                    platform = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
             with open('data/Temp/' + str(chat_id) + 'group_id.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text.strip())
             bot.send_message(chat_id, 'Envíe un nombre opcional para el grupo o escriba "no":')
@@ -1304,10 +1323,14 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 173
 
         elif sost_num == 173:  # Nombre opcional del grupo y creación
-            with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
-                platform = f.read()
-            with open('data/Temp/' + str(chat_id) + 'group_id.txt', encoding='utf-8') as f:
-                gid = f.read()
+            try:
+                with open('data/Temp/' + str(chat_id) + 'group_platform.txt', encoding='utf-8') as f:
+                    platform = f.read()
+                with open('data/Temp/' + str(chat_id) + 'group_id.txt', encoding='utf-8') as f:
+                    gid = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
             name = None if message_text.lower() == 'no' else message_text
             ok, msg = advertising.add_target_group(platform, gid, name)
             bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
@@ -1369,7 +1392,7 @@ def ad_inline(callback_data, chat_id, message_id):
             amount = int(lines[1])
             text = lines[2]
         except Exception:
-            bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+            session_expired(chat_id)
             return
 
         media = None
@@ -1412,24 +1435,8 @@ def ad_inline(callback_data, chat_id, message_id):
             except ValueError:
                 duration_days = 0
         except FileNotFoundError:
-            bot.send_message(chat_id, '❌ La sesión expiró. Vuelva a intentarlo.')
-            with shelve.open(files.sost_bd) as bd:
-                if str(chat_id) in bd:
-                    del bd[str(chat_id)]
-
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('💬 Respuestas')
-            user_markup.row('📦 Surtido', '➕ Producto')
-            user_markup.row('💰 Pagos')
-            user_markup.row('📊 Stats', '📣 Difusión')
-            user_markup.row('💸 Descuentos')
-            user_markup.row('⚙️ Otros')
+            session_expired(chat_id)
             bot.delete_message(chat_id, message_id)
-            bot.send_message(
-                chat_id,
-                '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start',
-                reply_markup=user_markup,
-            )
             return
 
         con = db.get_db_connection()
@@ -1525,11 +1532,7 @@ def handle_multimedia(message):
                 with open(temp_path, 'r', encoding='utf-8') as f:
                     product_name = f.read()
             except FileNotFoundError:
-                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                session_expired(chat_id)
                 return
 
         file_id = None
@@ -1566,11 +1569,7 @@ def handle_multimedia(message):
                     amount = int(lines[1])
                     text = lines[2]
                 except Exception:
-                    bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                    with shelve.open(files.sost_bd) as bd:
-                        if str(chat_id) in bd:
-                            del bd[str(chat_id)]
-                    in_adminka(chat_id, 'Volver al menú principal', None, None)
+                    session_expired(chat_id)
                     return
 
                 media_path = f"data/Temp/{chat_id}_broadcast_media.txt"
