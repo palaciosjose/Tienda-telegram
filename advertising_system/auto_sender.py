@@ -3,6 +3,8 @@ import time
 import threading
 import logging
 import os
+import files
+import db
 from .scheduler import CampaignScheduler
 from .telegram_multi import TelegramMultiBot
 from .whaticket_api import WHATicketAPI
@@ -20,6 +22,11 @@ class AutoSender:
         self.thread = None
         logging.basicConfig(filename='data/advertising.log', level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
         self.logger = logging.getLogger(__name__)
+
+    def _get_connection(self):
+        if self.scheduler.db_path == files.main_db:
+            return db.get_db_connection(), True
+        return sqlite3.connect(self.scheduler.db_path), False
 
     def start(self):
         if self.running:
@@ -79,27 +86,34 @@ class AutoSender:
         return processed
 
     def _get_telegram_groups(self):
-        conn = sqlite3.connect(self.scheduler.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, group_id, group_name FROM target_groups WHERE platform = 'telegram' AND status = 'active'")
+        cursor.execute(
+            "SELECT id, group_id, group_name FROM target_groups WHERE platform = 'telegram' AND status = 'active'"
+        )
         rows = cursor.fetchall()
-        conn.close()
+        if not shared:
+            conn.close()
         return [{'id': r[0], 'group_id': r[1], 'group_name': r[2]} for r in rows]
 
     def _get_whatsapp_groups(self):
-        conn = sqlite3.connect(self.scheduler.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, group_id, group_name FROM target_groups WHERE platform = 'whatsapp' AND status = 'active'")
+        cursor.execute(
+            "SELECT id, group_id, group_name FROM target_groups WHERE platform = 'whatsapp' AND status = 'active'"
+        )
         rows = cursor.fetchall()
-        conn.close()
+        if not shared:
+            conn.close()
         return [{'id': r[0], 'group_id': r[1], 'group_name': r[2]} for r in rows]
 
     def _mark_group_blocked(self, group_id):
-        conn = sqlite3.connect(self.scheduler.db_path)
+        conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute("UPDATE target_groups SET status = 'blocked' WHERE id = ?", (group_id,))
         conn.commit()
-        conn.close()
+        if not shared:
+            conn.close()
 
     def _send_telegram_campaign(self, campaign_id, schedule_id, campaign_data):
         groups = self._get_telegram_groups()
