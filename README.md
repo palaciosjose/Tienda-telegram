@@ -63,8 +63,19 @@ El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start
 ## Panel de administración
 
 Al entrar verás botones para gestionar las distintas funciones del bot. Entre
-ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **💰 Pagos**,
+ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **💰 Pagos**, 
 **📊 Stats**, **📣 Difusión**, **📢 Marketing**, **💸 Descuentos** y **⚙️ Otros**.
+
+### Carga y edición de unidades
+
+En **➕ Producto** se muestran los productos existentes. Tras elegir uno
+aparecen tres opciones:
+
+- **Añadir unidades** – agrega nuevas líneas al archivo `data/goods/<producto>.txt`.
+- **Editar unidades** – reemplaza el contenido de líneas específicas.
+- **Eliminar unidades** – borra las líneas seleccionadas.
+
+Después de cada acción se vuelve al menú de productos.
 
 ### Difusión
 
