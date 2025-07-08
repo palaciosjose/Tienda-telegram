@@ -56,14 +56,15 @@ class AutoSender:
     def _main_loop(self):
         while self.running:
             try:
-                self._check_and_send_campaigns()
-                time.sleep(30)
+                sent_any = self._check_and_send_campaigns()
+                time.sleep(30 if sent_any else 60)
             except Exception as e:
                 self.logger.error(f"Error en main loop: {e}")
                 time.sleep(60)
 
     def _check_and_send_campaigns(self):
         pending_sends = self.scheduler.get_pending_sends()
+        processed = False
         for send_data in pending_sends:
             schedule_id = send_data[0]
             campaign_id = send_data[1]
@@ -73,7 +74,9 @@ class AutoSender:
                     self._send_telegram_campaign(campaign_id, schedule_id, send_data)
                 elif platform == 'whatsapp':
                     self._send_whatsapp_campaign(campaign_id, schedule_id, send_data)
+                processed = True
                 time.sleep(2)
+        return processed
 
     def _get_telegram_groups(self):
         conn = sqlite3.connect(self.scheduler.db_path)
