@@ -1893,7 +1893,9 @@ def handle_multimedia(message):
                 bot.send_message(chat_id,
                                f'✅ {media_names.get(media_type, "Archivo")} agregado al {target}: {product_name}',
                                reply_markup=user_markup)
-                del bd[str(chat_id)]
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
             else:
                 bot.send_message(chat_id, '❌ Error guardando multimedia')
         else:
