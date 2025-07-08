@@ -20,6 +20,11 @@ pip install -r requirements.txt
    por comas) que empleará `advertising_cron.py`; el script fallará si no
    se configura esta variable.
 
+   Puedes modificar la frecuencia de consulta al servidor de Telegram
+   estableciendo las variables opcionales `POLL_INTERVAL`, `POLL_TIMEOUT`
+   y `LONG_POLLING_TIMEOUT`.  Si no las defines, el bot utiliza los valores
+   por defecto `8`, `25` y `20` segundos respectivamente.
+
 ## Uso
 
 Antes de iniciar el bot por primera vez se debe crear la estructura de la base de datos. Ejecuta:
