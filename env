@@ -1,0 +1,7 @@
+TELEGRAM_BOT_TOKEN=7275890221:AAHjeLMyikGG_pnjA1SXtn1bC1UJ-G3UXDg
+TELEGRAM_ADMIN_ID=723745098
+# Token utilizado por advertising_cron.py (obligatorio)
+# Puedes definir múltiples tokens separados por comas
+TELEGRAM_TOKEN=7275890221:AAHjeLMyikGG_pnjA1SXtn1bC1UJ-G3UXDg
+WHATICKET_URL=https://apiwhaticket.streamdigi.co/api/messages/send
+WHATICKET_TOKEN=il7Z9alI1M5V34QxZCmFBXWqPvt8sV
