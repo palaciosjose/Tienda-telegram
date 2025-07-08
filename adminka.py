@@ -752,9 +752,18 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 16
 
+
         elif sost_num == 16:
+            try:
+                duration_val = int(message_text)
+                if duration_val < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, '❌ Por favor ingrese una duración válida (0 o más días).')
+                return
+
             with open('data/Temp/' + str(chat_id) + 'good_duration.txt', 'w', encoding='utf-8') as f:
-                f.write(message_text)
+                f.write(str(duration_val))
 
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Añadir producto a la tienda', callback_data='Añadir producto a la tienda'))
@@ -772,12 +781,8 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
                 price = f.read()
             duration_display = ''
-            try:
-                duration_int = int(message_text)
-                if duration_int > 0:
-                    duration_display = f'\n*Duración:* {duration_int} días'
-            except ValueError:
-                pass
+            if duration_val > 0:
+                duration_display = f'\n*Duración:* {duration_val} días'
 
             summary = (
                 f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}'
@@ -1404,6 +1409,10 @@ def ad_inline(callback_data, chat_id, message_id):
                 price = f.read()
             with open('data/Temp/' + str(chat_id) + 'good_duration.txt', encoding='utf-8') as f:
                 duration_days = f.read()
+            try:
+                duration_days = int(duration_days)
+            except ValueError:
+                duration_days = 0
         except FileNotFoundError:
             bot.send_message(chat_id, '❌ La sesión expiró. Vuelva a intentarlo.')
             with shelve.open(files.sost_bd) as bd:
