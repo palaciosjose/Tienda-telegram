@@ -4,6 +4,7 @@ import db
 from bot_instance import bot
 import atexit
 import glob
+import sys
 
 # Limpieza automática de archivos temporales al cerrar
 def cleanup_temp_files():
@@ -18,6 +19,37 @@ def cleanup_temp_files():
 
 # Registrar limpieza al cerrar
 atexit.register(cleanup_temp_files)
+
+def is_running():
+    """Verificar si ya existe un proceso en ejecución"""
+    pid_file = 'data/bot.pid'
+    if not os.path.exists(pid_file):
+        return False
+    try:
+        with open(pid_file, 'r') as f:
+            pid = int(f.read())
+        os.kill(pid, 0)
+        return True
+    except Exception:
+        try:
+            os.remove(pid_file)
+        except Exception:
+            pass
+        return False
+
+def remove_pid_file():
+    """Eliminar el archivo PID al cerrar"""
+    pid_file = 'data/bot.pid'
+    try:
+        if os.path.exists(pid_file):
+            with open(pid_file, 'r') as f:
+                pid_in_file = f.read().strip()
+            if pid_in_file == str(os.getpid()):
+                os.remove(pid_file)
+    except Exception:
+        pass
+
+atexit.register(remove_pid_file)
 
 # Solo log crítico
 print("🚀 Bot iniciado.")
@@ -454,6 +486,16 @@ def handle_media_files(message):
     adminka.handle_multimedia(message)
 
 if __name__ == '__main__':
+    if is_running():
+        print("⚠️ Bot ya está ejecutándose (data/bot.pid)")
+        sys.exit(1)
+    try:
+        os.makedirs('data', exist_ok=True)
+        with open('data/bot.pid', 'w') as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        print("⚠️ No se pudo escribir data/bot.pid")
+
     print("✅ Bot iniciando polling optimizado...")
     # Polling optimizado configurable mediante variables de entorno
     bot.polling(

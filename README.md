@@ -41,6 +41,11 @@ Luego puedes iniciar el bot con:
 python main.py
 ```
 
+Al iniciar, el proceso guarda su ID en `data/bot.pid` para evitar ejecuciones
+duplicadas.  Si el archivo existe y corresponde a un proceso activo, el bot se
+detendrá con una advertencia.  El archivo se elimina automáticamente al cerrar
+el bot.
+
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.
 
 ## Suscripciones
