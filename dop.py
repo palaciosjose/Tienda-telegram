@@ -1,5 +1,6 @@
 import telebot, shelve, datetime, sqlite3, random, os
 import files, config
+from bot_instance import bot
 
 # ---------------------------------------------------------------------------
 # Utilidad para asegurar que la base de datos tenga las columnas necesarias
@@ -43,8 +44,6 @@ def ensure_database_schema():
 
 # Asegurar el esquema al importar el módulo
 ensure_database_schema()
-
-bot = telebot.TeleBot(config.token)
 
 # -------------------------------------------------
 # Utilidad para editar mensajes con o sin multimedia

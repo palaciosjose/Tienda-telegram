@@ -1,7 +1,6 @@
 import telebot, sqlite3, shelve, os
 import config, dop, files, subscriptions
-
-bot = telebot.TeleBot(config.token)
+from bot_instance import bot
 
 def in_adminka(chat_id, message_text, username, name_user):
     """Función principal de administración"""
