@@ -353,6 +353,12 @@ def in_adminka(chat_id, message_text, username, name_user):
 
 
         elif '➕ Producto' == message_text:
+            overview_lines = dop.get_stock_overview()
+            if overview_lines:
+                step = 10
+                for i in range(0, len(overview_lines), step):
+                    part = '\n'.join(overview_lines[i:i + step])
+                    bot.send_message(chat_id, part, parse_mode='Markdown')
             show_product_menu(chat_id)
 
         elif '💰 Pagos' == message_text:
