@@ -1200,7 +1200,7 @@ def text_analytics(message_text, chat_id):
                 pass
             else:
                 media = None
-            result = send_broadcast(group, amount, text, media)
+            result = dop.broadcast_message(group, amount, text, media)
             bot.send_message(chat_id, result)
             try:
                 os.remove('data/Temp/' + str(chat_id) + '.txt')
@@ -1533,8 +1533,8 @@ def handle_multimedia(message):
                             del bd[str(chat_id)]
                     in_adminka(chat_id, 'Volver al menú principal', None, None)
                     return
-                media = {'file_id': file_id, 'type': media_type}
-                result = send_broadcast(group, amount, text, media)
+                media = {'file_id': file_id, 'type': media_type, 'caption': caption}
+                result = dop.broadcast_message(group, amount, text, media)
                 bot.send_message(chat_id, result)
                 try:
                     os.remove('data/Temp/' + str(chat_id) + '.txt')
