@@ -32,6 +32,77 @@ def show_discount_menu(chat_id):
 
     bot.send_message(chat_id, message, reply_markup=user_markup, parse_mode='Markdown')
 
+
+def _send_media(chat_id, text, media):
+    """Enviar media con caption al chat"""
+    mtype = media.get('type')
+    fid = media.get('file_id')
+    if mtype == 'photo':
+        bot.send_photo(chat_id, fid, caption=text)
+    elif mtype == 'video':
+        bot.send_video(chat_id, fid, caption=text)
+    elif mtype == 'document':
+        bot.send_document(chat_id, fid, caption=text)
+    elif mtype == 'audio':
+        bot.send_audio(chat_id, fid, caption=text)
+    elif mtype == 'animation':
+        bot.send_animation(chat_id, fid, caption=text)
+    else:
+        bot.send_message(chat_id, text)
+
+
+def send_broadcast(group, amount, text, media=None):
+    """Enviar un boletín a un grupo de usuarios"""
+    good_send = 0
+    lose_send = 0
+    i = 0
+
+    if group == 'all':
+        try:
+            with open(files.users_list, encoding='utf-8') as f:
+                users = f.readlines()
+
+            while i < int(amount) and i < len(users):
+                chat_id = int(users[i].strip())
+                try:
+                    if media:
+                        _send_media(chat_id, text, media)
+                    else:
+                        bot.send_message(chat_id, text)
+                    good_send += 1
+                except Exception:
+                    lose_send += 1
+                    dop.new_blockuser(chat_id)
+                i += 1
+        except Exception:
+            pass
+
+    elif group == 'buyers':
+        try:
+            con = db.get_db_connection()
+            cursor = con.cursor()
+            cursor.execute("SELECT id FROM buyers LIMIT ?;", (int(amount),))
+            buyers = cursor.fetchall()
+
+            for buyer in buyers:
+                chat_id = int(buyer[0])
+                try:
+                    if media:
+                        _send_media(chat_id, text, media)
+                    else:
+                        bot.send_message(chat_id, text)
+                    good_send += 1
+                except Exception:
+                    lose_send += 1
+                    dop.new_blockuser(chat_id)
+        except Exception:
+            pass
+
+    return (
+        f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n'
+        f'{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
+    )
+
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
         normalized = message_text.strip().lower()
@@ -367,8 +438,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
             bot.send_message(chat_id, 'Ingrese la API Key de Binance:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd: 
-                bd[str(chat_id)] = 19
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 40
 
         elif '📊 Stats' == message_text:
             result = dop.get_daily_sales()
@@ -1081,6 +1152,72 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
             show_discount_menu(chat_id)
 
+        elif sost_num == 40:  # Cantidad de destinatarios
+            try:
+                amount = int(message_text)
+                if amount <= 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, '❌ Por favor ingrese un número válido.')
+                return
+
+            with open('data/Temp/' + str(chat_id) + '.txt', 'a', encoding='utf-8') as f:
+                f.write(str(amount) + '\n')
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Ingrese el texto del anuncio', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 41
+
+        elif sost_num == 41:  # Texto del anuncio
+            with open('data/Temp/' + str(chat_id) + '.txt', 'a', encoding='utf-8') as f:
+                f.write(message_text + '\n')
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Si desea añadir un archivo multimedia envíelo ahora o escriba "no"', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 42
+
+        elif sost_num == 42:  # Archivo multimedia opcional
+            try:
+                with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
+                    lines = f.read().splitlines()
+                group = lines[0]
+                amount = int(lines[1])
+                text = lines[2]
+            except Exception:
+                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(chat_id) in bd:
+                        del bd[str(chat_id)]
+                in_adminka(chat_id, 'Volver al menú principal', None, None)
+                return
+
+            media = None
+            if message_text.lower() in ('no', 'skip', 'sin archivo'):
+                pass
+            else:
+                media = None
+            result = send_broadcast(group, amount, text, media)
+            bot.send_message(chat_id, result)
+            try:
+                os.remove('data/Temp/' + str(chat_id) + '.txt')
+            except Exception:
+                pass
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+
+
+
+
+
+
+
+
+
         elif sost_num == 34:  # Recibir nuevo multiplicador
             try:
                 multiplier = float(message_text)
@@ -1333,11 +1470,13 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200):
+        if state not in (32, 200, 42):
             return
 
         if state == 32:
             temp_path = 'data/Temp/' + str(chat_id) + 'media_product.txt'
+        elif state == 42:
+            temp_path = 'data/Temp/' + str(chat_id) + '.txt'
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
 
@@ -1380,6 +1519,30 @@ def handle_multimedia(message):
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
+            elif state == 42:
+                try:
+                    with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
+                        lines = f.read().splitlines()
+                    group = lines[0]
+                    amount = int(lines[1])
+                    text = lines[2]
+                except Exception:
+                    bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
+                    with shelve.open(files.sost_bd) as bd:
+                        if str(chat_id) in bd:
+                            del bd[str(chat_id)]
+                    in_adminka(chat_id, 'Volver al menú principal', None, None)
+                    return
+                media = {'file_id': file_id, 'type': media_type}
+                result = send_broadcast(group, amount, text, media)
+                bot.send_message(chat_id, result)
+                try:
+                    os.remove('data/Temp/' + str(chat_id) + '.txt')
+                except Exception:
+                    pass
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
                     f.write(file_id + '\n')
