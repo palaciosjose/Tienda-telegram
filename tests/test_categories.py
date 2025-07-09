@@ -29,7 +29,9 @@ def setup_dop(monkeypatch, tmp_path):
     conn = sqlite3.connect(files.main_db)
     cur = conn.cursor()
     cur.execute("CREATE TABLE shops (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER, name TEXT)")
-    cur.execute("CREATE TABLE goods (name TEXT PRIMARY KEY, description TEXT, format TEXT, minimum INTEGER, price INTEGER, stored TEXT, shop_id INTEGER)")
+    cur.execute(
+        "CREATE TABLE goods (name TEXT, description TEXT, format TEXT, minimum INTEGER, price INTEGER, stored TEXT, shop_id INTEGER DEFAULT 1, PRIMARY KEY (name, shop_id))"
+    )
     conn.commit()
     conn.close()
 

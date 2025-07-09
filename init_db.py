@@ -53,7 +53,7 @@ def create_database():
     # Crear tabla de productos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS goods (
-            name TEXT PRIMARY KEY,
+            name TEXT,
             description TEXT,
             format TEXT,
             minimum INTEGER,
@@ -67,6 +67,7 @@ def create_database():
             manual_delivery INTEGER DEFAULT 0,
             category_id INTEGER,
             shop_id INTEGER DEFAULT 1,
+            PRIMARY KEY (name, shop_id),
             FOREIGN KEY (category_id) REFERENCES categories(id)
         )
     ''')

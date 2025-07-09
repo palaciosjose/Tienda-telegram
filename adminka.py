@@ -1278,7 +1278,7 @@ def text_analytics(message_text, chat_id):
                 return
 
             action = message_text.strip().lower()
-            file_path = f'data/goods/{product}.txt'
+            file_path = f'data/goods/{shop_id}_{product}.txt'
             if action == 'añadir unidades':
                 bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
                 with shelve.open(files.sost_bd) as bd:
@@ -1319,7 +1319,7 @@ def text_analytics(message_text, chat_id):
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            file_path = f'data/goods/{product}.txt'
+            file_path = f'data/goods/{shop_id}_{product}.txt'
             with open(file_path, 'a', encoding='utf-8') as f:
                 f.write(message_text + '\n')
             bot.send_message(chat_id, '¡Unidades añadidas con éxito!')
@@ -1334,7 +1334,7 @@ def text_analytics(message_text, chat_id):
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            file_path = f'data/goods/{product}.txt'
+            file_path = f'data/goods/{shop_id}_{product}.txt'
             if not os.path.exists(file_path):
                 bot.send_message(chat_id, '❌ Archivo de producto no encontrado')
                 show_product_menu(chat_id)
@@ -1367,7 +1367,7 @@ def text_analytics(message_text, chat_id):
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            file_path = f'data/goods/{product}.txt'
+            file_path = f'data/goods/{shop_id}_{product}.txt'
             if not os.path.exists(file_path):
                 bot.send_message(chat_id, '❌ Archivo de producto no encontrado')
                 show_product_menu(chat_id)
@@ -2221,7 +2221,7 @@ def ad_inline(callback_data, chat_id, message_id):
             format_type,
             minimum,
             price,
-            'data/goods/' + name + '.txt',
+            f'data/goods/{shop_id}_{name}.txt',
             additional_description='',
             media_file_id=media_id,
             media_type=media_type,
@@ -2231,7 +2231,7 @@ def ad_inline(callback_data, chat_id, message_id):
             category_id=category_id,
             shop_id=shop_id,
         )
-        goods_file = f"data/goods/{name}.txt"
+        goods_file = f"data/goods/{shop_id}_{name}.txt"
         open(goods_file, "a", encoding="utf-8").close()
         # Mostrar información del producto con la multimedia que se haya adjuntado
         media_info = dop.get_product_media(name, shop_id)
