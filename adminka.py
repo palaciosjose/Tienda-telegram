@@ -617,6 +617,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '⚙️ Otros' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nuevo admin', 'Eliminar admin')
+            user_markup.row('Cambiar nombre de tienda')
             if chat_id == config.admin_id:
                 user_markup.row('🛍️ Gestionar tiendas')
             user_markup.row('Volver al menú principal')
@@ -643,6 +644,11 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, 'Seleccione qué admin desea eliminar', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 22
+
+        elif message_text == 'Cambiar nombre de tienda':
+            bot.send_message(chat_id, 'Ingrese el nuevo nombre de la tienda:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 303
 
         elif message_text == '🛍️ Gestionar tiendas' and chat_id == config.admin_id:
             shops = dop.list_shops()
@@ -1300,6 +1306,16 @@ def text_analytics(message_text, chat_id):
             else:
                 bot.send_message(chat_id, '❌ Error asignando admin')
             in_adminka(chat_id, '🛍️ Gestionar tiendas', None, None)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+        elif sost_num == 303:
+            shop_id = dop.get_shop_id(chat_id)
+            if dop.update_shop_name(shop_id, message_text.strip()):
+                bot.send_message(chat_id, 'Nombre de tienda actualizado.')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando nombre de tienda')
+            in_adminka(chat_id, '⚙️ Otros', None, None)
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 

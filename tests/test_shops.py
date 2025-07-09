@@ -19,3 +19,9 @@ def test_shop_functions(monkeypatch, tmp_path):
     ok = dop.assign_admin_to_shop(sid2, 5)
     assert ok
     assert dop.get_shop_id(5) == sid2
+
+    # Cambiar nombre de la tienda
+    renamed = dop.update_shop_name(sid2, "NuevaShop")
+    assert renamed
+    shops = dop.list_shops()
+    assert any(s[0] == sid2 and s[2] == "NuevaShop" for s in shops)
