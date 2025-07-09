@@ -109,8 +109,8 @@ def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, a
                 f'Para comprar {name_good} cantidad {amount}\nTotal: ${sum_amount} USD\nHaz clic en "Pagar con PayPal" y completa el pago.\nLuego presiona "Verificar pago".',
                 reply_markup=key
             )
-        except:
-            pass
+        except Exception as e:
+            print(f"Error editando mensaje de pago PayPal: {e}")
         
         he_client.append(chat_id)
     else:
@@ -145,8 +145,8 @@ def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
                         })(),
                         '¡Pago de PayPal confirmado!\nAhora recibirás tu producto'
                     )
-                except:
-                    pass
+                except Exception as e:
+                    print(f"Error confirmando pago PayPal: {e}")
                 
                 # Entregar producto
                 deliver_product(chat_id, username, first_name, name_good, amount, sum_amount, "PayPal")
@@ -168,7 +168,8 @@ def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, 
     try:
         api_key, api_secret, binance_pay_id = dop.get_binancedata(shop_id)
         # binance_pay_id es tu 294603789
-    except:
+    except Exception as e:
+        print(f"Error obteniendo Binance Pay ID: {e}")
         binance_pay_id = "294603789"  # fallback
     
     # Generar ID único para el pago
@@ -258,7 +259,8 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
     try:
         shop_id = dop.get_user_shop(chat_id)
         api_key, api_secret, binance_pay_id = dop.get_binancedata(shop_id)
-    except:
+    except Exception as e:
+        print(f"Error obteniendo Binance Pay ID: {e}")
         binance_pay_id = "294603789"  # fallback
     
     # **SISTEMA DE VERIFICACIÓN MANUAL**

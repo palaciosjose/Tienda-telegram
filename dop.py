@@ -158,7 +158,8 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
             parse_mode=parse_mode
         )
         return True
-    except:
+    except Exception as e:
+        print(f"Error editando mensaje de texto: {e}")
         try:
             bot.edit_message_caption(
                 chat_id=message.chat.id,
@@ -168,7 +169,8 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
                 parse_mode=parse_mode
             )
             return True
-        except:
+        except Exception as e:
+            print(f"Error editando caption del mensaje: {e}")
             try:
                 bot.delete_message(message.chat.id, message.message_id)
                 bot.send_message(
@@ -178,15 +180,17 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
                     parse_mode=parse_mode
                 )
                 return True
-            except:
+            except Exception as e:
+                print(f"Error enviando nuevo mensaje: {e}")
                 return False
 
 
 def it_first(chat_id):
     try:
-        with open(files.working_log, encoding='utf-8') as f: 
+        with open(files.working_log, encoding='utf-8') as f:
             return False
-    except:
+    except Exception as e:
+        print(f"Error verificando primer arranque: {e}")
         return True
 
 def main(chat_id):
@@ -212,43 +216,46 @@ Para salir, presiona /start
         with shelve.open(files.payments_bd) as bd:
             bd['paypal'] = '❌'
             bd['binance'] = '❌'
-    except:
-        pass
+    except Exception as e:
+        print(f"Error inicializando base de pagos: {e}")
 
     log('Primer arranque del bot')
     new_admin(chat_id)
 
 def log(text):
     time = str(datetime.datetime.utcnow())[:22]
-    try: 
-        with open(files.working_log, 'a', encoding='utf-8') as f: 
+    try:
+        with open(files.working_log, 'a', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
-    except: 
-        with open(files.working_log, 'w', encoding='utf-8') as f: 
+    except Exception:
+        with open(files.working_log, 'w', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
 
 def check_message(message):
     try:
         with shelve.open(files.bot_message_bd) as bd:
-            if message in bd: 
+            if message in bd:
                 return True
-            else: 
+            else:
                 return False
-    except:
+    except Exception as e:
+        print(f"Error comprobando mensaje: {e}")
         return False
 
 def get_adminlist():
     admins_list = [config.admin_id]  # Siempre incluir el admin principal
     try:
         with open(files.admins_list, encoding='utf-8') as f:
-            for admin_id in f.readlines(): 
+            for admin_id in f.readlines():
                 try:
                     admin_id = int(admin_id.strip())
                     if admin_id not in admins_list:
                         admins_list.append(admin_id)
-                except:
+                except Exception as e:
+                    print(f"Error leyendo id de admin: {e}")
                     continue
-    except:
+    except Exception as e:
+        print(f"Error obteniendo lista de admins: {e}")
         pass
     return admins_list
 
@@ -259,7 +266,8 @@ def user_loger(chat_id=0):
                 if not str(chat_id) in f.read():
                     with open(files.users_list, 'a', encoding='utf-8') as f:
                         f.write(str(chat_id) + '\n')
-        except:
+        except Exception as e:
+            print(f"Error registrando usuario: {e}")
             with open(files.users_list, 'w', encoding='utf-8') as f:
                 f.write(str(chat_id) + '\n')
         try:
@@ -272,7 +280,8 @@ def user_loger(chat_id=0):
     try:
         with open(files.users_list, encoding='utf-8') as f:
             return len(f.readlines())
-    except:
+    except Exception as e:
+        print(f"Error contando usuarios: {e}")
         return 0
 
 def get_productcatalog(shop_id=1):
@@ -313,7 +322,8 @@ def get_goods(shop_id=1):
         for row in cursor.fetchall():
             goods.append(row[0])
         return goods
-    except:
+    except Exception as e:
+        print(f"Error obteniendo productos: {e}")
         return []
 
 def list_products_by_category(cat_id=None, shop_id=1):
@@ -442,7 +452,8 @@ def get_stored(name_good, shop_id=1):
         if result:
             return result[0]
         return None
-    except:
+    except Exception as e:
+        print(f"Error obteniendo ruta de almacen: {e}")
         return None
 
 def amount_of_goods(name_good, shop_id=1):
@@ -455,7 +466,8 @@ def amount_of_goods(name_good, shop_id=1):
         with open(stored, encoding='utf-8') as f:
             lines = f.readlines()
             return len([line for line in lines if line.strip()])
-    except:
+    except Exception as e:
+        print(f"Error contando items en almacen: {e}")
         return 0
 
 def get_stock_overview(shop_id=1):
@@ -488,7 +500,8 @@ def get_minimum(name_good, shop_id=1):
         if result:
             return result[0]
         return 1
-    except:
+    except Exception as e:
+        print(f"Error obteniendo mínimo: {e}")
         return 1
 
 def order_sum(name_good, amount, shop_id=1):
@@ -507,7 +520,8 @@ def order_sum(name_good, amount, shop_id=1):
                 price = int(price * (100 - discount) / 100)
             return price * amount
         return 0
-    except Exception:
+    except Exception as e:
+        print(f"Error calculando total del pedido: {e}")
         return 0
 
 def read_my_line(filename, linenumber):
@@ -517,7 +531,8 @@ def read_my_line(filename, linenumber):
                 if i == linenumber:
                     return line
         return ""
-    except:
+    except Exception as e:
+        print(f"Error leyendo línea {linenumber} de {filename}: {e}")
         return ""
 
 def normal_read_line(filename, linenumber):
@@ -528,14 +543,16 @@ def get_sost(chat_id):
     try:
         with shelve.open(files.sost_bd) as bd:
             return str(chat_id) in bd
-    except:
+    except Exception as e:
+        print(f"Error verificando sost para {chat_id}: {e}")
         return False
 
 def check_vklpayments(name):
     try:
         with shelve.open(files.payments_bd) as bd: 
             return bd.get(name, '❌')
-    except:
+    except Exception as e:
+        print(f"Error verificando pago habilitado {name}: {e}")
         return '❌'
 
 def get_goodformat(name_good, shop_id=1):
@@ -550,7 +567,8 @@ def get_goodformat(name_good, shop_id=1):
         if result:
             return result[0]
         return 'text'
-    except:
+    except Exception as e:
+        print(f"Error obteniendo formato: {e}")
         return 'text'
 
 def get_profit(shop_id=1):
@@ -562,7 +580,8 @@ def get_profit(shop_id=1):
         for row in cursor.fetchall(): 
             price_amount += int(row[0])
         return price_amount
-    except:
+    except Exception as e:
+        print(f"Error calculando ganancias: {e}")
         return 0
 
 def get_amountsbayers(shop_id=1):
@@ -572,21 +591,24 @@ def get_amountsbayers(shop_id=1):
         cursor.execute("SELECT COUNT(*) FROM buyers WHERE shop_id = ?;", (shop_id,))
         result = cursor.fetchone()
         return result[0] if result else 0
-    except:
+    except Exception as e:
+        print(f"Error contando compradores: {e}")
         return 0
 
 def get_amountblock():
     try:
         with open(files.blockusers_list, encoding='utf-8') as f: 
             return len(f.readlines())
-    except:
+    except Exception as e:
+        print(f"Error contando usuarios bloqueados: {e}")
         return 0
 
 def new_blockuser(his_id):
     try:
         with open(files.blockusers_list, 'a', encoding='utf-8') as f: 
             f.write(str(his_id) + '\n')
-    except:
+    except Exception as e:
+        print(f"Error eliminando id de archivo {file}: {e}")
         pass
 
 def rasl(group, amount, text, shop_id=1):
@@ -604,12 +626,13 @@ def rasl(group, amount, text, shop_id=1):
                 try:
                     bot.send_message(chat_id, text)
                     good_send += 1
-                except: 
+                except Exception as e:
                     lose_send += 1
+                    print(f"Error enviando mensaje a {chat_id}: {e}")
                     new_blockuser(chat_id)
                 i += 1
-        except:
-            pass
+        except Exception as e:
+            print(f"Error enviando mensajes a todos: {e}")
     
     elif group == 'buyers':
         try:
@@ -626,11 +649,12 @@ def rasl(group, amount, text, shop_id=1):
                 try:
                     bot.send_message(chat_id, text)
                     good_send += 1
-                except: 
+                except Exception as e:
                     lose_send += 1
+                    print(f"Error enviando mensaje a comprador {chat_id}: {e}")
                     new_blockuser(chat_id)
-        except:
-            pass
+        except Exception as e:
+            print(f"Error obteniendo compradores: {e}")
 
     return f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
 
@@ -704,11 +728,12 @@ def broadcast_message(group, amount, text, media=None, shop_id=1):
                     else:
                         bot.send_message(chat_id, text)
                     good_send += 1
-                except Exception:
+                except Exception as e:
                     lose_send += 1
+                    print(f"Error enviando mensaje a comprador {chat_id}: {e}")
                     new_blockuser(chat_id)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error obteniendo compradores para broadcast: {e}")
 
     return f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
 
@@ -722,7 +747,8 @@ def del_id(file, chat_id):
                     text += line + '\n'
         with open(file, 'w', encoding='utf-8') as f: 
             f.write(text)
-    except:
+    except Exception as e:
+        print(f"Error actualizando archivo {file}: {e}")
         pass
 
 def new_admin(his_id):
@@ -739,7 +765,8 @@ def new_admin(his_id):
             (his_id, f'Shop {his_id}'),
         )
         con.commit()
-    except:
+    except Exception as e:
+        print(f"Error agregando nuevo admin: {e}")
         with open(files.admins_list, 'w', encoding='utf-8') as f:
             f.write(str(his_id) + '\n')
 
@@ -1067,7 +1094,8 @@ def check_paypal_valid(client_id, client_secret, sandbox=True):
             }]
         })
         return True
-    except:
+    except Exception as e:
+        print(f"Error validando PayPal: {e}")
         return False
 
 def check_binance_valid(api_key, api_secret):
@@ -1076,7 +1104,8 @@ def check_binance_valid(api_key, api_secret):
         client = Client(api_key, api_secret, testnet=True)
         client.get_account()
         return True
-    except:
+    except Exception as e:
+        print(f"Error validando Binance: {e}")
         return False
 
 def payments_checkvkl(shop_id=1):
@@ -1087,31 +1116,31 @@ def payments_checkvkl(shop_id=1):
     if check_vklpayments('paypal') == '✅' and get_paypaldata(shop_id) != None:
         active_payment.append('paypal')
     elif check_vklpayments('paypal') == '✅' and get_paypaldata(shop_id) == None:
-        for admin_id in get_adminlist(): 
+        for admin_id in get_adminlist():
             try:
                 bot.send_message(admin_id, '¡Faltan datos de PayPal en la base de datos! Se desactivó automáticamente para recibir pagos.')
-            except:
-                pass
+            except Exception as e:
+                print(f"Error notificando admin {admin_id} por PayPal: {e}")
         try:
-            with shelve.open(files.payments_bd) as bd: 
+            with shelve.open(files.payments_bd) as bd:
                 bd['paypal'] = '❌'
-        except:
-            pass
+        except Exception as e:
+            print(f"Error desactivando PayPal: {e}")
 
     # Verificar Binance
     if check_vklpayments('binance') == '✅' and get_binancedata(shop_id) != None:
         active_payment.append('binance')
     elif check_vklpayments('binance') == '✅' and get_binancedata(shop_id) == None:
-        for admin_id in get_adminlist(): 
+        for admin_id in get_adminlist():
             try:
                 bot.send_message(admin_id, '¡Faltan datos de Binance en la base de datos! Se desactivó automáticamente para recibir pagos.')
-            except:
-                pass
+            except Exception as e:
+                print(f"Error notificando admin {admin_id} por Binance: {e}")
         try:
-            with shelve.open(files.payments_bd) as bd: 
+            with shelve.open(files.payments_bd) as bd:
                 bd['binance'] = '❌'
-        except:
-            pass
+        except Exception as e:
+            print(f"Error desactivando Binance: {e}")
 
     if len(active_payment) > 0: 
         return active_payment
@@ -1144,7 +1173,8 @@ def get_tovar(name_good, shop_id=1):
             f.writelines(remaining_lines)
         
         return first_line
-    except:
+    except Exception as e:
+        print(f"Error obteniendo producto: {e}")
         return "Error obteniendo producto"
 
 def new_buy(his_id, username, name_good, amount, price, shop_id=1):
@@ -1156,7 +1186,8 @@ def new_buy(his_id, username, name_good, amount, price, shop_id=1):
             (his_id, username, name_good, amount, price, shop_id)
         )
         con.commit()
-    except:
+    except Exception as e:
+        print(f"Error registrando compra: {e}")
         pass
 
 def new_buyer(his_id, username, payed, shop_id=1):
@@ -1180,7 +1211,8 @@ def new_buyer(his_id, username, payed, shop_id=1):
             )
         
         con.commit()
-    except:
+    except Exception as e:
+        print(f"Error actualizando comprador: {e}")
         pass
 def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None, shop_id=1):
     """Versión mejorada de new_buy que incluye método de pago y timestamp"""
@@ -1208,7 +1240,8 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
                 (user_id, username, product_name, amount, price, payment_method, payment_id, timestamp, status) 
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
             """, (his_id, username, name_good, amount, price, payment_method, payment_id, current_time))
-        except:
+        except Exception as e:
+            print(f"Error insertando en tabla de validación: {e}")
             pass  # Si la tabla no existe, continuar
         
         con.commit()
@@ -1316,7 +1349,8 @@ def search_user_purchases(search_term, shop_id=1):
                     date_str = dt.strftime("%d/%m/%Y %H:%M")
                 else:
                     date_str = str(timestamp) if timestamp else "Fecha no disponible"
-            except:
+            except Exception as e:
+                print(f"Error formateando fecha {timestamp}: {e}")
                 date_str = str(timestamp) if timestamp else "Fecha no disponible"
             
             response += f"🛒 **Compra #{i}**\n"
@@ -1388,8 +1422,8 @@ def get_discount_config(shop_id=1):
                 'multiplier': 1.5,
                 'show_fake_price': True
             }
-    except:
-        # Configuración por defecto en caso de error
+    except Exception as e:
+        print(f"Error obteniendo configuración de descuentos: {e}")
         return {
             'enabled': True,
             'text': '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
@@ -1737,7 +1771,8 @@ def has_additional_description(good_name, shop_id=1):
     try:
         additional_desc = get_additional_description(good_name, shop_id)
         return additional_desc and additional_desc.strip() != "" and additional_desc != "No hay información adicional disponible para este producto."
-    except:
+    except Exception as e:
+        print(f"Error verificando descripción adicional: {e}")
         return False
 
 def save_product_media(product_name, file_id, media_type, caption=None, shop_id=1):
