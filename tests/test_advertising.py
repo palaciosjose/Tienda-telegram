@@ -266,3 +266,21 @@ def test_send_campaign_to_group_fails(tmp_path, monkeypatch):
 
     assert rows == [("failed", "err", 1)]
 
+
+def test_get_target_groups_only_active(tmp_path):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    manager.add_target_group("telegram", "111", "GroupA")
+    manager.add_target_group("telegram", "222", "GroupB")
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("UPDATE target_groups SET status='blocked' WHERE group_id='222'")
+    conn.commit()
+    conn.close()
+
+    groups = manager.get_target_groups()
+    assert groups == [{"id": 1, "group_id": "111", "group_name": "GroupA"}]
+

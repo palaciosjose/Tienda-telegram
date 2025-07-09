@@ -195,6 +195,23 @@ class AdvertisingManager:
             return True, 'Grupo eliminado'
         return False, 'Grupo no encontrado'
 
+    def get_target_groups(self, platform='telegram'):
+        """Obtener grupos activos registrados para una plataforma."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT id, group_id, group_name FROM target_groups
+               WHERE platform = ? AND status = 'active' AND shop_id = ?""",
+            (platform, self.shop_id),
+        )
+        rows = cur.fetchall()
+        if not shared:
+            conn.close()
+        return [
+            {'id': r[0], 'group_id': r[1], 'group_name': r[2]}
+            for r in rows
+        ]
+
     def get_platform_configs(self):
         """Obtener la configuración de plataformas."""
         conn, shared = self._get_connection()
