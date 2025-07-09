@@ -7,7 +7,7 @@ import os
 import json
 
 # Instancia única usada por los helpers de este módulo
-_manager = AdvertisingManager(files.main_db)
+_manager = AdvertisingManager(files.main_db, shop_id=1)
 
 # Reexportamos la instancia por si otros módulos necesitan acceso directo
 manager = _manager

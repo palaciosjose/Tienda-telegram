@@ -23,11 +23,22 @@ def create_database():
     conn = sqlite3.connect('data/db/main_data.db')
     cursor = conn.cursor()
     
+    # Tabla de tiendas
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS shops (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            admin_id INTEGER,
+            name TEXT UNIQUE NOT NULL
+        )
+    ''')
+    print("✓ Tabla 'shops' creada")
+
     # Tabla de categorías
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS categories (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            name TEXT UNIQUE NOT NULL
+            name TEXT NOT NULL,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     print("✓ Tabla 'categories' creada")
@@ -48,6 +59,7 @@ def create_database():
             duration_days INTEGER DEFAULT NULL,
             manual_delivery INTEGER DEFAULT 0,
             category_id INTEGER,
+            shop_id INTEGER DEFAULT 1,
             FOREIGN KEY (category_id) REFERENCES categories(id)
         )
     ''')
@@ -94,6 +106,7 @@ def create_database():
             status TEXT DEFAULT 'active',
             created_date TEXT,
             created_by INTEGER,
+            shop_id INTEGER DEFAULT 1,
             daily_limit INTEGER DEFAULT 3,
             priority INTEGER DEFAULT 1
         )
@@ -109,6 +122,7 @@ def create_database():
             is_active INTEGER DEFAULT 1,
             next_send_telegram TEXT,
             created_date TEXT,
+            shop_id INTEGER DEFAULT 1,
             FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
         )
     ''')
@@ -123,7 +137,8 @@ def create_database():
             last_sent TEXT,
             success_rate REAL DEFAULT 1.0,
             added_date TEXT,
-            notes TEXT
+            notes TEXT,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     cursor.execute('''
@@ -132,7 +147,8 @@ def create_database():
             platform TEXT UNIQUE,
             config_data TEXT,
             is_active INTEGER DEFAULT 1,
-            last_updated TEXT
+            last_updated TEXT,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     cursor.execute('''
@@ -145,6 +161,7 @@ def create_database():
             sent_date TEXT,
             response_time REAL,
             error_message TEXT,
+            shop_id INTEGER DEFAULT 1,
             FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
         )
     ''')
@@ -156,7 +173,8 @@ def create_database():
             telegram_sent INTEGER DEFAULT 0,
             success_rate REAL DEFAULT 0,
             failed_count INTEGER DEFAULT 0,
-            avg_response_time REAL DEFAULT 0
+            avg_response_time REAL DEFAULT 0,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     cursor.execute('''
@@ -164,7 +182,8 @@ def create_database():
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             platform TEXT,
             success INTEGER,
-            timestamp TEXT
+            timestamp TEXT,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
 
@@ -173,7 +192,8 @@ def create_database():
         CREATE TABLE IF NOT EXISTS paypal_data (
             client_id TEXT,
             client_secret TEXT,
-            sandbox INTEGER DEFAULT 1
+            sandbox INTEGER DEFAULT 1,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     print("✓ Tabla 'paypal_data' creada")
@@ -183,7 +203,8 @@ def create_database():
         CREATE TABLE IF NOT EXISTS binance_data (
             api_key TEXT,
             api_secret TEXT,
-            merchant_id TEXT
+            merchant_id TEXT,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     print("✓ Tabla 'binance_data' creada")

@@ -4,8 +4,9 @@ import files
 import db
 
 class CampaignDB:
-    def __init__(self, db_path):
+    def __init__(self, db_path, shop_id=1):
         self.db_path = db_path
+        self.shop_id = shop_id
 
     def _get_connection(self):
         if self.db_path == files.main_db:
@@ -16,16 +17,16 @@ class CampaignDB:
         conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            """INSERT INTO campaigns 
+            """INSERT INTO campaigns
             (name, message_text, media_file_id, media_type, media_caption,
-             button1_text, button1_url, button2_text, button2_url, created_date, created_by)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+             button1_text, button1_url, button2_text, button2_url, created_date, created_by, shop_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 data['name'], data['message_text'], data.get('media_file_id'),
                 data.get('media_type'), data.get('media_caption'),
                 data.get('button1_text'), data.get('button1_url'),
                 data.get('button2_text'), data.get('button2_url'),
-                datetime.now().isoformat(), data.get('created_by')
+                datetime.now().isoformat(), data.get('created_by'), self.shop_id
             )
         )
         campaign_id = cursor.lastrowid
@@ -37,7 +38,10 @@ class CampaignDB:
     def fetch_all_campaigns(self):
         conn, shared = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT id, name, status FROM campaigns")
+        cursor.execute(
+            "SELECT id, name, status FROM campaigns WHERE shop_id = ?",
+            (self.shop_id,),
+        )
         rows = cursor.fetchall()
         if not shared:
             conn.close()
@@ -61,7 +65,8 @@ class CampaignDB:
             params.append(value)
 
         params.append(campaign_id)
-        sql = "UPDATE campaigns SET " + ", ".join(columns) + " WHERE id = ?"
+        params.append(self.shop_id)
+        sql = "UPDATE campaigns SET " + ", ".join(columns) + " WHERE id = ? AND shop_id = ?"
         cursor.execute(sql, tuple(params))
         conn.commit()
         updated = cursor.rowcount

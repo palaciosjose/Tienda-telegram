@@ -5,8 +5,9 @@ import files
 import db
 
 class CampaignScheduler:
-    def __init__(self, db_path):
+    def __init__(self, db_path, shop_id=1):
         self.db_path = db_path
+        self.shop_id = shop_id
         self.optimal_times = ['10:00', '15:00', '20:00']
         self.platform_delays = {
             'telegram': 60
@@ -23,8 +24,8 @@ class CampaignScheduler:
 
         for platform in platforms:
             cursor.execute(
-                "SELECT COUNT(*) FROM target_groups WHERE platform = ? AND status = 'active'",
-                (platform,)
+                "SELECT COUNT(*) FROM target_groups WHERE platform = ? AND status = 'active' AND shop_id = ?",
+                (platform, self.shop_id)
             )
             group_count = cursor.fetchone()[0]
             if group_count == 0:
@@ -41,7 +42,8 @@ class CampaignScheduler:
                     'platform': platform,
                     'schedule_json': json.dumps({d: [send_time] for d in ['lunes','martes','miercoles','jueves','viernes','sabado','domingo']}),
                     'group_range': f'{start_groups}-{end_groups}',
-                    'estimated_duration': estimated_duration
+                    'estimated_duration': estimated_duration,
+                    'shop_id': self.shop_id
                 }
                 self.save_schedule(schedule_data)
 
@@ -53,10 +55,16 @@ class CampaignScheduler:
         cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO campaign_schedules
-               (campaign_id, schedule_name, frequency, schedule_json, target_platforms, created_date)
-               VALUES (?, ?, ?, ?, ?, ?)""",
+               (campaign_id, schedule_name, frequency, schedule_json, target_platforms, created_date, shop_id)
+               VALUES (?, ?, ?, ?, ?, ?, ?)""",
             (
-                data['campaign_id'], 'auto', 'daily', data['schedule_json'], data['platform'], datetime.now().isoformat()
+                data['campaign_id'],
+                'auto',
+                'daily',
+                data['schedule_json'],
+                data['platform'],
+                datetime.now().isoformat(),
+                data.get('shop_id', self.shop_id),
             )
         )
         conn.commit()
@@ -73,7 +81,8 @@ class CampaignScheduler:
                    c.button1_text, c.button1_url, c.button2_text, c.button2_url
                FROM campaign_schedules cs
                JOIN campaigns c ON cs.campaign_id = c.id
-               WHERE cs.is_active = 1 AND c.status = 'active'"""
+               WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?""",
+            (self.shop_id, self.shop_id),
         )
         rows = cursor.fetchall()
         pending = []

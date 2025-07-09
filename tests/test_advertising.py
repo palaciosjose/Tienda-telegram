@@ -38,6 +38,7 @@ CREATE_CAMPAIGNS_TABLE = """CREATE TABLE IF NOT EXISTS campaigns (
     status TEXT DEFAULT 'active',
     created_date TEXT,
     created_by INTEGER,
+    shop_id INTEGER DEFAULT 1,
     daily_limit INTEGER DEFAULT 3,
     priority INTEGER DEFAULT 1
 )"""
@@ -51,6 +52,7 @@ CREATE_SEND_LOGS_TABLE = """CREATE TABLE IF NOT EXISTS send_logs (
     sent_date TEXT,
     response_time REAL,
     error_message TEXT,
+    shop_id INTEGER DEFAULT 1,
     FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
 )"""
 
@@ -64,7 +66,8 @@ CREATE_TARGET_GROUPS_TABLE = """CREATE TABLE IF NOT EXISTS target_groups (
     last_sent TEXT,
     success_rate REAL DEFAULT 1.0,
     added_date TEXT,
-    notes TEXT
+    notes TEXT,
+    shop_id INTEGER DEFAULT 1
 )"""
 
 CREATE_SCHEDULES_TABLE = """CREATE TABLE IF NOT EXISTS campaign_schedules (
@@ -77,13 +80,21 @@ CREATE_SCHEDULES_TABLE = """CREATE TABLE IF NOT EXISTS campaign_schedules (
     is_active INTEGER DEFAULT 1,
     next_send_telegram TEXT,
     created_date TEXT,
+    shop_id INTEGER DEFAULT 1,
     FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
+)"""
+
+CREATE_SHOPS_TABLE = """CREATE TABLE IF NOT EXISTS shops (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    admin_id INTEGER,
+    name TEXT
 )"""
 
 
 def init_ads_db(path):
     conn = sqlite3.connect(path)
     cur = conn.cursor()
+    cur.execute(CREATE_SHOPS_TABLE)
     cur.execute(CREATE_CAMPAIGNS_TABLE)
     cur.execute(CREATE_SEND_LOGS_TABLE)
     cur.execute(CREATE_TARGET_GROUPS_TABLE)
@@ -101,11 +112,11 @@ def test_create_campaign_inserts(tmp_path):
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT name, message_text FROM campaigns WHERE id = ?", (campaign_id,))
+    cur.execute("SELECT name, message_text, shop_id FROM campaigns WHERE id = ?", (campaign_id,))
     row = cur.fetchone()
     conn.close()
 
-    assert row == ("Test Campaign", "Hello")
+    assert row == ("Test Campaign", "Hello", 1)
 
 
 def test_get_today_stats_empty_db(tmp_path):
@@ -147,13 +158,14 @@ def test_send_campaign_now(tmp_path, monkeypatch):
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT platform, status FROM send_logs ORDER BY id")
+    cur.execute("SELECT platform, status, shop_id FROM send_logs ORDER BY id")
     rows = cur.fetchall()
     conn.close()
 
     assert len(rows) == 1
     assert sent == [("tg", "111", "Hi")]
     assert all(r[1] == "sent" for r in rows)
+    assert all(r[2] == 1 for r in rows)
 
 
 def test_schedule_campaign_records_json(tmp_path):
@@ -186,10 +198,10 @@ def test_update_campaign_updates_text(tmp_path):
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT message_text FROM campaigns WHERE id = ?", (camp_id,))
+    cur.execute("SELECT message_text, shop_id FROM campaigns WHERE id = ?", (camp_id,))
     row = cur.fetchone()
     conn.close()
-    assert row[0] == "Bye"
+    assert row == ("Bye", 1)
 
 
 def test_send_campaign_now_failure(tmp_path, monkeypatch):
@@ -217,11 +229,11 @@ def test_send_campaign_now_failure(tmp_path, monkeypatch):
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT status, error_message FROM send_logs")
+    cur.execute("SELECT status, error_message, shop_id FROM send_logs")
     rows = cur.fetchall()
     conn.close()
 
-    assert rows == [("failed", "err")]
+    assert rows == [("failed", "err", 1)]
 
 
 def test_send_campaign_to_group_fails(tmp_path, monkeypatch):
@@ -248,9 +260,9 @@ def test_send_campaign_to_group_fails(tmp_path, monkeypatch):
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
-    cur.execute("SELECT status, error_message FROM send_logs")
+    cur.execute("SELECT status, error_message, shop_id FROM send_logs")
     rows = cur.fetchall()
     conn.close()
 
-    assert rows == [("failed", "err")]
+    assert rows == [("failed", "err", 1)]
 
