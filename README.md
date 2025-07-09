@@ -24,7 +24,7 @@ pip install -r requirements.txt
    Puedes modificar la frecuencia de consulta al servidor de Telegram
    estableciendo las variables opcionales `POLL_INTERVAL`, `POLL_TIMEOUT`
    y `LONG_POLLING_TIMEOUT`.  Si no las defines, el bot utiliza los valores
-   por defecto `8`, `25` y `20` segundos respectivamente.
+   por defecto `2`, `10` y `10` segundos respectivamente.
 
 ### Actualización
 
