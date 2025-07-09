@@ -678,6 +678,27 @@ def assign_admin_to_shop(shop_id, admin_id):
         print(f"Error asignando admin a tienda: {e}")
         return False
 
+# ------------------------------------------------------------------
+# Funciones para la tienda seleccionada por cada usuario
+# ------------------------------------------------------------------
+
+def set_user_shop(user_id, shop_id):
+    """Guardar la tienda elegida por un usuario."""
+    try:
+        with shelve.open(files.user_shops_bd) as bd:
+            bd[str(user_id)] = int(shop_id)
+    except Exception:
+        pass
+
+
+def get_user_shop(user_id):
+    """Obtener la tienda seleccionada por un usuario (por defecto 1)."""
+    try:
+        with shelve.open(files.user_shops_bd) as bd:
+            return bd.get(str(user_id), 1)
+    except Exception:
+        return 1
+
 def get_description(name_good):
     """Descripción del producto con sistema de descuentos"""
     try:
@@ -1160,12 +1181,12 @@ def setup_discount_system():
 # Agregadas automáticamente por el instalador
 # ============================================
 
-def get_additional_description(good_name):
+def get_additional_description(good_name, shop_id=1):
     """Obtiene la descripción adicional de un producto"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (good_name,))
+        cursor.execute("SELECT additional_description FROM goods WHERE name = ? AND shop_id = ?", (good_name, shop_id))
         result = cursor.fetchone()
         
         if result and result[0]:
@@ -1176,13 +1197,13 @@ def get_additional_description(good_name):
         print(f"Error obteniendo descripción adicional: {e}")
         return "Error al cargar información adicional."
 
-def set_additional_description(good_name, additional_description):
+def set_additional_description(good_name, additional_description, shop_id=1):
     """Establece la descripción adicional de un producto"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("UPDATE goods SET additional_description = ? WHERE name = ?", 
-                      (additional_description, good_name))
+        cursor.execute("UPDATE goods SET additional_description = ? WHERE name = ? AND shop_id = ?",
+                      (additional_description, good_name, shop_id))
         con.commit()
         return True
     except Exception as e:
@@ -1321,10 +1342,10 @@ def format_product_basic_info(good_name, shop_id=1):
         print(f"Error formateando información básica: {e}")
         return "Error al cargar información del producto"
 
-def format_product_additional_info(good_name):
+def format_product_additional_info(good_name, shop_id=1):
     """Formatea la información adicional del producto"""
     try:
-        additional_desc = get_additional_description(good_name)
+        additional_desc = get_additional_description(good_name, shop_id)
         
         info_text = f"""ℹ️ **Información Adicional**
 
@@ -1337,10 +1358,10 @@ def format_product_additional_info(good_name):
         print(f"Error formateando información adicional: {e}")
         return "Error al cargar información adicional"
 
-def has_additional_description(good_name):
+def has_additional_description(good_name, shop_id=1):
     """Verifica si un producto tiene descripción adicional"""
     try:
-        additional_desc = get_additional_description(good_name)
+        additional_desc = get_additional_description(good_name, shop_id)
         return additional_desc and additional_desc.strip() != "" and additional_desc != "No hay información adicional disponible para este producto."
     except:
         return False
