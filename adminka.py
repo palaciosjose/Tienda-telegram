@@ -23,7 +23,8 @@ def session_expired(chat_id):
 
 def show_discount_menu(chat_id):
     """Mostrar menú de configuración de descuentos"""
-    config_dis = dop.get_discount_config()
+    shop_id = dop.get_shop_id(chat_id)
+    config_dis = dop.get_discount_config(shop_id)
 
     status = 'Activado ✅' if config_dis['enabled'] else 'Desactivado ❌'
     show_fake = 'Sí' if config_dis['show_fake_price'] else 'No'
@@ -1488,7 +1489,8 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
 
         elif sost_num == 33:  # Recibir nuevo texto de descuento
-            if dop.update_discount_config(text=message_text):
+            shop_id = dop.get_shop_id(chat_id)
+            if dop.update_discount_config(text=message_text, shop_id=shop_id):
                 bot.send_message(chat_id, '✅ Texto de descuento actualizado')
             else:
                 bot.send_message(chat_id, '❌ Error actualizando texto')
@@ -1561,7 +1563,8 @@ def text_analytics(message_text, chat_id):
         elif sost_num == 34:  # Recibir nuevo multiplicador
             try:
                 multiplier = float(message_text)
-                if dop.update_discount_config(multiplier=multiplier):
+                shop_id = dop.get_shop_id(chat_id)
+                if dop.update_discount_config(multiplier=multiplier, shop_id=shop_id):
                     bot.send_message(chat_id, f'✅ Multiplicador actualizado a {multiplier}')
                 else:
                     bot.send_message(chat_id, '❌ Error actualizando multiplicador')
