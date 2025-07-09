@@ -1482,16 +1482,19 @@ def save_product_media(product_name, file_id, media_type, caption=None):
         print(f"Error guardando multimedia: {e}")
         return False
 
-def get_product_media(product_name):
-    """Obtener información multimedia de un producto"""
+def get_product_media(product_name, shop_id=1):
+    """Obtener información multimedia de un producto para una tienda"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT media_file_id, media_type, media_caption 
-            FROM goods 
-            WHERE name = ?
-        """, (product_name,))
+        cursor.execute(
+            """
+            SELECT media_file_id, media_type, media_caption
+            FROM goods
+            WHERE name = ? AND shop_id = ?
+        """,
+            (product_name, shop_id),
+        )
         result = cursor.fetchone()
         
         if result and result[0]:
@@ -1505,21 +1508,24 @@ def get_product_media(product_name):
         print(f"Error obteniendo multimedia: {e}")
         return None
 
-def has_product_media(product_name):
-    """Verificar si un producto tiene multimedia"""
-    media_info = get_product_media(product_name)
+def has_product_media(product_name, shop_id=1):
+    """Verificar si un producto tiene multimedia para la tienda indicada"""
+    media_info = get_product_media(product_name, shop_id)
     return media_info is not None
 
-def remove_product_media(product_name):
-    """Eliminar multimedia de un producto"""
+def remove_product_media(product_name, shop_id=1):
+    """Eliminar multimedia de un producto de una tienda"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
-            UPDATE goods 
+        cursor.execute(
+            """
+            UPDATE goods
             SET media_file_id = NULL, media_type = NULL, media_caption = NULL
-            WHERE name = ?
-        """, (product_name,))
+            WHERE name = ? AND shop_id = ?
+        """,
+            (product_name, shop_id),
+        )
         con.commit()
         return True
     except Exception as e:

@@ -302,7 +302,7 @@ def inline(callback):
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
             
             # Optimización: manejo de multimedia más eficiente
-            media_info = dop.get_product_media(callback.data)
+            media_info = dop.get_product_media(callback.data, shop_id_cb)
             formatted_info = dop.format_product_with_media(callback.data, shop_id_cb)
 
             if media_info:
