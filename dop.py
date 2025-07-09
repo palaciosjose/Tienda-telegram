@@ -250,7 +250,7 @@ def get_productcatalog(shop_id=1):
             return None
         
         # Obtener configuración de descuentos
-        discount_config = get_discount_config()
+        discount_config = get_discount_config(shop_id)
         
         # Mensaje del catálogo limpio
         catalog_text = '*Catálogo de productos disponibles:*\n\n'
@@ -789,22 +789,25 @@ def get_user_shop(user_id):
     except Exception:
         return 1
 
-def get_description(name_good):
+def get_description(name_good, shop_id=1):
     """Descripción del producto con sistema de descuentos"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT description, price, duration_days FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute(
+            "SELECT description, price, duration_days FROM goods WHERE name = ? AND shop_id = ?;",
+            (name_good, shop_id),
+        )
         result = cursor.fetchone()
 
         if not result:
             return "Producto no encontrado"
 
         description, price, duration = result
-        good_amount = amount_of_goods(name_good)
+        good_amount = amount_of_goods(name_good, shop_id)
         
         # Obtener configuración de descuentos
-        discount_config = get_discount_config()
+        discount_config = get_discount_config(shop_id)
         
         # Construir descripción
         product_description = f"*{name_good}*\n\n"
@@ -830,7 +833,7 @@ def get_description(name_good):
         product_description += f"📦 *Stock disponible:* {good_amount} unidades\n"
         if duration not in (None, 0):
             product_description += f"⏳ *Duración:* {duration} días\n"
-        product_description += f"🛒 *Mínimo de compra:* {get_minimum(name_good)} unidades"
+        product_description += f"🛒 *Mínimo de compra:* {get_minimum(name_good, shop_id)} unidades"
         
         return product_description
         
@@ -1222,12 +1225,16 @@ def get_user_purchases(user_id, shop_id=1):
     return response
 
 
-def get_discount_config():
-    """Obtiene la configuración de descuentos"""
+def get_discount_config(shop_id=1):
+    """Obtiene la configuración de descuentos para una tienda"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT discount_enabled, discount_text, discount_multiplier, show_fake_price FROM discount_config WHERE id = 1;")
+        cursor.execute(
+            "SELECT discount_enabled, discount_text, discount_multiplier, show_fake_price "
+            "FROM discount_config WHERE shop_id = ?;",
+            (shop_id,),
+        )
         result = cursor.fetchone()
         
         if result:
@@ -1254,46 +1261,62 @@ def get_discount_config():
             'show_fake_price': True
         }
 
-def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_price=None):
-    """Actualiza la configuración de descuentos"""
+def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_price=None, shop_id=1):
+    """Actualiza la configuración de descuentos para una tienda"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
         
-        # Crear tabla si no existe
+        # Crear tabla si no existe (la migración agrega shop_id si falta)
         cursor.execute('''
             CREATE TABLE IF NOT EXISTS discount_config (
                 id INTEGER PRIMARY KEY,
                 discount_enabled INTEGER DEFAULT 1,
                 discount_text TEXT DEFAULT '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
                 discount_multiplier REAL DEFAULT 1.5,
-                show_fake_price INTEGER DEFAULT 1
+                show_fake_price INTEGER DEFAULT 1,
+                shop_id INTEGER UNIQUE
             )
         ''')
-        
-        # Verificar si existe configuración
-        cursor.execute("SELECT COUNT(*) FROM discount_config WHERE id = 1;")
+
+        # Verificar si existe configuración para la tienda
+        cursor.execute("SELECT COUNT(*) FROM discount_config WHERE shop_id = ?;", (shop_id,))
         exists = cursor.fetchone()[0] > 0
         
         if not exists:
-            # Crear configuración inicial
-            cursor.execute("""
-                INSERT INTO discount_config (id, discount_enabled, discount_text, discount_multiplier, show_fake_price)
-                VALUES (1, 1, '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥', 1.5, 1)
-            """)
+            # Crear configuración inicial para la tienda
+            cursor.execute(
+                """
+                INSERT INTO discount_config (discount_enabled, discount_text, discount_multiplier, show_fake_price, shop_id)
+                VALUES (1, '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥', 1.5, 1, ?)
+                """,
+                (shop_id,),
+            )
         
         # Actualizar campos especificados
         if enabled is not None:
-            cursor.execute("UPDATE discount_config SET discount_enabled = ? WHERE id = 1;", (int(enabled),))
+            cursor.execute(
+                "UPDATE discount_config SET discount_enabled = ? WHERE shop_id = ?;",
+                (int(enabled), shop_id),
+            )
         
         if text is not None:
-            cursor.execute("UPDATE discount_config SET discount_text = ? WHERE id = 1;", (text,))
+            cursor.execute(
+                "UPDATE discount_config SET discount_text = ? WHERE shop_id = ?;",
+                (text, shop_id),
+            )
             
         if multiplier is not None:
-            cursor.execute("UPDATE discount_config SET discount_multiplier = ? WHERE id = 1;", (multiplier,))
+            cursor.execute(
+                "UPDATE discount_config SET discount_multiplier = ? WHERE shop_id = ?;",
+                (multiplier, shop_id),
+            )
             
         if show_fake_price is not None:
-            cursor.execute("UPDATE discount_config SET show_fake_price = ? WHERE id = 1;", (int(show_fake_price),))
+            cursor.execute(
+                "UPDATE discount_config SET show_fake_price = ? WHERE shop_id = ?;",
+                (int(show_fake_price), shop_id),
+            )
         
         con.commit()
         return True
@@ -1314,16 +1337,19 @@ def setup_discount_system():
                 discount_enabled INTEGER DEFAULT 1,
                 discount_text TEXT DEFAULT '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
                 discount_multiplier REAL DEFAULT 1.5,
-                show_fake_price INTEGER DEFAULT 1
+                show_fake_price INTEGER DEFAULT 1,
+                shop_id INTEGER UNIQUE
             )
         ''')
         
-        cursor.execute("SELECT COUNT(*) FROM discount_config")
+        cursor.execute("SELECT COUNT(*) FROM discount_config WHERE shop_id = 1")
         if cursor.fetchone()[0] == 0:
-            cursor.execute("""
-                INSERT INTO discount_config 
-                VALUES (1, 1, '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥', 1.5, 1)
-            """)
+            cursor.execute(
+                """
+                INSERT INTO discount_config (discount_enabled, discount_text, discount_multiplier, show_fake_price, shop_id)
+                VALUES (1, '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥', 1.5, 1, 1)
+                """
+            )
         
         con.commit()
         print("✅ Sistema de descuentos configurado")
