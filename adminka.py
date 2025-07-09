@@ -613,7 +613,7 @@ def in_adminka(chat_id, message_text, username, name_user):
 
 
         elif 'Vista previa' == message_text:
-            preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog()}"
+            preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id)}"
             bot.send_message(chat_id, preview, parse_mode='Markdown')
 
         elif normalized in ('a todos los usuarios', 'solo a los compradores', 'solo a compradores'):

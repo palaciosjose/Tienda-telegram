@@ -252,10 +252,10 @@ def inline(callback):
             for name, price in cursor.fetchall():
                 key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            if dop.get_productcatalog() is None:
+            if dop.get_productcatalog(shop_id) is None:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
             else:
-                catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog()}"
+                catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id)}"
                 if callback.message.content_type != 'text':
                     bot.delete_message(callback.message.chat.id, callback.message.message_id)
                     bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
@@ -275,10 +275,10 @@ def inline(callback):
             
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
 
-            if dop.get_productcatalog() == None:
+            if dop.get_productcatalog(shop_id_cb) == None:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
             else:
-                catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog()}"
+                catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id_cb)}"
                 if callback.message.content_type != 'text':
                     bot.delete_message(callback.message.chat.id, callback.message.message_id)
                     bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
