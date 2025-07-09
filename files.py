@@ -10,4 +10,7 @@ admins_list = 'data/lists/admins_list.txt'
 users_list = 'data/lists/chatid_list.txt'
 blockusers_list = 'data/lists/blockusers_list.txt'
 
+# Map user_id to the shop they selected
+user_shops_bd = 'data/bd/user_shops.bd'
+
 
