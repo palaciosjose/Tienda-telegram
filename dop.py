@@ -740,7 +740,7 @@ def get_shop_id(admin_id):
         return cur.lastrowid
     except Exception as e:
         print(f"Error obteniendo shop_id: {e}")
-        return 1
+        return None
 
 def list_shops():
     """Listar todas las tiendas registradas."""
