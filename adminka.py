@@ -337,7 +337,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 )
             else:
                 for product_name, media_type in products_with_media:
-                    media_info = dop.get_product_media(product_name)
+                    media_info = dop.get_product_media(product_name, shop_id)
                     caption = dop.format_product_with_media(product_name, shop_id)
                     if media_info:
                         mtype = media_info['type']
@@ -958,7 +958,7 @@ def text_analytics(message_text, chat_id):
 
                 info = (
                     dop.format_product_with_media(message_text, shop_id)
-                    if dop.has_product_media(message_text)
+                    if dop.has_product_media(message_text, shop_id)
                     else dop.format_product_basic_info(message_text, shop_id)
                 )
                 reply = telebot.types.ReplyKeyboardMarkup(True, False)
@@ -1002,7 +1002,7 @@ def text_analytics(message_text, chat_id):
 
                 info = (
                     dop.format_product_with_media(product, shop_id)
-                    if dop.has_product_media(product)
+                    if dop.has_product_media(product, shop_id)
                     else dop.format_product_basic_info(product, shop_id)
                 )
                 reply = telebot.types.ReplyKeyboardMarkup(True, False)
@@ -1046,7 +1046,7 @@ def text_analytics(message_text, chat_id):
 
             info = (
                 dop.format_product_with_media(product, shop_id)
-                if dop.has_product_media(product)
+                if dop.has_product_media(product, shop_id)
                 else dop.format_product_basic_info(product, shop_id)
             )
             bot.send_message(chat_id, info, parse_mode='Markdown')
@@ -1413,8 +1413,8 @@ def text_analytics(message_text, chat_id):
             for emoji in ['📸 ', '🎥 ', '📄 ', '🎵 ', '📎 ']:
                 clean_name = clean_name.replace(emoji, '')
             
-            if dop.has_product_media(clean_name):
-                if dop.remove_product_media(clean_name):
+            if dop.has_product_media(clean_name, shop_id):
+                if dop.remove_product_media(clean_name, shop_id):
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('🎬 Multimedia productos')
                     user_markup.row('Volver al menú principal')
@@ -1798,7 +1798,7 @@ def ad_inline(callback_data, chat_id, message_id):
         goods_file = f"data/goods/{name}.txt"
         open(goods_file, "a", encoding="utf-8").close()
         # Mostrar información del producto con la multimedia que se haya adjuntado
-        media_info = dop.get_product_media(name)
+        media_info = dop.get_product_media(name, shop_id)
         caption = dop.format_product_with_media(name, shop_id)
         if media_info:
             mtype = media_info['type']
