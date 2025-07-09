@@ -69,6 +69,27 @@ def show_product_menu(chat_id):
             bd[str(chat_id)] = 10
 
 
+def show_marketing_menu(chat_id):
+    """Mostrar menú principal de marketing"""
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+    user_markup.row('🎯 Nueva campaña', '📋 Ver campañas')
+    user_markup.row('⏰ Programar envíos', '🎯 Gestionar grupos')
+    user_markup.row('📊 Estadísticas hoy', '⚙️ Configuración')
+    user_markup.row('▶️ Envío manual', 'Volver al menú principal')
+
+    today_stats = advertising.get_today_stats()
+    stats_text = (
+        f"📢 **Sistema de Marketing**\n\n"
+        f"📊 **Estadísticas de hoy:**\n"
+        f"- Mensajes enviados: {today_stats['sent']}\n"
+        f"- Tasa de éxito: {today_stats['success_rate']}%\n"
+        f"- Grupos alcanzados: {today_stats['groups']}\n\n"
+        "Selecciona una opción:"
+    )
+
+    bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
+
+
 
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
@@ -413,16 +434,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Seleccione a qué grupo de usuarios desea enviar el boletín', reply_markup=user_markup)
 
         elif '📢 Marketing' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('🎯 Nueva campaña', '📋 Ver campañas')
-            user_markup.row('⏰ Programar envíos', '🎯 Gestionar grupos')
-            user_markup.row('📊 Estadísticas hoy', '⚙️ Configuración')
-            user_markup.row('▶️ Envío manual', 'Volver al menú principal')
-
-            today_stats = advertising.get_today_stats()
-            stats_text = f"""📢 **Sistema de Marketing**\n\n📊 **Estadísticas de hoy:**\n- Mensajes enviados: {today_stats['sent']}\n- Tasa de éxito: {today_stats['success_rate']}%\n- Grupos alcanzados: {today_stats['groups']}\n\nSelecciona una opción:"""
-
-            bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
+            show_marketing_menu(chat_id)
 
         elif '🏷️ Categorías' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
@@ -1596,7 +1608,7 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text)
             key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver a Marketing', callback_data='Volver a Marketing'))
             bot.send_message(chat_id, '📝 **Mensaje de la campaña**\n\nEscribe el texto que se enviará (máximo 500 caracteres):', reply_markup=key, parse_mode='Markdown')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 161
@@ -1793,7 +1805,7 @@ def text_analytics(message_text, chat_id):
                     del bd[str(chat_id)]
                 if os.path.exists(tmp):
                     os.remove(tmp)
-                in_adminka(chat_id, '📢 Marketing', None, None)
+                show_marketing_menu(chat_id)
             else:
                 try:
                     with open(tmp, 'r', encoding='utf-8') as f:
@@ -1817,7 +1829,7 @@ def text_analytics(message_text, chat_id):
                     del bd[str(chat_id)]
                 if os.path.exists(tmp):
                     os.remove(tmp)
-                in_adminka(chat_id, '📢 Marketing', None, None)
+                show_marketing_menu(chat_id)
 
 
 def ad_inline(callback_data, chat_id, message_id):
@@ -1837,6 +1849,13 @@ def ad_inline(callback_data, chat_id, message_id):
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
+    elif callback_data == 'Volver a Marketing':
+        if dop.get_sost(chat_id) is True:
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+        bot.delete_message(chat_id, message_id)
+        show_marketing_menu(chat_id)
+
     elif callback_data.startswith('EDIT_CAMPAIGN_'):
         camp_id = int(callback_data.split('_')[-1])
         path = f'data/Temp/{chat_id}_edit_campaign.txt'
@@ -1845,8 +1864,8 @@ def ad_inline(callback_data, chat_id, message_id):
         key = telebot.types.InlineKeyboardMarkup()
         key.add(
             telebot.types.InlineKeyboardButton(
-                text='Cancelar y volver al menú principal de administración',
-                callback_data='Volver al menú principal de administración'
+                text='Cancelar y volver a Marketing',
+                callback_data='Volver a Marketing'
             )
         )
         bot.send_message(chat_id, (
