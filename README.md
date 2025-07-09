@@ -14,12 +14,12 @@ pip install -r requirements.txt
 ```
 
 4. Copia el archivo `.env.example` a `.env` (o crea uno nuevo).  El
-   archivo de ejemplo incluye los campos `TELEGRAM_BOT_TOKEN` y
-   `TELEGRAM_ADMIN_ID` como referencia, así que sólo debes reemplazar sus
-   valores con tus credenciales.  Si utilizarás el sistema de publicidad,
-   **debes** definir `TELEGRAM_TOKEN` con el token (o los tokens separados
-   por comas) que empleará `advertising_cron.py`; el script fallará si no
-   se configura esta variable.
+   archivo de ejemplo incluye los campos `TELEGRAM_BOT_TOKEN`,
+   `TELEGRAM_ADMIN_ID` y `TELEGRAM_TOKEN` como referencia, así que sólo
+   debes reemplazar sus valores con tus credenciales.  Si utilizarás el
+   sistema de publicidad, **debes** definir `TELEGRAM_TOKEN` con el token
+   (o los tokens separados por comas) que empleará `advertising_cron.py`;
+   el script fallará si no se configura esta variable.
 
    Puedes modificar la frecuencia de consulta al servidor de Telegram
    estableciendo las variables opcionales `POLL_INTERVAL`, `POLL_TIMEOUT`
