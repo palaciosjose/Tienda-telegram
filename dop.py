@@ -1704,3 +1704,82 @@ def save_message(message_type, message_text):
     except Exception as e:
         print(f"Error guardando mensaje: {e}")
         return False
+
+
+def create_product(name, description, format_type, minimum, price, stored,
+                   additional_description='', media_file_id=None, media_type=None,
+                   media_caption=None, duration_days=None, manual_delivery=0,
+                   category_id=None, shop_id=1):
+    """Crear un producto en la base de datos."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT INTO goods (
+                name, description, format, minimum, price, stored,
+                additional_description, media_file_id, media_type,
+                media_caption, duration_days, manual_delivery,
+                category_id, shop_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                name, description, format_type, minimum, price, stored,
+                additional_description, media_file_id, media_type,
+                media_caption, duration_days, manual_delivery,
+                category_id, shop_id,
+            ),
+        )
+        con.commit()
+        return True
+    except Exception as e:
+        print(f"Error creando producto: {e}")
+        return False
+
+
+def delete_product(name, shop_id=1):
+    """Eliminar un producto de la tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "DELETE FROM goods WHERE name = ? AND shop_id = ?",
+            (name, shop_id),
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error eliminando producto: {e}")
+        return False
+
+
+def update_product_description(name, new_description, shop_id=1):
+    """Actualizar la descripción de un producto."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE goods SET description = ? WHERE name = ? AND shop_id = ?",
+            (new_description, name, shop_id),
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error actualizando descripción: {e}")
+        return False
+
+
+def update_product_price(name, new_price, shop_id=1):
+    """Actualizar el precio de un producto."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE goods SET price = ? WHERE name = ? AND shop_id = ?",
+            (new_price, name, shop_id),
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error actualizando precio: {e}")
+        return False
