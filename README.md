@@ -158,11 +158,13 @@ con comandos para gestionar campañas:
 - `🎯 Gestionar grupos` para administrar los grupos objetivo.
 - `📊 Estadísticas hoy` para consultar el resumen diario.
 - `⚙️ Configuración` para ajustes adicionales.
-- `▶️ Envío manual` para disparar un envío inmediato.
+- `▶️ Envío manual <ID>` para disparar un envío inmediato indicando el
+  identificador de la campaña. Tras introducir el ID el bot mostrará una lista
+  de grupos objetivo para seleccionar.
 
-Durante estos flujos puedes cancelar en cualquier momento enviando `/cancel` o
-presionando el botón *Cancelar y volver a Marketing* para regresar al menú de
-marketing.
+Durante estos flujos puedes cancelar en cualquier momento enviando `Cancelar` o
+`/cancel`, o presionando el botón *Cancelar y volver a Marketing* para regresar
+al menú de marketing.
 
 `advertising_cron.py` obtiene los tokens a utilizar desde la variable de entorno
 `TELEGRAM_TOKEN`.  Puedes indicar varios tokens separados por comas si
