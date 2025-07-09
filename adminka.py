@@ -1484,7 +1484,8 @@ def text_analytics(message_text, chat_id):
                 return
 
             if message_text.lower().strip() in ('no', 'skip', 'sin archivo'):
-                result = dop.broadcast_message(group, amount, text)
+                shop_id = dop.get_shop_id(chat_id)
+                result = dop.broadcast_message(group, amount, text, shop_id=shop_id)
                 bot.send_message(chat_id, result)
                 try:
                     os.remove('data/Temp/' + str(chat_id) + '.txt')
@@ -1720,7 +1721,8 @@ def ad_inline(callback_data, chat_id, message_id):
                     cap = mlines[2] if len(mlines) > 2 else None
                     media = {'file_id': fid, 'type': mtype, 'caption': cap}
 
-        result = dop.broadcast_message(group, amount, text, media)
+        shop_id = dop.get_shop_id(chat_id)
+        result = dop.broadcast_message(group, amount, text, media, shop_id)
         bot.edit_message_reply_markup(chat_id, message_id)
         bot.send_message(chat_id, result)
         try:

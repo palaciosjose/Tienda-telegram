@@ -488,9 +488,10 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
             except Exception as e:
                 print(f"DEBUG: Error notificando admin {admin_id}: {e}")
         
-        # Registrar compra
-        dop.new_buy(chat_id, username, name_good, amount, sum_amount)
-        dop.new_buyer(chat_id, username, sum_amount)
+        # Registrar compra asociada a la tienda del usuario
+        shop_id = dop.get_user_shop(chat_id)
+        dop.new_buy(chat_id, username, name_good, amount, sum_amount, shop_id)
+        dop.new_buyer(chat_id, username, sum_amount, shop_id)
         
         print(f"DEBUG: Producto entregado exitosamente a {chat_id}")
         return True
