@@ -618,6 +618,66 @@ def new_admin(his_id):
         with open(files.admins_list, 'w', encoding='utf-8') as f:
             f.write(str(his_id) + '\n')
 
+def get_shop_id(admin_id):
+    """Obtener el ID de tienda asociado a un admin."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute("SELECT id FROM shops WHERE admin_id = ?", (admin_id,))
+        row = cur.fetchone()
+        if row:
+            return row[0]
+        cur.execute(
+            "INSERT INTO shops (admin_id, name) VALUES (?, ?)",
+            (admin_id, f'Shop {admin_id}')
+        )
+        con.commit()
+        return cur.lastrowid
+    except Exception as e:
+        print(f"Error obteniendo shop_id: {e}")
+        return 1
+
+def list_shops():
+    """Listar todas las tiendas registradas."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute("SELECT id, admin_id, name FROM shops ORDER BY id")
+        return cur.fetchall()
+    except Exception as e:
+        print(f"Error listando tiendas: {e}")
+        return []
+
+def create_shop(name, admin_id=None):
+    """Crear una nueva tienda y devolver su ID."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "INSERT INTO shops (admin_id, name) VALUES (?, ?)",
+            (admin_id, name)
+        )
+        con.commit()
+        return cur.lastrowid
+    except Exception as e:
+        print(f"Error creando tienda: {e}")
+        return None
+
+def assign_admin_to_shop(shop_id, admin_id):
+    """Asignar un administrador existente a una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE shops SET admin_id = ? WHERE id = ?",
+            (admin_id, shop_id)
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error asignando admin a tienda: {e}")
+        return False
+
 def get_description(name_good):
     """Descripción del producto con sistema de descuentos"""
     try:
@@ -1186,7 +1246,7 @@ def get_manual_delivery_message(username, name):
     text = text.replace('username', username).replace('name', name)
     return text
 
-def get_product_full_info(good_name):
+def get_product_full_info(good_name, shop_id=1):
     """Obtiene toda la información del producto incluyendo descripción adicional"""
     try:
         con = db.get_db_connection()
@@ -1196,9 +1256,9 @@ def get_product_full_info(good_name):
             SELECT g.name, g.description, g.additional_description, g.format, g.minimum, g.price,
                    g.duration_days, g.manual_delivery, c.name
             FROM goods g LEFT JOIN categories c ON g.category_id = c.id
-            WHERE g.name = ?
+            WHERE g.name = ? AND g.shop_id = ?
         """,
-            (good_name,),
+            (good_name, shop_id),
         )
         result = cursor.fetchone()
 
@@ -1221,14 +1281,14 @@ def get_product_full_info(good_name):
         print(f"Error obteniendo información completa del producto: {e}")
         return None
 
-def format_product_basic_info(good_name):
+def format_product_basic_info(good_name, shop_id=1):
     """Formatea la información básica del producto (sin descripción adicional)"""
     try:
-        product_info = get_product_full_info(good_name)
+        product_info = get_product_full_info(good_name, shop_id)
         if not product_info:
             return "Producto no encontrado"
         
-        amount = amount_of_goods(good_name)
+        amount = amount_of_goods(good_name, shop_id)
         
         format_map = {'text': 'Texto', 'file': 'Archivo'}
         format_display = format_map.get(product_info['format'], product_info['format'])
@@ -1345,39 +1405,35 @@ def remove_product_media(product_name):
         print(f"Error eliminando multimedia: {e}")
         return False
 
-def get_products_with_media():
+def get_products_with_media(shop_id=1):
     """Obtener lista de productos que tienen multimedia"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT name, media_type 
-            FROM goods 
-            WHERE media_file_id IS NOT NULL
-        """)
-        results = cursor.fetchall()
-        return results
+        cursor.execute(
+            "SELECT name, media_type FROM goods WHERE media_file_id IS NOT NULL AND shop_id = ?",
+            (shop_id,)
+        )
+        return cursor.fetchall()
     except Exception as e:
         print(f"Error obteniendo productos con multimedia: {e}")
         return []
 
-def get_products_without_media():
+def get_products_without_media(shop_id=1):
     """Obtener lista de productos que NO tienen multimedia"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT name 
-            FROM goods 
-            WHERE media_file_id IS NULL
-        """)
-        results = cursor.fetchall()
-        return [row[0] for row in results]
+        cursor.execute(
+            "SELECT name FROM goods WHERE media_file_id IS NULL AND shop_id = ?",
+            (shop_id,)
+        )
+        return [row[0] for row in cursor.fetchall()]
     except Exception as e:
         print(f"Error obteniendo productos sin multimedia: {e}")
         return []
 
-def format_product_with_media(product_name):
+def format_product_with_media(product_name, shop_id=1):
     """Formatear información del producto incluyendo multimedia"""
     try:
         con = db.get_db_connection()
@@ -1387,9 +1443,9 @@ def format_product_with_media(product_name):
             SELECT g.name, g.description, g.price, g.media_file_id, g.media_type, g.media_caption,
                    g.duration_days, g.manual_delivery, c.name
             FROM goods g LEFT JOIN categories c ON g.category_id = c.id
-            WHERE g.name = ?
+            WHERE g.name = ? AND g.shop_id = ?
         """,
-            (product_name,),
+            (product_name, shop_id),
         )
         result = cursor.fetchone()
         

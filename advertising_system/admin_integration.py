@@ -12,6 +12,12 @@ _manager = AdvertisingManager(files.main_db, shop_id=1)
 # Reexportamos la instancia por si otros módulos necesitan acceso directo
 manager = _manager
 
+def set_shop_id(shop_id):
+    """Actualizar la instancia interna con el shop_id indicado."""
+    global _manager, manager
+    _manager = AdvertisingManager(files.main_db, shop_id=shop_id)
+    manager = _manager
+
 
 def create_campaign_from_admin(data):
     """Crear una campaña mostrando un mensaje apto para la interfaz admin."""

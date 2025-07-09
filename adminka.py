@@ -3,6 +3,7 @@ import config, dop, files
 import db
 from advertising_system.admin_integration import (
     manager as advertising,
+    set_shop_id,
     create_campaign_from_admin,
     list_campaigns_for_admin,
     add_target_group_from_admin,
@@ -50,7 +51,8 @@ def show_product_menu(chat_id):
     """Mostrar listado de productos para la gestión de unidades"""
     con = db.get_db_connection()
     cursor = con.cursor()
-    cursor.execute("SELECT name FROM goods;")
+    shop_id = dop.get_shop_id(chat_id)
+    cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
     user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
     count = 0
     for (name,) in cursor.fetchall():
@@ -69,6 +71,8 @@ def show_product_menu(chat_id):
 
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
+        shop_id = dop.get_shop_id(chat_id)
+        set_shop_id(shop_id)
         normalized = message_text.strip().lower()
         if normalized in ('volver al menú principal', 'volver al menu principal', '/adm'):
             if dop.get_sost(chat_id) is True:
@@ -145,10 +149,13 @@ def in_adminka(chat_id, message_text, username, name_user):
             cursor = con.cursor()
             goodz = 'Productos creados:\n\n'
             a = 0
-            cursor.execute("SELECT name, description, format, minimum, price, stored, duration_days FROM goods;")
+            cursor.execute(
+                "SELECT name, description, format, minimum, price, stored, duration_days FROM goods WHERE shop_id = ?;",
+                (shop_id,)
+            )
             for name, description, format, minimum, price, stored, duration in cursor.fetchall():
                 a += 1
-                amount = dop.amount_of_goods(name)
+                amount = dop.amount_of_goods(name, shop_id)
                 dur_line = f"\n*Duración:* {duration} días" if duration not in (None, 0) else ''
                 goodz += (
                     '*Nombre:* ' + name + '\n*Descripción:* ' + description +
@@ -186,7 +193,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif 'Eliminar posición' == message_text:
             con = db.get_db_connection()
             cursor = con.cursor()
-            cursor.execute("SELECT name FROM goods;")
+            cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
             a = 0
             for name in cursor.fetchall():
@@ -208,7 +215,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif 'Cambiar descripción de posición' == message_text:
             con = db.get_db_connection()
             cursor = con.cursor()
-            cursor.execute("SELECT name FROM goods;")
+            cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
             a = 0
             for name in cursor.fetchall():
@@ -230,7 +237,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif 'Cambiar precio' == message_text:
             con = db.get_db_connection()
             cursor = con.cursor()
-            cursor.execute("SELECT name FROM goods;")
+            cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
             a = 0
             for name in cursor.fetchall():
@@ -252,7 +259,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '📝 Descripción adicional' == message_text:
             con = db.get_db_connection()
             cursor = con.cursor()
-            cursor.execute("SELECT name FROM goods;")
+            cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
             a = 0
             for name in cursor.fetchall():
@@ -279,14 +286,14 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, '🎬 **Gestión de Multimedia**\n\nSelecciona una opción:', reply_markup=user_markup, parse_mode='Markdown')
 
         elif '📤 Agregar o cambiar multimedia' == message_text:
-            products = dop.get_goods()
+            products = dop.get_goods(shop_id)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             if not products:
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
             else:
-                products_with_media = {name: mtype for name, mtype in dop.get_products_with_media()}
+                products_with_media = {name: mtype for name, mtype in dop.get_products_with_media(shop_id)}
                 emoji_map = {'photo': '📸', 'video': '🎥', 'document': '📄', 'audio': '🎵'}
                 for product in products:
                     if product in products_with_media:
@@ -300,7 +307,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 30
 
         elif '🗑️ Eliminar multimedia' == message_text:
-            products_with_media = dop.get_products_with_media()
+            products_with_media = dop.get_products_with_media(shop_id)
             if not products_with_media:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('🎬 Multimedia productos')
@@ -317,7 +324,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 31
 
         elif '📋 Ver productos con multimedia' == message_text:
-            products_with_media = dop.get_products_with_media()
+            products_with_media = dop.get_products_with_media(shop_id)
             menu_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             menu_markup.row('🎬 Multimedia productos')
             menu_markup.row('Volver al menú principal')
@@ -331,7 +338,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             else:
                 for product_name, media_type in products_with_media:
                     media_info = dop.get_product_media(product_name)
-                    caption = dop.format_product_with_media(product_name)
+                    caption = dop.format_product_with_media(product_name, shop_id)
                     if media_info:
                         mtype = media_info['type']
                         file_id = media_info['file_id']
@@ -425,7 +432,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 61
 
         elif 'Eliminar categoría' == message_text:
-            cats = dop.list_categories()
+            cats = dop.list_categories(shop_id)
             if not cats:
                 bot.send_message(chat_id, 'No existen categorías para eliminar.')
             else:
@@ -438,7 +445,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 60
 
         elif 'Ver categorías' == message_text:
-            cats = dop.list_categories()
+            cats = dop.list_categories(shop_id)
             if not cats:
                 bot.send_message(chat_id, 'No hay categorías registradas.')
             else:
@@ -608,8 +615,10 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 40
 
         elif '⚙️ Otros' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nuevo admin', 'Eliminar admin')
+            if chat_id == config.admin_id:
+                user_markup.row('🛍️ Gestionar tiendas')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione qué desea hacer', reply_markup=user_markup)
 
@@ -621,19 +630,32 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 21
 
         elif 'Eliminar admin' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False) 
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             a = 0
-            for admin_id in dop.get_adminlist(): 
+            for admin_id in dop.get_adminlist():
                 a += 1
-                if int(admin_id) != config.admin_id: 
+                if int(admin_id) != config.admin_id:
                     user_markup.row(str(admin_id))
-            if a == 1: 
+            if a == 1:
                 bot.send_message(chat_id, '¡Todavía no ha añadido admins!')
-            else: 
+            else:
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, 'Seleccione qué admin desea eliminar', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd: 
+                with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 22
+
+        elif message_text == '🛍️ Gestionar tiendas' and chat_id == config.admin_id:
+            shops = dop.list_shops()
+            lines = ['*Tiendas:*']
+            for sid, aid, name in shops:
+                lines.append(f"{sid}. {name} (admin {aid})")
+            bot.send_message(chat_id, '\n'.join(lines), parse_mode='Markdown')
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('Crear tienda', 'Asignar admin a tienda')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, 'Elige una opción:', reply_markup=user_markup)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 300
 
 def text_analytics(message_text, chat_id):
     normalized = message_text.strip().lower()
@@ -782,7 +804,7 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'good_duration.txt', 'w', encoding='utf-8') as f:
                 f.write(str(duration_val))
 
-            cats = dop.list_categories()
+            cats = dop.list_categories(shop_id)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             for _cid, cname in cats:
                 user_markup.row(cname)
@@ -799,7 +821,7 @@ def text_analytics(message_text, chat_id):
                     bd[str(chat_id)] = 61
                 return
 
-            cat_id = dop.get_category_id(message_text)
+            cat_id = dop.get_category_id(message_text, shop_id)
             if cat_id is None:
                 bot.send_message(chat_id, '❌ Categoría no válida. Intente de nuevo.')
                 return
@@ -831,7 +853,7 @@ def text_analytics(message_text, chat_id):
             if duration_val > 0:
                 duration_display = f'\n*Duración:* {duration_val} días'
 
-            cat_name = dop.get_category_name(cat_id)
+            cat_name = dop.get_category_name(cat_id, shop_id)
             cat_line = f'\n*Categoría:* {cat_name}' if cat_name else ''
 
             manual_text = 'Sí' if manual_flag == '1' else 'No'
@@ -867,7 +889,7 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
 
         elif sost_num == 61:
-            cat_id = dop.create_category(message_text.strip())
+            cat_id = dop.create_category(message_text.strip(), shop_id)
             if not cat_id:
                 bot.send_message(chat_id, '❌ No se pudo crear la categoría (posiblemente ya existe).')
                 return
@@ -878,7 +900,7 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 62
 
-            cats = dop.list_categories()
+            cats = dop.list_categories(shop_id)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             for _cid, cname in cats:
                 user_markup.row(cname)
@@ -887,7 +909,7 @@ def text_analytics(message_text, chat_id):
             bot.send_message(chat_id, 'Categoría creada. Seleccione la categoría para continuar:', reply_markup=user_markup)
 
         elif sost_num == 60:
-            cat_id = dop.get_category_id(message_text)
+            cat_id = dop.get_category_id(message_text, shop_id)
             if cat_id is None:
                 bot.send_message(chat_id, '❌ Categoría no encontrada.')
             else:
@@ -937,9 +959,9 @@ def text_analytics(message_text, chat_id):
                     f.write(message_text)
 
                 info = (
-                    dop.format_product_with_media(message_text)
+                    dop.format_product_with_media(message_text, shop_id)
                     if dop.has_product_media(message_text)
-                    else dop.format_product_basic_info(message_text)
+                    else dop.format_product_basic_info(message_text, shop_id)
                 )
                 reply = telebot.types.ReplyKeyboardMarkup(True, False)
                 reply.row('Volver al menú principal')
@@ -973,7 +995,7 @@ def text_analytics(message_text, chat_id):
             temp_path = 'data/Temp/' + str(chat_id) + '.txt'
             if not os.path.exists(temp_path):
                 product = message_text
-                if product not in dop.get_goods():
+                if product not in dop.get_goods(shop_id):
                     bot.send_message(chat_id, '❌ Producto no válido')
                     return
 
@@ -981,9 +1003,9 @@ def text_analytics(message_text, chat_id):
                     f.write(product)
 
                 info = (
-                    dop.format_product_with_media(product)
+                    dop.format_product_with_media(product, shop_id)
                     if dop.has_product_media(product)
-                    else dop.format_product_basic_info(product)
+                    else dop.format_product_basic_info(product, shop_id)
                 )
                 reply = telebot.types.ReplyKeyboardMarkup(True, False)
                 reply.row('Volver al menú principal')
@@ -1017,7 +1039,7 @@ def text_analytics(message_text, chat_id):
 
         elif sost_num == 10:
             product = message_text
-            if product not in dop.get_goods():
+            if product not in dop.get_goods(shop_id):
                 bot.send_message(chat_id, '❌ Producto no válido')
                 return
 
@@ -1025,9 +1047,9 @@ def text_analytics(message_text, chat_id):
                 f.write(product)
 
             info = (
-                dop.format_product_with_media(product)
+                dop.format_product_with_media(product, shop_id)
                 if dop.has_product_media(product)
-                else dop.format_product_basic_info(product)
+                else dop.format_product_basic_info(product, shop_id)
             )
             bot.send_message(chat_id, info, parse_mode='Markdown')
 
@@ -1245,6 +1267,48 @@ def text_analytics(message_text, chat_id):
             except Exception as e:
                 bot.send_message(chat_id, f'Error guardando credenciales: {e}')
 
+        elif sost_num == 300 and chat_id == config.admin_id:
+            if message_text == 'Crear tienda':
+                bot.send_message(chat_id, 'Ingrese el nombre de la tienda:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 301
+            elif message_text == 'Asignar admin a tienda':
+                bot.send_message(chat_id, 'Envía "<shop_id> <admin_id>"')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 302
+            else:
+                in_adminka(chat_id, '⚙️ Otros', None, None)
+
+        elif sost_num == 301 and chat_id == config.admin_id:
+            shop_id_created = dop.create_shop(message_text.strip())
+            if shop_id_created:
+                bot.send_message(chat_id, f'Tienda creada con ID {shop_id_created}')
+            else:
+                bot.send_message(chat_id, '❌ Error creando tienda')
+            in_adminka(chat_id, '🛍️ Gestionar tiendas', None, None)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+        elif sost_num == 302 and chat_id == config.admin_id:
+            parts = message_text.split()
+            if len(parts) != 2:
+                bot.send_message(chat_id, 'Formato inválido. Usa "<shop_id> <admin_id>"')
+                return
+            try:
+                sid = int(parts[0])
+                aid = int(parts[1])
+            except ValueError:
+                bot.send_message(chat_id, 'IDs inválidos')
+                return
+            if dop.assign_admin_to_shop(sid, aid):
+                dop.new_admin(aid)
+                bot.send_message(chat_id, '✅ Admin asignado correctamente')
+            else:
+                bot.send_message(chat_id, '❌ Error asignando admin')
+            in_adminka(chat_id, '🛍️ Gestionar tiendas', None, None)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
         elif sost_num == 21:
             dop.new_admin(message_text)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
@@ -1332,7 +1396,7 @@ def text_analytics(message_text, chat_id):
             for emoji in ['📸 ', '🎥 ', '📄 ', '🎵 ', '📎 ']:
                 clean_name = clean_name.replace(emoji, '')
 
-            if clean_name in dop.get_goods():
+            if clean_name in dop.get_goods(shop_id):
                 with open('data/Temp/' + str(chat_id) + 'media_product.txt', 'w', encoding='utf-8') as f:
                     f.write(clean_name)
                 
@@ -1739,7 +1803,7 @@ def ad_inline(callback_data, chat_id, message_id):
         open(goods_file, "a", encoding="utf-8").close()
         # Mostrar información del producto con la multimedia que se haya adjuntado
         media_info = dop.get_product_media(name)
-        caption = dop.format_product_with_media(name)
+        caption = dop.format_product_with_media(name, shop_id)
         if media_info:
             mtype = media_info['type']
             file_id = media_info['file_id']
