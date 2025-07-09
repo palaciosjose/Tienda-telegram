@@ -1947,8 +1947,9 @@ def handle_multimedia(message):
             media_type = 'animation'
                 
         if file_id and media_type:
+            shop_id = dop.get_shop_id(chat_id)
             if state == 32:
-                saved = dop.save_product_media(product_name, file_id, media_type, caption)
+                saved = dop.save_product_media(product_name, file_id, media_type, caption, shop_id)
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')

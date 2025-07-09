@@ -958,9 +958,9 @@ def generator_pw(n):
     pas = ''.join([random.choice(passwd) for x in range(n)])
     return pas
 
-def get_tovar(name_good):
+def get_tovar(name_good, shop_id=1):
     try:
-        stored = get_stored(name_good)
+        stored = get_stored(name_good, shop_id)
         if not stored:
             return "Producto no encontrado"
             
@@ -1496,16 +1496,16 @@ def has_additional_description(good_name, shop_id=1):
     except:
         return False
 
-def save_product_media(product_name, file_id, media_type, caption=None):
+def save_product_media(product_name, file_id, media_type, caption=None, shop_id=1):
     """Guardar información multimedia de un producto"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
         cursor.execute("""
-            UPDATE goods 
+            UPDATE goods
             SET media_file_id = ?, media_type = ?, media_caption = ?
-            WHERE name = ?
-        """, (file_id, media_type, caption, product_name))
+            WHERE name = ? AND shop_id = ?
+        """, (file_id, media_type, caption, product_name, shop_id))
         con.commit()
         return True
     except Exception as e:

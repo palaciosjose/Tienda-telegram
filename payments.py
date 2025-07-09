@@ -453,6 +453,8 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
     try:
         print(f"DEBUG: Entregando producto {name_good} a usuario {chat_id}")
 
+        shop_id = dop.get_user_shop(chat_id)
+
         if dop.is_manual_delivery(name_good):
             manual_msg = dop.get_manual_delivery_message(username, first_name)
             bot.send_message(chat_id, manual_msg)
@@ -461,13 +463,13 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
             text = ''
             for i in range(int(amount)):
                 if dop.get_goodformat(name_good) == 'file':
-                    product_data = dop.get_tovar(name_good)
+                    product_data = dop.get_tovar(name_good, shop_id)
                     if product_data != "Error obteniendo producto" and product_data != "Producto agotado":
                         bot.send_document(chat_id, product_data)
                     else:
                         bot.send_message(chat_id, f"❌ Error obteniendo {name_good}: {product_data}")
                 elif dop.get_goodformat(name_good) == 'text':
-                    product_data = dop.get_tovar(name_good)
+                    product_data = dop.get_tovar(name_good, shop_id)
                     if product_data != "Error obteniendo producto" and product_data != "Producto agotado":
                         text += product_data + '\n'
                     else:
@@ -492,7 +494,6 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
                 print(f"DEBUG: Error notificando admin {admin_id}: {e}")
         
         # Registrar compra asociada a la tienda del usuario
-        shop_id = dop.get_user_shop(chat_id)
         dop.new_buy(chat_id, username, name_good, amount, sum_amount, shop_id)
         dop.new_buyer(chat_id, username, sum_amount, shop_id)
         
