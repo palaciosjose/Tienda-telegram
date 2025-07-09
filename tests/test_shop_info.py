@@ -115,4 +115,41 @@ def test_shop_selection_shows_info(monkeypatch, tmp_path):
     cb = types.SimpleNamespace(data=f"SELECT_SHOP_{sid}", message=Msg(), id="1", from_user=types.SimpleNamespace(username="u"))
     main.inline(cb)
     assert any(c[0] == "send_photo" for c in calls)
-    assert any("CATÁLOGO" in c[1][1] for c in calls if c[0] == "send_message")
+    assert any("CATEGORÍA" in c[1][1] for c in calls if c[0] == "send_message")
+
+
+def test_category_selection_lists_products(monkeypatch, tmp_path):
+    dop, main, calls, _ = setup_main(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+    sid = dop.create_shop("S1", admin_id=1)
+    cid = dop.create_category("Cat", shop_id=sid)
+    dop.create_product("P1", "d", "txt", 1, 2, "x", category_id=cid, shop_id=sid)
+    dop.create_product("P2", "d", "txt", 1, 2, "x", shop_id=sid)
+
+    class Msg:
+        def __init__(self):
+            self.chat = types.SimpleNamespace(id=5)
+            self.message_id = 1
+            self.content_type = "text"
+            self.from_user = types.SimpleNamespace(first_name="a")
+    msg = Msg()
+
+    cb_shop = types.SimpleNamespace(data=f"SELECT_SHOP_{sid}", message=msg, id="1", from_user=types.SimpleNamespace(username="u"))
+    main.inline(cb_shop)
+    calls.clear()
+
+    cb_cat = types.SimpleNamespace(data=f"CAT_{cid}", message=msg, id="2", from_user=types.SimpleNamespace(username="u"))
+    main.inline(cb_cat)
+
+    messages = [c for c in calls if c[0] == "send_message"]
+    msg_texts = []
+    for m in messages:
+        if len(m[1]) > 1:
+            msg_texts.append(m[1][1])
+        else:
+            msg_texts.append(m[2].get("text", ""))
+    assert any("CATÁLOGO" in t for t in msg_texts)
+    buttons = messages[-1][2]["reply_markup"].buttons
+    btn_texts = [b.text for b in buttons]
+    assert any("P1" in t for t in btn_texts)
+    assert not any("P2" in t for t in btn_texts)

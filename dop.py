@@ -316,6 +316,26 @@ def get_goods(shop_id=1):
     except:
         return []
 
+def list_products_by_category(cat_id=None, shop_id=1):
+    """Return product names filtered by category for a shop."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        if cat_id is None:
+            cursor.execute(
+                "SELECT name FROM goods WHERE shop_id = ?;",
+                (shop_id,)
+            )
+        else:
+            cursor.execute(
+                "SELECT name FROM goods WHERE shop_id = ? AND category_id = ?;",
+                (shop_id, cat_id),
+            )
+        return [row[0] for row in cursor.fetchall()]
+    except Exception as e:
+        print(f"Error listando productos por categoría: {e}")
+        return []
+
 def list_categories(shop_id=1):
     """Devuelve lista de categorías (id, nombre)."""
     try:

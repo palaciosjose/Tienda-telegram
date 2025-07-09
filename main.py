@@ -269,22 +269,20 @@ def inline(callback):
                 else:
                     bot.send_message(callback.message.chat.id, info.get('description'), reply_markup=markup)
 
-            con = dop.get_db_connection() if hasattr(dop, 'get_db_connection') else db.get_db_connection()
-            cursor = con.cursor()
-            cursor.execute("SELECT name, price FROM goods WHERE shop_id = ?;", (shop_id,))
+            categories = dop.list_categories(shop_id)
             key = telebot.types.InlineKeyboardMarkup()
-            for name, price in cursor.fetchall():
-                key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
+            for cid, cname in categories:
+                key.add(telebot.types.InlineKeyboardButton(text=cname, callback_data=f'CAT_{cid}'))
+            key.add(telebot.types.InlineKeyboardButton(text='Todos los productos', callback_data='CAT_NONE'))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            if dop.get_productcatalog(shop_id) is None:
-                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
-            else:
-                catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id)}"
-                bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
-                if callback.message.content_type != 'text':
-                    bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                else:
-                    pass
+            bot.send_message(
+                callback.message.chat.id,
+                '📂 **SELECCIONA UNA CATEGORÍA**',
+                reply_markup=key,
+                parse_mode='Markdown'
+            )
+            if callback.message.content_type != 'text':
+                bot.delete_message(callback.message.chat.id, callback.message.message_id)
 
         elif callback.data == 'Ir al catálogo de productos':
             # Optimización: usar conexión eficiente
@@ -300,6 +298,25 @@ def inline(callback):
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
 
             if dop.get_productcatalog(shop_id_cb) == None:
+                bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
+            else:
+                catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id_cb)}"
+                if callback.message.content_type != 'text':
+                    bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                    bot.send_message(callback.message.chat.id, catalog_text, reply_markup=key, parse_mode='Markdown')
+                else:
+                    dop.safe_edit_message(bot, callback.message, catalog_text, reply_markup=key, parse_mode='Markdown')
+
+        elif callback.data.startswith('CAT_'):
+            raw = callback.data.replace('CAT_', '')
+            cat_id = None if raw == 'NONE' else int(raw)
+            goods = dop.list_products_by_category(cat_id, shop_id_cb)
+            key = telebot.types.InlineKeyboardMarkup()
+            for name in goods:
+                key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
+            key.add(telebot.types.InlineKeyboardButton(text='🔙 Categorías', callback_data=f'SELECT_SHOP_{shop_id_cb}'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+            if dop.get_productcatalog(shop_id_cb) is None or not goods:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
             else:
                 catalog_text = f"🛍️ **CATÁLOGO DE PRODUCTOS**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id_cb)}"
