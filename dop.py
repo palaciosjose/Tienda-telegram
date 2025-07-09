@@ -901,6 +901,31 @@ def search_user_purchases(search_term):
         return f"❌ Error buscando compras: {e}"
 
 
+def get_user_purchases(user_id):
+    con = db.get_db_connection()
+    cursor = con.cursor()
+    cursor.execute(
+        "SELECT name_good, amount, price FROM purchases "
+        "WHERE id = ? ORDER BY rowid DESC",
+        (user_id,)
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        return "❌ No tienes compras registradas."
+    response = "📋 **Tus compras:**\n\n"
+    total = 0
+    for idx, (product, qty, price) in enumerate(rows, 1):
+        total += price
+        response += (
+            f"🛒 **Compra #{idx}**\n"
+            f"📦 {product} x{qty}\n"
+            f"💰 ${price} USD\n"
+            "━━━━━━━━━━━━━━━━━━━━\n"
+        )
+    response += f"\n💎 **Total gastado:** ${total} USD"
+    return response
+
+
 def get_discount_config():
     """Obtiene la configuración de descuentos"""
     try:

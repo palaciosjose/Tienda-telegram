@@ -56,6 +56,8 @@ def send_main_menu(chat_id, username, name):
     """Enviar el mensaje de inicio con el teclado principal"""
     key = telebot.types.InlineKeyboardMarkup()
     key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
+    key.add(telebot.types.InlineKeyboardButton(
+        text='📜 Mis compras', callback_data='Ver mis compras'))
     if dop.check_message('start'):
         with shelve.open(files.bot_message_bd) as bd:
             start_message = bd['start']
@@ -113,7 +115,9 @@ def message_send(message):
             elif dop.check_message('start') is True:
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
-                with shelve.open(files.bot_message_bd) as bd: 
+                key.add(telebot.types.InlineKeyboardButton(
+                    text='📜 Mis compras', callback_data='Ver mis compras'))
+                with shelve.open(files.bot_message_bd) as bd:
                     start_message = bd['start']
                 start_message = start_message.replace('username', message.chat.username)
                 start_message = start_message.replace('name', message.from_user.first_name)
@@ -345,14 +349,26 @@ def inline(callback):
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=False, text='ℹ️ Información adicional mostrada')
 
 
+        elif callback.data == 'Ver mis compras':
+            history = dop.get_user_purchases(callback.message.chat.id)
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(
+                text='🏠 Inicio', callback_data='Volver al inicio'))
+            bot.answer_callback_query(callback.id)
+            dop.safe_edit_message(bot, callback.message,
+                                  history, reply_markup=key, parse_mode='Markdown')
+
+
         elif callback.data == 'Volver al inicio':
             if callback.message.chat.username:
-                if dop.get_sost(callback.message.chat.id) is True: 
-                    with shelve.open(files.sost_bd) as bd: 
+                if dop.get_sost(callback.message.chat.id) is True:
+                    with shelve.open(files.sost_bd) as bd:
                         if str(callback.message.chat.id) in bd:
                             del bd[str(callback.message.chat.id)]
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
+                key.add(telebot.types.InlineKeyboardButton(
+                    text='📜 Mis compras', callback_data='Ver mis compras'))
                 if dop.check_message('start'):
                     with shelve.open(files.bot_message_bd) as bd:
                         start_message = bd['start']
