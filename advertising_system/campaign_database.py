@@ -26,7 +26,8 @@ class CampaignDB:
                 data.get('media_type'), data.get('media_caption'),
                 data.get('button1_text'), data.get('button1_url'),
                 data.get('button2_text'), data.get('button2_url'),
-                datetime.now().isoformat(), data.get('created_by'), self.shop_id
+                datetime.now().isoformat(), data.get('created_by'),
+                data.get('shop_id', self.shop_id)
             )
         )
         campaign_id = cursor.lastrowid

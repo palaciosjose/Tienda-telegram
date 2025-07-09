@@ -68,6 +68,15 @@ def ensure_database_schema():
             cursor.execute("ALTER TABLE goods ADD COLUMN shop_id INTEGER DEFAULT 1")
             updated = True
 
+        cursor.execute("PRAGMA table_info(campaigns)")
+        camp_cols = [c[1] for c in cursor.fetchall()]
+        if 'shop_id' not in camp_cols:
+            try:
+                cursor.execute("ALTER TABLE campaigns ADD COLUMN shop_id INTEGER DEFAULT 1")
+                updated = True
+            except sqlite3.OperationalError:
+                pass
+
         if updated:
             con.commit()
         con.commit()

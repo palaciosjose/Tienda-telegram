@@ -16,6 +16,7 @@ SQL_TABLES = [
         status TEXT DEFAULT 'active',
         created_date TEXT,
         created_by INTEGER,
+        shop_id INTEGER DEFAULT 1,
         daily_limit INTEGER DEFAULT 3,
         priority INTEGER DEFAULT 1
     )""",
@@ -29,6 +30,7 @@ SQL_TABLES = [
         is_active INTEGER DEFAULT 1,
         next_send_telegram TEXT,
         created_date TEXT,
+        shop_id INTEGER DEFAULT 1,
         FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
     )""",
     """CREATE TABLE IF NOT EXISTS target_groups (
@@ -41,14 +43,16 @@ SQL_TABLES = [
         last_sent TEXT,
         success_rate REAL DEFAULT 1.0,
         added_date TEXT,
-        notes TEXT
+        notes TEXT,
+        shop_id INTEGER DEFAULT 1
     )""",
     """CREATE TABLE IF NOT EXISTS platform_config (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         platform TEXT UNIQUE,
         config_data TEXT,
         is_active INTEGER DEFAULT 1,
-        last_updated TEXT
+        last_updated TEXT,
+        shop_id INTEGER DEFAULT 1
     )""",
     """CREATE TABLE IF NOT EXISTS send_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -59,6 +63,7 @@ SQL_TABLES = [
         sent_date TEXT,
         response_time REAL,
         error_message TEXT,
+        shop_id INTEGER DEFAULT 1,
         FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
     )""",
     """CREATE TABLE IF NOT EXISTS daily_stats (
@@ -68,13 +73,15 @@ SQL_TABLES = [
         telegram_sent INTEGER DEFAULT 0,
         success_rate REAL DEFAULT 0,
         failed_count INTEGER DEFAULT 0,
-        avg_response_time REAL DEFAULT 0
+        avg_response_time REAL DEFAULT 0,
+        shop_id INTEGER DEFAULT 1
     )""",
     """CREATE TABLE IF NOT EXISTS rate_limit_logs (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         platform TEXT,
         success INTEGER,
-        timestamp TEXT
+        timestamp TEXT,
+        shop_id INTEGER DEFAULT 1
     )"""
 ]
 
