@@ -160,6 +160,10 @@ con comandos para gestionar campañas:
 - `⚙️ Configuración` para ajustes adicionales.
 - `▶️ Envío manual` para disparar un envío inmediato.
 
+Durante estos flujos puedes cancelar en cualquier momento enviando `/cancel` o
+presionando el botón *Cancelar y volver a Marketing* para regresar al menú de
+marketing.
+
 `advertising_cron.py` obtiene los tokens a utilizar desde la variable de entorno
 `TELEGRAM_TOKEN`.  Puedes indicar varios tokens separados por comas si
 necesitas repartir la carga entre diferentes bots.  Si la variable no está
