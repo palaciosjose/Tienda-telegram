@@ -28,7 +28,8 @@ def setup_dop(monkeypatch, tmp_path):
 
     conn = sqlite3.connect(files.main_db)
     cur = conn.cursor()
-    cur.execute("CREATE TABLE goods (name TEXT PRIMARY KEY, description TEXT, format TEXT, minimum INTEGER, price INTEGER, stored TEXT)")
+    cur.execute("CREATE TABLE shops (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER, name TEXT)")
+    cur.execute("CREATE TABLE goods (name TEXT PRIMARY KEY, description TEXT, format TEXT, minimum INTEGER, price INTEGER, stored TEXT, shop_id INTEGER)")
     conn.commit()
     conn.close()
 
@@ -47,16 +48,23 @@ def test_category_creation_and_assignment(monkeypatch, tmp_path):
     cur.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='categories'")
     assert cur.fetchone() is not None
 
+    cur.execute("PRAGMA table_info(categories)")
+    cat_cols = [c[1] for c in cur.fetchall()]
+    assert "shop_id" in cat_cols
+
     cur.execute("PRAGMA table_info(goods)")
     cols = [c[1] for c in cur.fetchall()]
     assert "category_id" in cols
+    assert "shop_id" in cols
 
     cat_id = dop.create_category("Test")
     assert cat_id
 
-    cur.execute("INSERT INTO goods (name, description, format, minimum, price, stored, category_id) VALUES ('P', 'd', 'text', 1, 2, 'f', ?)", (cat_id,))
+    cur.execute("INSERT INTO goods (name, description, format, minimum, price, stored, category_id, shop_id) VALUES ('P', 'd', 'text', 1, 2, 'f', ?, 1)", (cat_id,))
     conn.commit()
 
-    cur.execute("SELECT category_id FROM goods WHERE name='P'")
-    assert cur.fetchone()[0] == cat_id
+    cur.execute("SELECT category_id, shop_id FROM goods WHERE name='P'")
+    row = cur.fetchone()
+    assert row[0] == cat_id
+    assert row[1] == 1
     conn.close()

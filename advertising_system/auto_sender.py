@@ -12,9 +12,10 @@ from .statistics import StatisticsManager
 
 class AutoSender:
     def __init__(self, config):
-        self.scheduler = CampaignScheduler(config['db_path'])
-        self.rate_limiter = IntelligentRateLimiter(config['db_path'])
-        self.stats = StatisticsManager(config['db_path'])
+        shop_id = config.get('shop_id', 1)
+        self.scheduler = CampaignScheduler(config['db_path'], shop_id)
+        self.rate_limiter = IntelligentRateLimiter(config['db_path'], shop_id)
+        self.stats = StatisticsManager(config['db_path'], shop_id)
         self.telegram = TelegramMultiBot(config['telegram_tokens'])
         self.running = False
         self.thread = None
@@ -85,7 +86,8 @@ class AutoSender:
         conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT id, group_id, group_name FROM target_groups WHERE platform = 'telegram' AND status = 'active'"
+            "SELECT id, group_id, group_name FROM target_groups WHERE platform = 'telegram' AND status = 'active' AND shop_id = ?",
+            (self.scheduler.shop_id,)
         )
         rows = cursor.fetchall()
         if not shared:
@@ -95,7 +97,10 @@ class AutoSender:
     def _mark_group_blocked(self, group_id):
         conn, shared = self._get_connection()
         cursor = conn.cursor()
-        cursor.execute("UPDATE target_groups SET status = 'blocked' WHERE id = ?", (group_id,))
+        cursor.execute(
+            "UPDATE target_groups SET status = 'blocked' WHERE id = ? AND shop_id = ?",
+            (group_id, self.scheduler.shop_id),
+        )
         conn.commit()
         if not shared:
             conn.close()

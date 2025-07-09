@@ -6,8 +6,9 @@ import files
 import db
 
 class IntelligentRateLimiter:
-    def __init__(self, db_path):
+    def __init__(self, db_path, shop_id=1):
         self.db_path = db_path
+        self.shop_id = shop_id
         self.platform_limits = {
             'telegram': {
                 'messages_per_second': 30,
@@ -53,8 +54,8 @@ class IntelligentRateLimiter:
         conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO rate_limit_logs (platform, success, timestamp) VALUES (?, ?, ?)",
-            (platform, int(success), datetime.now().isoformat())
+            "INSERT INTO rate_limit_logs (platform, success, timestamp, shop_id) VALUES (?, ?, ?, ?)",
+            (platform, int(success), datetime.now().isoformat(), self.shop_id)
         )
         conn.commit()
         if not shared:

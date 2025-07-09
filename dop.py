@@ -11,20 +11,37 @@ from bot_instance import bot
 # se ejecuta al importar el módulo y modifica la tabla `goods` si es necesario.
 # ---------------------------------------------------------------------------
 def ensure_database_schema():
-    """Agregar columnas faltantes a la tabla goods si es necesario."""
+    """Agregar tablas y columnas faltantes si es necesario."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
 
+        # Tabla de tiendas
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS shops (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                admin_id INTEGER,
+                name TEXT UNIQUE NOT NULL
+            )
+            """
+        )
+
+        cursor.execute("PRAGMA table_info(categories)")
+        cat_cols = [c[1] for c in cursor.fetchall()]
+        if "shop_id" not in cat_cols:
+            try:
+                cursor.execute("ALTER TABLE categories ADD COLUMN shop_id INTEGER DEFAULT 1")
+            except sqlite3.OperationalError:
+                pass
+
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, shop_id INTEGER)"
+        )
+
         cursor.execute("PRAGMA table_info(goods)")
         columns = [c[1] for c in cursor.fetchall()]
         updated = False
-
-        # Asegurar tabla de categorías
-        cursor.execute(
-            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL)"
-        )
-        con.commit()
 
         if 'additional_description' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN additional_description TEXT DEFAULT ''")
@@ -47,9 +64,13 @@ def ensure_database_schema():
         if 'category_id' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN category_id INTEGER")
             updated = True
+        if 'shop_id' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN shop_id INTEGER DEFAULT 1")
+            updated = True
 
         if updated:
             con.commit()
+        con.commit()
     except Exception as e:
         print(f"Error asegurando esquema de base de datos: {e}")
 ensure_database_schema()
@@ -208,84 +229,105 @@ def get_productcatalog():
         print(f"Error obteniendo catálogo: {e}")
         return None
 
-def get_goods():
+def get_goods(shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT name FROM goods;")
+        cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
         goods = []
-        for row in cursor.fetchall(): 
+        for row in cursor.fetchall():
             goods.append(row[0])
         return goods
     except:
         return []
 
-def list_categories():
+def list_categories(shop_id=1):
     """Devuelve lista de categorías (id, nombre)."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        cursor.execute(
+            "SELECT id, name FROM categories WHERE shop_id = ? ORDER BY name",
+            (shop_id,),
+        )
         return cursor.fetchall()
     except Exception as e:
         print(f"Error listando categorías: {e}")
         return []
 
-def create_category(name):
+def create_category(name, shop_id=1):
     """Crear una categoría y devolver su ID."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("INSERT INTO categories (name) VALUES (?)", (name,))
+        cursor.execute(
+            "INSERT INTO categories (name, shop_id) VALUES (?, ?)",
+            (name, shop_id),
+        )
         con.commit()
         return cursor.lastrowid
     except sqlite3.IntegrityError:
-        cursor.execute("SELECT id FROM categories WHERE name = ?", (name,))
+        cursor.execute(
+            "SELECT id FROM categories WHERE name = ? AND shop_id = ?",
+            (name, shop_id),
+        )
         row = cursor.fetchone()
         return row[0] if row else None
     except Exception as e:
         print(f"Error creando categoría: {e}")
         return None
 
-def get_category_id(name):
+def get_category_id(name, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT id FROM categories WHERE name = ?", (name,))
+        cursor.execute(
+            "SELECT id FROM categories WHERE name = ? AND shop_id = ?",
+            (name, shop_id),
+        )
         row = cursor.fetchone()
         return row[0] if row else None
     except Exception as e:
         print(f"Error obteniendo id de categoría: {e}")
         return None
 
-def get_category_name(cat_id):
+def get_category_name(cat_id, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT name FROM categories WHERE id = ?", (cat_id,))
+        cursor.execute(
+            "SELECT name FROM categories WHERE id = ? AND shop_id = ?",
+            (cat_id, shop_id),
+        )
         row = cursor.fetchone()
         return row[0] if row else None
     except Exception as e:
         print(f"Error obteniendo nombre de categoría: {e}")
         return None
 
-def assign_product_category(product, category_id):
+def assign_product_category(product, category_id, shop_id=1):
     """Asigna una categoría a un producto."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("UPDATE goods SET category_id = ? WHERE name = ?", (category_id, product))
+        cursor.execute(
+            "UPDATE goods SET category_id = ? WHERE name = ? AND shop_id = ?",
+            (category_id, product, shop_id),
+        )
         con.commit()
         return True
     except Exception as e:
         print(f"Error asignando categoría: {e}")
         return False
 
-def get_stored(name_good):
+def get_stored(name_good, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT stored FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute(
+            "SELECT stored FROM goods WHERE name = ? AND shop_id = ?;",
+            (name_good, shop_id),
+        )
         result = cursor.fetchone()
         if result:
             return result[0]
@@ -293,10 +335,10 @@ def get_stored(name_good):
     except:
         return None
 
-def amount_of_goods(name_good):
-    if is_manual_delivery(name_good):
+def amount_of_goods(name_good, shop_id=1):
+    if is_manual_delivery(name_good, shop_id):
         return 10 ** 9
-    stored = get_stored(name_good)
+    stored = get_stored(name_good, shop_id)
     if not stored:
         return 0
     try:
@@ -306,17 +348,17 @@ def amount_of_goods(name_good):
     except:
         return 0
 
-def get_stock_overview():
+def get_stock_overview(shop_id=1):
     """Return a list with stock summary lines for all products."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT name, price FROM goods;")
+        cursor.execute("SELECT name, price FROM goods WHERE shop_id = ?;", (shop_id,))
         goods = cursor.fetchall()
 
         overview = []
         for i, (name, price) in enumerate(goods, start=1):
-            count = amount_of_goods(name)
+            count = amount_of_goods(name, shop_id)
             overview.append(f"{i}. {name} — {count} unidades (${price} USD)")
 
         return overview
@@ -324,11 +366,14 @@ def get_stock_overview():
         print(f"Error generando resumen de stock: {e}")
         return []
 
-def get_minimum(name_good):
+def get_minimum(name_good, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT minimum FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute(
+            "SELECT minimum FROM goods WHERE name = ? AND shop_id = ?;",
+            (name_good, shop_id),
+        )
         result = cursor.fetchone()
         if result:
             return result[0]
@@ -336,11 +381,14 @@ def get_minimum(name_good):
     except:
         return 1
 
-def order_sum(name_good, amount):
+def order_sum(name_good, amount, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT price FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute(
+            "SELECT price FROM goods WHERE name = ? AND shop_id = ?;",
+            (name_good, shop_id),
+        )
         result = cursor.fetchone()
         if result:
             return int(result[0]) * amount
@@ -376,11 +424,14 @@ def check_vklpayments(name):
     except:
         return '❌'
 
-def get_goodformat(name_good):
+def get_goodformat(name_good, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT format FROM goods WHERE name = ?;", (name_good,))
+        cursor.execute(
+            "SELECT format FROM goods WHERE name = ? AND shop_id = ?;",
+            (name_good, shop_id),
+        )
         result = cursor.fetchone()
         if result:
             return result[0]
@@ -554,10 +605,17 @@ def new_admin(his_id):
         with open(files.admins_list, encoding='utf-8') as f:
             content = f.read()
         if str(his_id) not in content:
-            with open(files.admins_list, 'a', encoding='utf-8') as f: 
+            with open(files.admins_list, 'a', encoding='utf-8') as f:
                 f.write(str(his_id) + '\n')
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "INSERT OR IGNORE INTO shops (admin_id, name) VALUES (?, ?)",
+            (his_id, f'Shop {his_id}'),
+        )
+        con.commit()
     except:
-        with open(files.admins_list, 'w', encoding='utf-8') as f: 
+        with open(files.admins_list, 'w', encoding='utf-8') as f:
             f.write(str(his_id) + '\n')
 
 def get_description(name_good):
@@ -1071,12 +1129,15 @@ def set_additional_description(good_name, additional_description):
         print(f"Error estableciendo descripción adicional: {e}")
         return False
 
-def get_duration_days(product_name):
+def get_duration_days(product_name, shop_id=1):
     """Devuelve la duración en días de un producto."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT duration_days FROM goods WHERE name = ?", (product_name,))
+        cursor.execute(
+            "SELECT duration_days FROM goods WHERE name = ? AND shop_id = ?",
+            (product_name, shop_id),
+        )
         result = cursor.fetchone()
         if result:
             return result[0]
@@ -1085,24 +1146,30 @@ def get_duration_days(product_name):
         print(f"Error obteniendo duración: {e}")
         return None
 
-def set_duration_days(product_name, days):
+def set_duration_days(product_name, days, shop_id=1):
     """Establece la duración en días de un producto."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("UPDATE goods SET duration_days = ? WHERE name = ?", (days, product_name))
+        cursor.execute(
+            "UPDATE goods SET duration_days = ? WHERE name = ? AND shop_id = ?",
+            (days, product_name, shop_id),
+        )
         con.commit()
         return True
     except Exception as e:
         print(f"Error estableciendo duración: {e}")
         return False
 
-def is_manual_delivery(product_name):
+def is_manual_delivery(product_name, shop_id=1):
     """Indica si un producto requiere entrega manual."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT manual_delivery FROM goods WHERE name = ?", (product_name,))
+        cursor.execute(
+            "SELECT manual_delivery FROM goods WHERE name = ? AND shop_id = ?",
+            (product_name, shop_id),
+        )
         result = cursor.fetchone()
         return bool(result and result[0])
     except Exception as e:

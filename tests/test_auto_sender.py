@@ -35,7 +35,7 @@ def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
     auto_sender = importlib.import_module('advertising_system.auto_sender')
 
     class DummyScheduler:
-        def __init__(self, db_path):
+        def __init__(self, db_path, shop_id=1):
             pass
 
         def get_pending_sends(self):
@@ -45,11 +45,11 @@ def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
             pass
 
     class DummyRateLimiter:
-        def __init__(self, db_path):
+        def __init__(self, db_path, shop_id=1):
             pass
 
     class DummyStats:
-        def __init__(self, db_path):
+        def __init__(self, db_path, shop_id=1):
             pass
 
     monkeypatch.setattr(auto_sender, 'CampaignScheduler', DummyScheduler)

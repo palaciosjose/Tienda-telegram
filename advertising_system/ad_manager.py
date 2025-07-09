@@ -12,10 +12,11 @@ import db
 class AdvertisingManager:
     """Gestión de campañas publicitarias"""
 
-    def __init__(self, db_path):
-        self.db = CampaignDB(db_path)
-        self.scheduler = CampaignScheduler(db_path)
+    def __init__(self, db_path, shop_id=1):
+        self.db = CampaignDB(db_path, shop_id)
+        self.scheduler = CampaignScheduler(db_path, shop_id)
         self.db_path = db_path
+        self.shop_id = shop_id
 
     def _get_connection(self):
         if self.db_path == files.main_db:
@@ -37,8 +38,8 @@ class AdvertisingManager:
         cur.execute(
             """SELECT id, name, message_text, media_file_id, media_type,
                       button1_text, button1_url, button2_text, button2_url, status
-                   FROM campaigns WHERE id = ?""",
-            (campaign_id,),
+                   FROM campaigns WHERE id = ? AND shop_id = ?""",
+            (campaign_id, self.shop_id),
         )
         row = cur.fetchone()
         if not shared:
@@ -62,7 +63,7 @@ class AdvertisingManager:
         """Eliminar una campaña existente."""
         conn, shared = self._get_connection()
         cur = conn.cursor()
-        cur.execute('DELETE FROM campaigns WHERE id = ?', (campaign_id,))
+        cur.execute('DELETE FROM campaigns WHERE id = ? AND shop_id = ?', (campaign_id, self.shop_id))
         conn.commit()
         removed = cur.rowcount
         if not shared:
@@ -79,12 +80,13 @@ class AdvertisingManager:
         cursor = conn.cursor()
         today = datetime.now().strftime('%Y-%m-%d')
         cursor.execute(
-            "SELECT COUNT(*) FROM send_logs WHERE DATE(sent_date) = ?",
-            (today,)
+            "SELECT COUNT(*) FROM send_logs WHERE DATE(sent_date) = ? AND shop_id = ?",
+            (today, self.shop_id),
         )
         sent = cursor.fetchone()[0]
         cursor.execute(
-            "SELECT COUNT(*) FROM target_groups WHERE status = 'active'",
+            "SELECT COUNT(*) FROM target_groups WHERE status = 'active' AND shop_id = ?",
+            (self.shop_id,),
         )
         groups = cursor.fetchone()[0]
         if not shared:
@@ -114,7 +116,7 @@ class AdvertisingManager:
 
         conn, shared = self._get_connection()
         cur = conn.cursor()
-        cur.execute('SELECT 1 FROM campaigns WHERE id = ?', (campaign_id,))
+        cur.execute('SELECT 1 FROM campaigns WHERE id = ? AND shop_id = ?', (campaign_id, self.shop_id))
         if not cur.fetchone():
             if not shared:
                 conn.close()
@@ -124,8 +126,8 @@ class AdvertisingManager:
             cur.execute(
                 """INSERT INTO campaign_schedules
                    (campaign_id, schedule_name, frequency, schedule_json,
-                    target_platforms, created_date)
-                   VALUES (?, ?, ?, ?, ?, ?)""",
+                    target_platforms, created_date, shop_id)
+                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
                 (
                     campaign_id,
                     'manual',
@@ -133,6 +135,7 @@ class AdvertisingManager:
                     schedule_json,
                     ','.join(platforms),
                     datetime.now().isoformat(),
+                    self.shop_id,
                 ),
             )
             conn.commit()
@@ -157,13 +160,14 @@ class AdvertisingManager:
         try:
             cur.execute(
                 """INSERT INTO target_groups
-                   (platform, group_id, group_name, added_date)
-                   VALUES (?, ?, ?, ?)""",
+                   (platform, group_id, group_name, added_date, shop_id)
+                   VALUES (?, ?, ?, ?, ?)""",
                 (
                     platform,
                     str(group_id),
                     group_name,
                     datetime.now().isoformat(),
+                    self.shop_id,
                 ),
             )
             conn.commit()
@@ -179,7 +183,10 @@ class AdvertisingManager:
         """Eliminar un grupo objetivo por su ID."""
         conn, shared = self._get_connection()
         cur = conn.cursor()
-        cur.execute('DELETE FROM target_groups WHERE group_id = ?', (str(group_id),))
+        cur.execute(
+            'DELETE FROM target_groups WHERE group_id = ? AND shop_id = ?',
+            (str(group_id), self.shop_id),
+        )
         conn.commit()
         removed = cur.rowcount
         if not shared:
@@ -192,7 +199,7 @@ class AdvertisingManager:
         """Obtener la configuración de plataformas."""
         conn, shared = self._get_connection()
         cur = conn.cursor()
-        cur.execute('SELECT platform, config_data, is_active FROM platform_config')
+        cur.execute('SELECT platform, config_data, is_active FROM platform_config WHERE shop_id = ?', (self.shop_id,))
         rows = cur.fetchall()
         if not shared:
             conn.close()
@@ -205,7 +212,7 @@ class AdvertisingManager:
         """Actualizar o crear la configuración de una plataforma."""
         conn, shared = self._get_connection()
         cur = conn.cursor()
-        cur.execute('SELECT 1 FROM platform_config WHERE platform = ?', (platform,))
+        cur.execute('SELECT 1 FROM platform_config WHERE platform = ? AND shop_id = ?', (platform, self.shop_id))
         exists = cur.fetchone() is not None
         if exists:
             fields = []
@@ -219,17 +226,18 @@ class AdvertisingManager:
             if fields:
                 fields.append('last_updated = ?')
                 params.append(datetime.now().isoformat())
-                sql = 'UPDATE platform_config SET ' + ', '.join(fields) + ' WHERE platform = ?'
-                params.append(platform)
+                sql = 'UPDATE platform_config SET ' + ', '.join(fields) + ' WHERE platform = ? AND shop_id = ?'
+                params.extend([platform, self.shop_id])
                 cur.execute(sql, tuple(params))
         else:
             cur.execute(
-                'INSERT INTO platform_config (platform, config_data, is_active, last_updated) VALUES (?, ?, ?, ?)',
+                'INSERT INTO platform_config (platform, config_data, is_active, last_updated, shop_id) VALUES (?, ?, ?, ?, ?)',
                 (
                     platform,
                     config_data,
                     1 if is_active in (None, True) else 0,
                     datetime.now().isoformat(),
+                    self.shop_id,
                 ),
             )
         conn.commit()
@@ -247,8 +255,8 @@ class AdvertisingManager:
         cur.execute(
             """SELECT name, message_text, media_file_id, media_type,
                       button1_text, button1_url, button2_text, button2_url
-                   FROM campaigns WHERE id = ? AND status = 'active'""",
-            (campaign_id,),
+                   FROM campaigns WHERE id = ? AND status = 'active' AND shop_id = ?""",
+            (campaign_id, self.shop_id),
         )
         campaign = cur.fetchone()
         if not campaign:
@@ -261,8 +269,8 @@ class AdvertisingManager:
 
         for platform in platforms:
             cur.execute(
-                "SELECT group_id FROM target_groups WHERE platform = ? AND status = 'active'",
-                (platform,),
+                "SELECT group_id FROM target_groups WHERE platform = ? AND status = 'active' AND shop_id = ?",
+                (platform, self.shop_id),
             )
             groups = [g[0] for g in cur.fetchall()]
             for gid in groups:
@@ -284,8 +292,8 @@ class AdvertisingManager:
 
                 cur.execute(
                     """INSERT INTO send_logs
-                           (campaign_id, group_id, platform, status, sent_date, response_time, error_message)
-                           VALUES (?, ?, ?, ?, ?, 0, ?)""",
+                           (campaign_id, group_id, platform, status, sent_date, response_time, error_message, shop_id)
+                           VALUES (?, ?, ?, ?, ?, 0, ?, ?)""",
                     (
                         campaign_id,
                         gid,
@@ -293,6 +301,7 @@ class AdvertisingManager:
                         'sent' if success else 'failed',
                         datetime.now().isoformat(),
                         '' if success else str(resp),
+                        self.shop_id,
                     ),
                 )
 
@@ -308,8 +317,8 @@ class AdvertisingManager:
         cur.execute(
             """SELECT name, message_text, media_file_id, media_type,
                       button1_text, button1_url, button2_text, button2_url
-                   FROM campaigns WHERE id = ? AND status = 'active'""",
-            (campaign_id,),
+                   FROM campaigns WHERE id = ? AND status = 'active' AND shop_id = ?""",
+            (campaign_id, self.shop_id),
         )
         campaign = cur.fetchone()
         if not campaign:
@@ -338,8 +347,8 @@ class AdvertisingManager:
 
         cur.execute(
             """INSERT INTO send_logs
-                   (campaign_id, group_id, platform, status, sent_date, response_time, error_message)
-                   VALUES (?, ?, ?, ?, ?, 0, ?)""",
+                   (campaign_id, group_id, platform, status, sent_date, response_time, error_message, shop_id)
+                   VALUES (?, ?, ?, ?, ?, 0, ?, ?)""",
             (
                 campaign_id,
                 str(group_id),
@@ -347,6 +356,7 @@ class AdvertisingManager:
                 'sent' if success else 'failed',
                 datetime.now().isoformat(),
                 '' if success else str(resp),
+                self.shop_id,
             ),
         )
         conn.commit()
