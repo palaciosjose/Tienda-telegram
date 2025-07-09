@@ -26,11 +26,12 @@ def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, a
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='PayPal no está disponible!')
         return
         
-    if dop.get_paypaldata() == None: 
+    shop_id = dop.get_user_shop(chat_id)
+    if dop.get_paypaldata(shop_id) == None:
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='PayPal no está configurado en este momento!')
         return
-        
-    client_id, client_secret, sandbox = dop.get_paypaldata()
+
+    client_id, client_secret, sandbox = dop.get_paypaldata(shop_id)
     
     # Configurar PayPal
     if sandbox:
@@ -158,13 +159,14 @@ def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
 
 def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, amount):
     """Crear solicitud de pago Binance CORREGIDA - Con ID en instrucciones"""
-    if dop.get_binancedata() == None: 
+    shop_id = dop.get_user_shop(chat_id)
+    if dop.get_binancedata(shop_id) == None:
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Binance Pay no está configurado en este momento!')
         return
     
     # Obtener tu Binance Pay ID
     try:
-        api_key, api_secret, binance_pay_id = dop.get_binancedata()
+        api_key, api_secret, binance_pay_id = dop.get_binancedata(shop_id)
         # binance_pay_id es tu 294603789
     except:
         binance_pay_id = "294603789"  # fallback
@@ -254,7 +256,8 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
     
     # Obtener tu Binance Pay ID
     try:
-        api_key, api_secret, binance_pay_id = dop.get_binancedata()
+        shop_id = dop.get_user_shop(chat_id)
+        api_key, api_secret, binance_pay_id = dop.get_binancedata(shop_id)
     except:
         binance_pay_id = "294603789"  # fallback
     

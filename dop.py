@@ -781,29 +781,69 @@ def get_description(name_good):
         print(f"Error obteniendo descripción: {e}")
         return "Error obteniendo información del producto"
 
-def get_paypaldata():
+def get_paypaldata(shop_id=1):
+    """Obtener credenciales PayPal asociadas a una tienda."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT client_id, client_secret, sandbox FROM paypal_data;")
+        cursor.execute(
+            "SELECT client_id, client_secret, sandbox FROM paypal_data WHERE shop_id = ? ORDER BY rowid DESC LIMIT 1;",
+            (shop_id,),
+        )
         result = cursor.fetchone()
         if result:
             return result[0], result[1], bool(result[2])
         return None
-    except:
+    except Exception:
         return None
 
-def get_binancedata():
+def get_binancedata(shop_id=1):
+    """Obtener credenciales Binance asociadas a una tienda."""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT api_key, api_secret, merchant_id FROM binance_data;")
+        cursor.execute(
+            "SELECT api_key, api_secret, merchant_id FROM binance_data WHERE shop_id = ? ORDER BY rowid DESC LIMIT 1;",
+            (shop_id,),
+        )
         result = cursor.fetchone()
         if result:
             return result[0], result[1], result[2]
         return None
-    except:
+    except Exception:
         return None
+
+def save_paypaldata(client_id, client_secret, sandbox=1, shop_id=1):
+    """Guardar o actualizar credenciales PayPal para una tienda."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM paypal_data WHERE shop_id = ?", (shop_id,))
+        cursor.execute(
+            "INSERT INTO paypal_data (client_id, client_secret, sandbox, shop_id) VALUES (?, ?, ?, ?)",
+            (client_id, client_secret, int(bool(sandbox)), shop_id),
+        )
+        con.commit()
+        return True
+    except Exception as e:
+        print(f"Error guardando PayPal data: {e}")
+        return False
+
+def save_binancedata(api_key, api_secret, merchant_id, shop_id=1):
+    """Guardar o actualizar credenciales Binance para una tienda."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("DELETE FROM binance_data WHERE shop_id = ?", (shop_id,))
+        cursor.execute(
+            "INSERT INTO binance_data (api_key, api_secret, merchant_id, shop_id) VALUES (?, ?, ?, ?)",
+            (api_key, api_secret, merchant_id, shop_id),
+        )
+        con.commit()
+        return True
+    except Exception as e:
+        print(f"Error guardando Binance data: {e}")
+        return False
 
 def check_paypal_valid(client_id, client_secret, sandbox=True):
     try:
@@ -843,13 +883,14 @@ def check_binance_valid(api_key, api_secret):
     except:
         return False
 
-def payments_checkvkl():
+def payments_checkvkl(shop_id=1):
+    """Verificar métodos de pago activos para una tienda."""
     active_payment = []
     
     # Verificar PayPal
-    if check_vklpayments('paypal') == '✅' and get_paypaldata() != None: 
+    if check_vklpayments('paypal') == '✅' and get_paypaldata(shop_id) != None:
         active_payment.append('paypal')
-    elif check_vklpayments('paypal') == '✅' and get_paypaldata() == None:
+    elif check_vklpayments('paypal') == '✅' and get_paypaldata(shop_id) == None:
         for admin_id in get_adminlist(): 
             try:
                 bot.send_message(admin_id, '¡Faltan datos de PayPal en la base de datos! Se desactivó automáticamente para recibir pagos.')
@@ -862,9 +903,9 @@ def payments_checkvkl():
             pass
 
     # Verificar Binance
-    if check_vklpayments('binance') == '✅' and get_binancedata() != None: 
+    if check_vklpayments('binance') == '✅' and get_binancedata(shop_id) != None:
         active_payment.append('binance')
-    elif check_vklpayments('binance') == '✅' and get_binancedata() == None:
+    elif check_vklpayments('binance') == '✅' and get_binancedata(shop_id) == None:
         for admin_id in get_adminlist(): 
             try:
                 bot.send_message(admin_id, '¡Faltan datos de Binance en la base de datos! Se desactivó automáticamente para recibir pagos.')

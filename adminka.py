@@ -1199,17 +1199,15 @@ def text_analytics(message_text, chat_id):
             try:
                 with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', encoding='utf-8') as f:
                     client_id = f.read()
-            
-                con = db.get_db_connection()
-                cursor = con.cursor()
-                cursor.execute("INSERT OR REPLACE INTO paypal_data VALUES(?, ?, ?)", (client_id, message_text, 1))
-                con.commit()
-                
+
+                shop_id = dop.get_shop_id(chat_id)
+                dop.save_paypaldata(client_id, message_text, 1, shop_id)
+
                 with shelve.open(files.payments_bd) as bd:
                     bd['paypal'] = '✅'
-                
+
                 bot.send_message(chat_id, '¡Credenciales PayPal guardadas exitosamente!')
-                with shelve.open(files.sost_bd) as bd: 
+                with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
             except FileNotFoundError:
                 session_expired(chat_id)
@@ -1252,16 +1250,14 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + 'binance_secret.txt', encoding='utf-8') as f:
                     api_secret = f.read()
             
-                con = db.get_db_connection()
-                cursor = con.cursor()
-                cursor.execute("INSERT OR REPLACE INTO binance_data VALUES(?, ?, ?)", (api_key, api_secret, message_text))
-                con.commit()
-                
+                shop_id = dop.get_shop_id(chat_id)
+                dop.save_binancedata(api_key, api_secret, message_text, shop_id)
+
                 with shelve.open(files.payments_bd) as bd:
                     bd['binance'] = '✅'
-                
+
                 bot.send_message(chat_id, '¡Credenciales Binance guardadas exitosamente!')
-                with shelve.open(files.sost_bd) as bd: 
+                with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
             except FileNotFoundError:
                 session_expired(chat_id)

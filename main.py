@@ -412,7 +412,7 @@ def inline(callback):
                 return
             if dop.amount_of_goods(name_good, shop_id_cb) == 0:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='❌ Producto agotado - No disponible para compra')
-            elif dop.payments_checkvkl() == None:
+            elif dop.payments_checkvkl(shop_id_cb) == None:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='💳 Los pagos están temporalmente desactivados')
             else:
                 key = telebot.types.InlineKeyboardMarkup()
