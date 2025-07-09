@@ -145,7 +145,7 @@ def create_database():
             FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
         )
     ''')
-    cursor.execute('''
+        cursor.execute('''
         CREATE TABLE IF NOT EXISTS target_groups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             platform TEXT NOT NULL,
@@ -158,6 +158,13 @@ def create_database():
             added_date TEXT,
             notes TEXT,
             shop_id INTEGER DEFAULT 1
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS bot_groups (
+            group_id TEXT PRIMARY KEY,
+            group_name TEXT,
+            added_date TEXT
         )
     ''')
     cursor.execute('''

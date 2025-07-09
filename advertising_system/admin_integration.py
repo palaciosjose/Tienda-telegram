@@ -5,6 +5,8 @@ from .statistics import StatisticsManager
 import files
 import os
 import json
+import db
+from datetime import datetime
 
 # Instancia única usada por los helpers de este módulo
 _manager = AdvertisingManager(files.main_db, shop_id=1)
@@ -58,34 +60,46 @@ def add_target_group_from_admin(platform, group_id, name=None):
         return False, f"Error al agregar grupo: {exc}"
 
 
+def add_bot_group(group_id, title):
+    """Registrar un grupo donde el bot está presente."""
+    conn = db.get_db_connection()
+    cur = conn.cursor()
+    cur.execute(
+        """INSERT OR IGNORE INTO bot_groups (group_id, group_name, added_date)
+            VALUES (?, ?, ?)""",
+        (str(group_id), title, datetime.now().isoformat()),
+    )
+    conn.commit()
+    return cur.rowcount > 0
+
+
+def remove_bot_group(group_id):
+    """Eliminar un grupo registrado."""
+    conn = db.get_db_connection()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM bot_groups WHERE group_id = ?", (str(group_id),))
+    conn.commit()
+    return cur.rowcount > 0
+
+
 def get_admin_telegram_groups(bot, admin_id):
-    """Obtener grupos donde el usuario admin es miembro."""
+    """Obtener grupos registrados donde el admin sigue presente."""
 
-    try:
-        updates = bot.get_updates()
-    except Exception:
-        updates = []
+    conn = db.get_db_connection()
+    cur = conn.cursor()
+    cur.execute("SELECT group_id, group_name FROM bot_groups")
+    rows = cur.fetchall()
 
-    groups = {}
-    for upd in updates:
-        chat = None
-        if getattr(upd, "message", None):
-            chat = upd.message.chat
-        elif getattr(upd, "channel_post", None):
-            chat = upd.channel_post.chat
+    groups = []
+    for gid, name in rows:
+        try:
+            member = bot.get_chat_member(gid, admin_id)
+            if getattr(member, "status", "") not in ("left", "kicked"):
+                groups.append({"id": gid, "title": name})
+        except Exception:
+            continue
 
-        if chat and chat.type in ("group", "supergroup"):
-            gid = chat.id
-            if gid in groups:
-                continue
-            try:
-                member = bot.get_chat_member(gid, admin_id)
-                if getattr(member, "status", "") not in ("left", "kicked"):
-                    groups[gid] = chat.title or str(gid)
-            except Exception:
-                continue
-
-    return [{"id": gid, "title": title} for gid, title in groups.items()]
+    return groups
 
 
 # Las funciones existentes en AdvertisingManager se siguen exponiendo si se
