@@ -37,13 +37,14 @@ python migrate_drop_subscriptions.py
 
 antes de iniciar la nueva versión del bot para eliminarlas de forma segura.
 
-Si ya habías usado el sistema de publicidad antes de soportar múltiples
-tiendas, ejecuta también:
+Si tu base de datos de publicidad no incluye la columna `shop_id`,
+ejecuta:
 
 ```bash
 python migrate_add_shop_id_ads.py
 ```
-para añadir la columna `shop_id` en sus tablas.
+o `init_db.py` para crear la base desde cero. Esto añadirá el campo
+faltante y prevendrá errores en el módulo de marketing.
 
 ## Uso
 
