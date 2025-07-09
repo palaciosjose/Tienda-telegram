@@ -102,7 +102,7 @@ Al crear una nueva posición se preguntará ahora **¿Entrega manual?**. Si resp
 *Sí*, el bot omitirá el formato del producto y utilizará el mensaje configurado
 anteriormente para avisar al comprador.
 
-Además, cada producto puede pertenecer a una **categoría**. Desde el panel principal está disponible el menú *🏷️ Categorías* para crear, eliminar o ver categorías. Al crear un producto se solicitará elegir una existente o registrar una nueva.
+Además, cada producto puede pertenecer a una **categoría**. Desde el panel principal está disponible el menú *🏷️ Categorías* para crear, eliminar, renombrar o ver categorías. Al crear un producto se solicitará elegir una existente o registrar una nueva.
 
 ### Difusión
 

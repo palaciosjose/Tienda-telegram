@@ -422,6 +422,7 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '🏷️ Categorías' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir categoría', 'Eliminar categoría')
+            user_markup.row('Renombrar categoría')
             user_markup.row('Ver categorías')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Gestión de categorías', reply_markup=user_markup)
@@ -443,6 +444,19 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, 'Seleccione la categoría a eliminar:', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 60
+
+        elif 'Renombrar categoría' == message_text:
+            cats = dop.list_categories(shop_id)
+            if not cats:
+                bot.send_message(chat_id, 'No hay categorías para renombrar.')
+            else:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for _cid, cname in cats:
+                    user_markup.row(cname)
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'Seleccione la categoría a renombrar:', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 63
 
         elif 'Ver categorías' == message_text:
             cats = dop.list_categories(shop_id)
@@ -928,6 +942,33 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
             in_adminka(chat_id, '🏷️ Categorías', None, None)
+
+        elif sost_num == 63:
+            temp_path = 'data/Temp/' + str(chat_id) + 'rename_cat.txt'
+            if not os.path.exists(temp_path):
+                cat_id = dop.get_category_id(message_text, shop_id)
+                if cat_id is None:
+                    bot.send_message(chat_id, '❌ Categoría no válida. Intente de nuevo.')
+                    return
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    f.write(str(cat_id))
+                bot.send_message(chat_id, 'Ingrese el nuevo nombre para la categoría:')
+            else:
+                try:
+                    with open(temp_path, encoding='utf-8') as f:
+                        cat_id = int(f.read())
+                except (FileNotFoundError, ValueError):
+                    session_expired(chat_id)
+                    return
+                success = dop.update_category_name(cat_id, message_text.strip(), shop_id)
+                if success:
+                    bot.send_message(chat_id, 'Categoría actualizada.')
+                else:
+                    bot.send_message(chat_id, '❌ Error al actualizar la categoría.')
+                os.remove(temp_path)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                in_adminka(chat_id, '🏷️ Categorías', None, None)
 
         elif sost_num == 6:
             con = db.get_db_connection()
