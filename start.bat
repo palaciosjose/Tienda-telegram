@@ -1,2 +1,4 @@
 title BOT
-py main.pypause
+py main.py
+pause
+pause
