@@ -1651,20 +1651,80 @@ def text_analytics(message_text, chat_id):
             except Exception:
                 pass
 
-        elif sost_num == 165:  # Guardar edición de campaña (texto)
+        elif sost_num == 165:  # Guardar texto o multimedia editada
             path = f'data/Temp/{chat_id}_edit_campaign.txt'
+            data_path = f'data/Temp/{chat_id}_edit_campaign_data.json'
             try:
                 with open(path, 'r', encoding='utf-8') as f:
-                    cid = int(f.read())
+                    _ = int(f.read())
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            ok = advertising.update_campaign(cid, {'message_text': message_text})
+
+            os.makedirs('data/Temp', exist_ok=True)
+            with open(data_path, 'w', encoding='utf-8') as f:
+                json.dump({'message_text': message_text}, f)
+
+            bot.send_message(chat_id,
+                             'Si deseas agregar un botón escribe:\n<texto> <url>'
+                             '\nEscribe "no" para continuar sin botones:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 166
+
+        elif sost_num == 166:  # Primer botón para campaña editada
+            data_path = f'data/Temp/{chat_id}_edit_campaign_data.json'
+            try:
+                with open(data_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+
+            if message_text.lower() not in ('no', 'sin botones'):
+                parts = message_text.split()
+                if len(parts) >= 2:
+                    data['button1_text'] = parts[0]
+                    data['button1_url'] = parts[1]
+
+            with open(data_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f)
+
+            bot.send_message(chat_id,
+                             'Si deseas agregar un segundo botón escribe:\n<texto> <url>'
+                             '\nEscribe "no" para continuar sin segundo botón:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 167
+
+        elif sost_num == 167:  # Segundo botón y aplicar cambios
+            path = f'data/Temp/{chat_id}_edit_campaign.txt'
+            data_path = f'data/Temp/{chat_id}_edit_campaign_data.json'
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    cid = int(f.read())
+                with open(data_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+
+            if message_text.lower() not in ('no', 'sin botones'):
+                parts = message_text.split()
+                if len(parts) >= 2:
+                    data['button2_text'] = parts[0]
+                    data['button2_url'] = parts[1]
+
+            updates = {k: v for k, v in data.items() if k in (
+                'message_text', 'media_file_id', 'media_type',
+                'button1_text', 'button1_url', 'button2_text', 'button2_url'
+            )}
+            ok = advertising.update_campaign(cid, updates)
             bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + 'Campaña actualizada')
             with shelve.open(files.sost_bd) as bd:
-                del bd[str(chat_id)]
+                if str(chat_id) in bd:
+                    del bd[str(chat_id)]
             try:
                 os.remove(path)
+                os.remove(data_path)
             except Exception:
                 pass
 
@@ -1737,7 +1797,10 @@ def ad_inline(callback_data, chat_id, message_id):
                 callback_data='Volver al menú principal de administración'
             )
         )
-        bot.send_message(chat_id, 'Envía el nuevo texto o la nueva multimedia para la campaña:', reply_markup=key)
+        bot.send_message(chat_id, (
+            'Envía el nuevo texto o la nueva multimedia para la campaña.'
+            '\nLuego se solicitarán los botones.'
+        ), reply_markup=key)
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 165
 
@@ -1986,24 +2049,23 @@ def handle_multimedia(message):
                 return
             elif state == 165:
                 path = f'data/Temp/{chat_id}_edit_campaign.txt'
+                data_path = f'data/Temp/{chat_id}_edit_campaign_data.json'
                 try:
                     with open(path, 'r', encoding='utf-8') as f:
-                        cid = int(f.read())
+                        _ = int(f.read())
                 except FileNotFoundError:
                     session_expired(chat_id)
                     return
-                updates = {'media_file_id': file_id, 'media_type': media_type}
+
+                data = {'media_file_id': file_id, 'media_type': media_type}
                 if caption:
-                    updates['message_text'] = caption
-                ok = advertising.update_campaign(cid, updates)
-                bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + 'Campaña actualizada')
+                    data['message_text'] = caption
+                with open(data_path, 'w', encoding='utf-8') as f:
+                    json.dump(data, f)
+
+                bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
                 with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                try:
-                    os.remove(path)
-                except Exception:
-                    pass
+                    bd[str(chat_id)] = 166
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
