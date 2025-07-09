@@ -535,7 +535,10 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif message_text == '📋 Listar grupos':
             conn = db.get_db_connection()
             cur = conn.cursor()
-            cur.execute("SELECT platform, group_id, group_name FROM target_groups")
+            cur.execute(
+                "SELECT platform, group_id, group_name FROM target_groups WHERE shop_id = ?",
+                (shop_id,),
+            )
             rows = cur.fetchall()
             if rows:
                 txt = '🎯 *Grupos registrados:*\n'
