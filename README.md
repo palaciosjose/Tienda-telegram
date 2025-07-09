@@ -114,7 +114,7 @@ con comandos para gestionar campañas:
 - `🎯 Gestionar grupos` para administrar los grupos objetivo.
 - `📊 Estadísticas hoy` para consultar el resumen diario.
 - `⚙️ Configuración` para ajustes adicionales.
-- `▶️ Envío manual` para disparar un envío inmediato.
+- `▶️ Envío manual <ID>` permite seleccionar un grupo activo y enviar de inmediato la campaña indicada.
 
 `advertising_cron.py` obtiene los tokens a utilizar desde la variable de entorno
 `TELEGRAM_TOKEN`.  Puedes indicar varios tokens separados por comas si

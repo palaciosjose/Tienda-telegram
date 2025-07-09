@@ -136,6 +136,104 @@ class AdvertisingManager:
             return True, 'Grupo eliminado'
         return False, 'Grupo no encontrado'
 
+    def list_active_groups(self):
+        """Obtener todos los grupos activos."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT id, platform, group_id, group_name FROM target_groups WHERE status = "active"'
+        )
+        rows = cur.fetchall()
+        if not shared:
+            conn.close()
+        return [
+            {
+                'id': r[0],
+                'platform': r[1],
+                'group_id': r[2],
+                'group_name': r[3],
+            }
+            for r in rows
+        ]
+
+    def send_campaign_to_group(self, campaign_id, group_id):
+        """Enviar una campaña inmediatamente a un único grupo."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT platform, group_id FROM target_groups WHERE id = ? AND status = "active"',
+            (group_id,),
+        )
+        group = cur.fetchone()
+        if not group:
+            if not shared:
+                conn.close()
+            return False, 'Grupo no encontrado'
+
+        cur.execute(
+            """SELECT name, message_text, media_file_id, media_type,
+                      button1_text, button1_url, button2_text, button2_url
+                   FROM campaigns WHERE id = ? AND status = 'active'""",
+            (campaign_id,),
+        )
+        campaign = cur.fetchone()
+        if not campaign:
+            if not shared:
+                conn.close()
+            return False, 'Campaña no encontrada'
+
+        telegram_tokens = [t.strip() for t in os.getenv('TELEGRAM_TOKEN', '').split(',') if t.strip()]
+        telegram_bot = TelegramMultiBot(telegram_tokens) if telegram_tokens else None
+        whatsapp_api = WHATicketAPI(
+            os.getenv('WHATICKET_URL', 'https://whaticket.local'),
+            os.getenv('WHATICKET_TOKEN', 'token'),
+        )
+
+        platform = group[0]
+        gid = group[1]
+
+        if platform == 'telegram' and telegram_bot:
+            success, resp = telegram_bot.send_message(
+                gid,
+                campaign[1],
+                campaign[2],
+                campaign[3],
+                {
+                    'button1_text': campaign[4],
+                    'button1_url': campaign[5],
+                    'button2_text': campaign[6],
+                    'button2_url': campaign[7],
+                },
+            )
+        elif platform == 'whatsapp':
+            msg = campaign[1]
+            if campaign[4]:
+                msg += f"\n\n{campaign[4]}: {campaign[5]}"
+            if campaign[6]:
+                msg += f"\n{campaign[6]}: {campaign[7]}"
+            media = campaign[2] if campaign[3] == 'photo' else None
+            success, resp = whatsapp_api.send_message(gid, msg, media)
+        else:
+            success, resp = False, 'Plataforma no soportada'
+
+        cur.execute(
+            """INSERT INTO send_logs
+                   (campaign_id, group_id, platform, status, sent_date, response_time, error_message)
+                   VALUES (?, ?, ?, ?, ?, 0, ?)""",
+            (
+                campaign_id,
+                gid,
+                platform,
+                'sent' if success else 'failed',
+                datetime.now().isoformat(),
+                '' if success else str(resp),
+            ),
+        )
+        conn.commit()
+        if not shared:
+            conn.close()
+        return True, 'Campaña enviada' if success else (False, resp)
+
     def get_platform_configs(self):
         """Obtener la configuración de plataformas."""
         conn, shared = self._get_connection()

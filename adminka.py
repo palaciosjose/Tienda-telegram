@@ -595,10 +595,30 @@ def in_adminka(chat_id, message_text, username, name_user):
             else:
                 try:
                     camp_id = int(params.split()[0])
-                    ok, msg = advertising.send_campaign_now(camp_id)
-                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
                 except ValueError:
                     bot.send_message(chat_id, '❌ ID de campaña inválido')
+                    return
+
+                groups = advertising.list_active_groups()
+                if not groups:
+                    bot.send_message(chat_id, '❌ No hay grupos registrados')
+                else:
+                    key = telebot.types.InlineKeyboardMarkup()
+                    for g in groups:
+                        label = f"{g['id']} {g['group_name'] or g['group_id']} ({g['platform']})"
+                        key.add(
+                            telebot.types.InlineKeyboardButton(
+                                text=label,
+                                callback_data=f"SEND_GROUP_{camp_id}_{g['id']}"
+                            )
+                        )
+                    key.add(
+                        telebot.types.InlineKeyboardButton(
+                            text='Cancelar y volver al menú principal de administración',
+                            callback_data='Volver al menú principal de administración'
+                        )
+                    )
+                    bot.send_message(chat_id, 'Seleccione el grupo destino:', reply_markup=key)
 
 
         elif 'Vista previa' == message_text:
@@ -1363,6 +1383,19 @@ def ad_inline(callback_data, chat_id, message_id):
         bot.send_message(chat_id, 'Ingrese el nombre del nuevo producto', reply_markup=key)
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 2
+
+    elif callback_data.startswith('SEND_GROUP_'):
+        try:
+            parts = callback_data.split('_')
+            camp_id = int(parts[2])
+            group_id = int(parts[3])
+        except Exception:
+            bot.send_message(chat_id, '❌ Datos inválidos')
+            return
+
+        ok, msg = advertising.send_campaign_to_group(camp_id, group_id)
+        bot.edit_message_reply_markup(chat_id, message_id)
+        bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
 
     elif callback_data == 'CONFIRM_BROADCAST':
         try:
