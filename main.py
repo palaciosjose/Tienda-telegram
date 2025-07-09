@@ -2,6 +2,7 @@ import telebot, shelve, sqlite3, os
 import config, dop, payments, adminka, files
 import db
 from bot_instance import bot
+from advertising_system.admin_integration import add_bot_group, remove_bot_group
 import atexit
 import glob
 import sys
@@ -482,6 +483,20 @@ def inline(callback):
         # Manejo de errores optimizado - no hacer print de todos los errores
         if "bad request" not in str(e).lower():
             print(f"Error en callback: {e}")
+
+
+if hasattr(bot, "my_chat_member_handler"):
+    @bot.my_chat_member_handler()
+    def track_bot_membership(update):
+        """Registrar alta o baja del bot en grupos."""
+        chat = getattr(update, "chat", None)
+        if not chat or chat.type not in ("group", "supergroup"):
+            return
+        status = getattr(update.new_chat_member, "status", "")
+        if status in ("member", "administrator"):
+            add_bot_group(chat.id, chat.title or str(chat.id))
+        elif status in ("left", "kicked"):
+            remove_bot_group(chat.id)
 
 @bot.message_handler(content_types=['document'])
 def handle_docs_log(message):
