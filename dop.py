@@ -20,6 +20,12 @@ def ensure_database_schema():
         columns = [c[1] for c in cursor.fetchall()]
         updated = False
 
+        # Asegurar tabla de categorías
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL)"
+        )
+        con.commit()
+
         if 'additional_description' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN additional_description TEXT DEFAULT ''")
             updated = True
@@ -37,6 +43,9 @@ def ensure_database_schema():
             updated = True
         if 'manual_delivery' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN manual_delivery INTEGER DEFAULT 0")
+            updated = True
+        if 'category_id' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN category_id INTEGER")
             updated = True
 
         if updated:
@@ -210,6 +219,67 @@ def get_goods():
         return goods
     except:
         return []
+
+def list_categories():
+    """Devuelve lista de categorías (id, nombre)."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("SELECT id, name FROM categories ORDER BY name")
+        return cursor.fetchall()
+    except Exception as e:
+        print(f"Error listando categorías: {e}")
+        return []
+
+def create_category(name):
+    """Crear una categoría y devolver su ID."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("INSERT INTO categories (name) VALUES (?)", (name,))
+        con.commit()
+        return cursor.lastrowid
+    except sqlite3.IntegrityError:
+        cursor.execute("SELECT id FROM categories WHERE name = ?", (name,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        print(f"Error creando categoría: {e}")
+        return None
+
+def get_category_id(name):
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("SELECT id FROM categories WHERE name = ?", (name,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        print(f"Error obteniendo id de categoría: {e}")
+        return None
+
+def get_category_name(cat_id):
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("SELECT name FROM categories WHERE id = ?", (cat_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        print(f"Error obteniendo nombre de categoría: {e}")
+        return None
+
+def assign_product_category(product, category_id):
+    """Asigna una categoría a un producto."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute("UPDATE goods SET category_id = ? WHERE name = ?", (category_id, product))
+        con.commit()
+        return True
+    except Exception as e:
+        print(f"Error asignando categoría: {e}")
+        return False
 
 def get_stored(name_good):
     try:
@@ -1029,14 +1099,19 @@ def get_product_full_info(good_name):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT name, description, additional_description, format, minimum, price, duration_days, manual_delivery
-            FROM goods WHERE name = ?
-        """, (good_name,))
+        cursor.execute(
+            """
+            SELECT g.name, g.description, g.additional_description, g.format, g.minimum, g.price,
+                   g.duration_days, g.manual_delivery, c.name
+            FROM goods g LEFT JOIN categories c ON g.category_id = c.id
+            WHERE g.name = ?
+        """,
+            (good_name,),
+        )
         result = cursor.fetchone()
 
         if result:
-            name, description, additional_desc, format, minimum, price, duration_days, manual = result
+            name, description, additional_desc, format, minimum, price, duration_days, manual, category = result
             return {
                 'name': name,
                 'description': description,
@@ -1045,7 +1120,8 @@ def get_product_full_info(good_name):
                 'minimum': minimum,
                 'price': price,
                 'duration_days': duration_days,
-                'manual_delivery': bool(manual)
+                'manual_delivery': bool(manual),
+                'category': category,
             }
         else:
             return None
@@ -1068,7 +1144,12 @@ def format_product_basic_info(good_name):
         info_text = f"""🛍️ **{product_info['name']}**
 
 📝 **Descripción:**
-{product_info['description']}
+{product_info['description']}"""
+
+        if product_info.get('category'):
+            info_text += f"\n🏷️ **Categoría:** {product_info['category']}"
+
+        info_text += f"""
 
 💰 **Precio:** ${product_info['price']} USD
 📦 **Cantidad mínima:** {product_info['minimum']}
@@ -1209,21 +1290,27 @@ def format_product_with_media(product_name):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("""
-            SELECT name, description, price, media_file_id, media_type, media_caption, duration_days, manual_delivery
-            FROM goods
-            WHERE name = ?
-        """, (product_name,))
+        cursor.execute(
+            """
+            SELECT g.name, g.description, g.price, g.media_file_id, g.media_type, g.media_caption,
+                   g.duration_days, g.manual_delivery, c.name
+            FROM goods g LEFT JOIN categories c ON g.category_id = c.id
+            WHERE g.name = ?
+        """,
+            (product_name,),
+        )
         result = cursor.fetchone()
         
         if not result:
             return None
             
-        name, description, price, file_id, media_type, caption, duration, manual = result
-        
+        name, description, price, file_id, media_type, caption, duration, manual, category = result
+
         info = f"🎯 **{name}**\n"
         info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"
+        if category:
+            info += f"🏷️ **Categoría:** {category}\n"
         if duration not in (None, 0):
             info += f"⏳ **Duración:** {duration} días\n"
 

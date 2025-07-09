@@ -23,6 +23,15 @@ def create_database():
     conn = sqlite3.connect('data/db/main_data.db')
     cursor = conn.cursor()
     
+    # Tabla de categorías
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS categories (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            name TEXT UNIQUE NOT NULL
+        )
+    ''')
+    print("✓ Tabla 'categories' creada")
+
     # Crear tabla de productos
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS goods (
@@ -37,7 +46,9 @@ def create_database():
             media_type TEXT,
             media_caption TEXT,
             duration_days INTEGER DEFAULT NULL,
-            manual_delivery INTEGER DEFAULT 0
+            manual_delivery INTEGER DEFAULT 0,
+            category_id INTEGER,
+            FOREIGN KEY (category_id) REFERENCES categories(id)
         )
     ''')
     print("✓ Tabla 'goods' creada")

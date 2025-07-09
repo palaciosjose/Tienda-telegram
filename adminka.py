@@ -80,6 +80,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
             user_markup.row('📢 Marketing')
+            user_markup.row('🏷️ Categorías')
             user_markup.row('💸 Descuentos')
             user_markup.row('⚙️ Otros')
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
@@ -410,6 +411,39 @@ def in_adminka(chat_id, message_text, username, name_user):
             stats_text = f"""📢 **Sistema de Marketing**\n\n📊 **Estadísticas de hoy:**\n- Mensajes enviados: {today_stats['sent']}\n- Tasa de éxito: {today_stats['success_rate']}%\n- Grupos alcanzados: {today_stats['groups']}\n\nSelecciona una opción:"""
 
             bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
+
+        elif '🏷️ Categorías' == message_text:
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('Añadir categoría', 'Eliminar categoría')
+            user_markup.row('Ver categorías')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, 'Gestión de categorías', reply_markup=user_markup)
+
+        elif 'Añadir categoría' == message_text:
+            bot.send_message(chat_id, 'Ingrese el nombre de la nueva categoría:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 61
+
+        elif 'Eliminar categoría' == message_text:
+            cats = dop.list_categories()
+            if not cats:
+                bot.send_message(chat_id, 'No existen categorías para eliminar.')
+            else:
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for _cid, cname in cats:
+                    user_markup.row(cname)
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'Seleccione la categoría a eliminar:', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 60
+
+        elif 'Ver categorías' == message_text:
+            cats = dop.list_categories()
+            if not cats:
+                bot.send_message(chat_id, 'No hay categorías registradas.')
+            else:
+                text = '*Categorías:*\n' + '\n'.join(f'- {c[1]}' for c in cats)
+                bot.send_message(chat_id, text, parse_mode='Markdown')
 
         elif '🎯 Nueva campaña' == message_text:
             key = telebot.types.InlineKeyboardMarkup()
@@ -748,9 +782,30 @@ def text_analytics(message_text, chat_id):
             with open('data/Temp/' + str(chat_id) + 'good_duration.txt', 'w', encoding='utf-8') as f:
                 f.write(str(duration_val))
 
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Añadir producto a la tienda', callback_data='Añadir producto a la tienda'))
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            cats = dop.list_categories()
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            for _cid, cname in cats:
+                user_markup.row(cname)
+            user_markup.row('Nueva categoría')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, 'Elija una categoría para el producto:', reply_markup=user_markup)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 62
+
+        elif sost_num == 62:
+            if message_text == 'Nueva categoría':
+                bot.send_message(chat_id, 'Ingrese el nombre de la nueva categoría:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 61
+                return
+
+            cat_id = dop.get_category_id(message_text)
+            if cat_id is None:
+                bot.send_message(chat_id, '❌ Categoría no válida. Intente de nuevo.')
+                return
+
+            with open('data/Temp/' + str(chat_id) + 'good_category.txt', 'w', encoding='utf-8') as f:
+                f.write(str(cat_id))
 
             try:
                 with open('data/Temp/' + str(chat_id) + 'good_name.txt', encoding='utf-8') as f:
@@ -766,19 +821,29 @@ def text_analytics(message_text, chat_id):
                     minimum = f.read()
                 with open('data/Temp/' + str(chat_id) + 'good_price.txt', encoding='utf-8') as f:
                     price = f.read()
+                with open('data/Temp/' + str(chat_id) + 'good_duration.txt', encoding='utf-8') as f:
+                    duration_val = int(f.read())
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
+
             duration_display = ''
             if duration_val > 0:
                 duration_display = f'\n*Duración:* {duration_val} días'
 
+            cat_name = dop.get_category_name(cat_id)
+            cat_line = f'\n*Categoría:* {cat_name}' if cat_name else ''
+
             manual_text = 'Sí' if manual_flag == '1' else 'No'
             summary = (
                 f'*Resumen del producto:*\n\n*Nombre:* {name}\n*Descripción:* {description}'
-                f'\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${price} USD{duration_display}'
+                f'\n*Formato:* {format_display}\n*Cantidad mínima:* {minimum}\n*Precio:* ${price} USD{duration_display}{cat_line}'
                 f'\n*Entrega manual:* {manual_text}'
             )
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Añadir producto a la tienda', callback_data='Añadir producto a la tienda'))
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
 
             media_temp = 'data/Temp/' + str(chat_id) + 'new_media.txt'
             if os.path.exists(media_temp):
@@ -800,6 +865,40 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, summary, parse_mode='MarkDown', reply_markup=key)
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
+
+        elif sost_num == 61:
+            cat_id = dop.create_category(message_text.strip())
+            if not cat_id:
+                bot.send_message(chat_id, '❌ No se pudo crear la categoría (posiblemente ya existe).')
+                return
+
+            with open('data/Temp/' + str(chat_id) + 'good_category.txt', 'w', encoding='utf-8') as f:
+                f.write(str(cat_id))
+
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 62
+
+            cats = dop.list_categories()
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            for _cid, cname in cats:
+                user_markup.row(cname)
+            user_markup.row('Nueva categoría')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, 'Categoría creada. Seleccione la categoría para continuar:', reply_markup=user_markup)
+
+        elif sost_num == 60:
+            cat_id = dop.get_category_id(message_text)
+            if cat_id is None:
+                bot.send_message(chat_id, '❌ Categoría no encontrada.')
+            else:
+                con = db.get_db_connection()
+                cursor = con.cursor()
+                cursor.execute('DELETE FROM categories WHERE id = ?', (cat_id,))
+                con.commit()
+                bot.send_message(chat_id, 'Categoría eliminada.')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            in_adminka(chat_id, '🏷️ Categorías', None, None)
 
         elif sost_num == 6:
             con = db.get_db_connection()
@@ -1607,10 +1706,17 @@ def ad_inline(callback_data, chat_id, message_id):
 
         if manual_flag == '1':
             format_type = 'manual'
+        category_id = None
+        try:
+            with open('data/Temp/' + str(chat_id) + 'good_category.txt', encoding='utf-8') as f:
+                category_id = int(f.read())
+        except Exception:
+            pass
+
         cursor.execute(
             """
-            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption, duration_days, manual_delivery)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption, duration_days, manual_delivery, category_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name,
@@ -1625,6 +1731,7 @@ def ad_inline(callback_data, chat_id, message_id):
                 media_caption,
                 duration_days,
                 int(manual_flag),
+                category_id,
             ),
         )
         con.commit()
@@ -1653,6 +1760,10 @@ def ad_inline(callback_data, chat_id, message_id):
 
         if os.path.exists(media_temp):
             os.remove(media_temp)
+        try:
+            os.remove('data/Temp/' + str(chat_id) + 'good_category.txt')
+        except Exception:
+            pass
         
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
