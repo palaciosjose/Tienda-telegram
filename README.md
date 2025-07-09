@@ -102,7 +102,7 @@ ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **�
 En **💬 Respuestas** puedes definir distintos textos que el bot enviará. Se añadió la opción
 **Agregar/Cambiar mensaje de entrega manual**, utilizado cuando un producto requiere
 entrega manual. En ese mensaje puedes incluir las palabras `username` y `name` para
-personalizarlo.
+personalizarlo. Configurar **💬 Respuestas** es un privilegio exclusivo del super admin.
 
 ### Carga y edición de unidades
 
