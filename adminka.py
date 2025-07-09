@@ -169,6 +169,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
             user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+            user_markup.row('Cambiar categoría')
             user_markup.row('📝 Descripción adicional')
             user_markup.row('🎬 Multimedia productos')
             user_markup.row('Volver al menú principal')
@@ -230,6 +231,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             if a == 0: 
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
                 user_markup.row('📝 Descripción adicional')
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
@@ -252,6 +254,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             if a == 0: 
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
                 user_markup.row('📝 Descripción adicional')
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
@@ -274,6 +277,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             if a == 0: 
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
                 user_markup.row('📝 Descripción adicional')
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
@@ -281,8 +285,31 @@ def in_adminka(chat_id, message_text, username, name_user):
             else:
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, '¿Para qué posición desea cambiar el precio?', parse_mode='Markdown', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd: 
+                with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 9
+
+        elif 'Cambiar categoría' == message_text:
+            con = db.get_db_connection()
+            cursor = con.cursor()
+            cursor.execute("SELECT name FROM goods WHERE shop_id = ?;", (shop_id,))
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            a = 0
+            for name in cursor.fetchall():
+                a += 1
+                user_markup.row(name[0])
+            if a == 0:
+                user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
+                user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
+                user_markup.row('📝 Descripción adicional')
+                user_markup.row('🎬 Multimedia productos')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '¡No se ha creado ninguna posición todavía!', reply_markup=user_markup)
+            else:
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, '¿Para qué producto desea cambiar la categoría?', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 64
 
         elif '📝 Descripción adicional' == message_text:
             con = db.get_db_connection()
@@ -296,6 +323,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             if a == 0: 
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
                 user_markup.row('📝 Descripción adicional')
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
@@ -1050,6 +1078,7 @@ def text_analytics(message_text, chat_id):
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
                 user_markup.row('📝 Descripción adicional')
                 user_markup.row('🎬 Multimedia productos')
                 user_markup.row('Volver al menú principal')
@@ -1088,6 +1117,7 @@ def text_analytics(message_text, chat_id):
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
             user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+            user_markup.row('Cambiar categoría')
             user_markup.row('📝 Descripción adicional')
             user_markup.row('🎬 Multimedia productos')
             user_markup.row('Volver al menú principal')
@@ -1128,6 +1158,7 @@ def text_analytics(message_text, chat_id):
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                     user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                    user_markup.row('Cambiar categoría')
                     user_markup.row('📝 Descripción adicional')
                     user_markup.row('🎬 Multimedia productos')
                     user_markup.row('Volver al menú principal')
@@ -1137,6 +1168,81 @@ def text_analytics(message_text, chat_id):
                     os.remove(temp_path)
                 except ValueError:
                     bot.send_message(chat_id, 'Error: ingrese un número válido')
+
+        elif sost_num == 64:
+            temp_path = f'data/Temp/{chat_id}_edit_cat.txt'
+            if not os.path.exists(temp_path):
+                product = message_text
+                if product not in dop.get_goods(shop_id):
+                    bot.send_message(chat_id, '❌ Producto no válido')
+                    return
+
+                with open(temp_path, 'w', encoding='utf-8') as f:
+                    f.write(product)
+
+                cats = dop.list_categories(shop_id)
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for _cid, cname in cats:
+                    user_markup.row(cname)
+                user_markup.row('Nueva categoría')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'Seleccione la nueva categoría:', reply_markup=user_markup)
+            else:
+                with open(temp_path, encoding='utf-8') as f:
+                    product = f.read()
+
+                if message_text == 'Nueva categoría':
+                    bot.send_message(chat_id, 'Ingrese el nombre de la nueva categoría:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 65
+                    return
+
+                cat_id = dop.get_category_id(message_text, shop_id)
+                if cat_id is None:
+                    bot.send_message(chat_id, '❌ Categoría no válida. Intente de nuevo.')
+                    return
+
+                dop.assign_product_category(product, cat_id, shop_id)
+                os.remove(temp_path)
+
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
+                user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                user_markup.row('Cambiar categoría')
+                user_markup.row('📝 Descripción adicional')
+                user_markup.row('🎬 Multimedia productos')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'Categoría actualizada con éxito.', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+
+        elif sost_num == 65:
+            temp_path = f'data/Temp/{chat_id}_edit_cat.txt'
+            try:
+                with open(temp_path, encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+
+            cat_id = dop.create_category(message_text.strip(), shop_id)
+            if not cat_id:
+                bot.send_message(chat_id, '❌ No se pudo crear la categoría (posiblemente ya existe).')
+                return
+
+            dop.assign_product_category(product, cat_id, shop_id)
+            os.remove(temp_path)
+
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
+            user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+            user_markup.row('Cambiar categoría')
+            user_markup.row('📝 Descripción adicional')
+            user_markup.row('🎬 Multimedia productos')
+            user_markup.row('Volver al menú principal')
+            bot.send_message(chat_id, 'Categoría creada y asignada con éxito.', reply_markup=user_markup)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
 
         elif sost_num == 10:
             product = message_text
@@ -1551,6 +1657,7 @@ def text_analytics(message_text, chat_id):
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                     user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+                    user_markup.row('Cambiar categoría')
                     user_markup.row('📝 Descripción adicional')
                     user_markup.row('🎬 Multimedia productos')
                     user_markup.row('Volver al menú principal')
@@ -2157,6 +2264,7 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
         user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
         user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
+        user_markup.row('Cambiar categoría')
         user_markup.row('📝 Descripción adicional')
         user_markup.row('🎬 Multimedia productos')
         user_markup.row('Volver al menú principal')
