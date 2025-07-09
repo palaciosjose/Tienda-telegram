@@ -154,3 +154,57 @@ def test_send_campaign_now(tmp_path, monkeypatch):
     assert sent == [("tg", "111", "Hi"), ("wa", "222", "Hi")]
     assert all(r[1] == "sent" for r in rows)
 
+
+def test_send_campaign_to_group(tmp_path, monkeypatch):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "Camp", "message_text": "Hi", "created_by": 1})
+    manager.add_target_group("telegram", "111")
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM target_groups WHERE group_id = '111'")
+    group_id = cur.fetchone()[0]
+    conn.close()
+
+    sent = []
+
+    class DummyTG:
+        def __init__(self, *a, **k):
+            pass
+
+        def send_message(self, gid, msg, media_file_id=None, media_type=None, buttons=None):
+            sent.append(("tg", gid, msg))
+            return True, "ok"
+
+    import advertising_system.ad_manager as mod
+    monkeypatch.setattr(mod, "TelegramMultiBot", DummyTG)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "x")
+
+    ok, msg = manager.send_campaign_to_group(camp_id, group_id)
+    assert ok
+    assert sent == [("tg", "111", "Hi")]
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT platform, group_id, status FROM send_logs")
+    row = cur.fetchone()
+    conn.close()
+    assert row == ("telegram", "111", "sent")
+
+
+def test_list_active_groups(tmp_path):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    manager.add_target_group("telegram", "111", "TG")
+    manager.add_target_group("whatsapp", "222", "WA")
+
+    groups = manager.list_active_groups()
+    ids = {g["group_id"] for g in groups}
+
+    assert ids == {"111", "222"}
+
