@@ -23,6 +23,8 @@ def create_campaign_from_admin(data):
     """Crear una campaña mostrando un mensaje apto para la interfaz admin."""
 
     try:
+        data = dict(data)
+        data.setdefault('shop_id', _manager.shop_id)
         campaign_id = _manager.create_campaign(data)
         return True, f"Campaña creada con ID {campaign_id}"
     except Exception as exc:
