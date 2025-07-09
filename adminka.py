@@ -721,15 +721,12 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 11
 
         elif sost_num == 11:
-            try:
-                with open(f'data/Temp/{chat_id}upload_file.txt', encoding='utf-8'):
-                    pass
-            except FileNotFoundError:
-                bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
-                with shelve.open(files.sost_bd) as bd:
-                    if str(chat_id) in bd:
-                        del bd[str(chat_id)]
-                in_adminka(chat_id, 'Volver al menú principal', None, None)
+            required_files = [
+                f'data/Temp/{chat_id}good_name.txt',
+                f'data/Temp/{chat_id}good_description.txt'
+            ]
+            if not all(os.path.exists(p) for p in required_files):
+                session_expired(chat_id)
                 return
 
             manual_flag = '1' if message_text == 'Sí' else '0'
