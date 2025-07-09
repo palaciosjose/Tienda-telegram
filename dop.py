@@ -77,6 +77,24 @@ def ensure_database_schema():
             except sqlite3.OperationalError:
                 pass
 
+        cursor.execute("PRAGMA table_info(purchases)")
+        purch_cols = [c[1] for c in cursor.fetchall()]
+        if 'shop_id' not in purch_cols:
+            try:
+                cursor.execute("ALTER TABLE purchases ADD COLUMN shop_id INTEGER DEFAULT 1")
+                updated = True
+            except sqlite3.OperationalError:
+                pass
+
+        cursor.execute("PRAGMA table_info(buyers)")
+        buyer_cols = [c[1] for c in cursor.fetchall()]
+        if 'shop_id' not in buyer_cols:
+            try:
+                cursor.execute("ALTER TABLE buyers ADD COLUMN shop_id INTEGER DEFAULT 1")
+                updated = True
+            except sqlite3.OperationalError:
+                pass
+
         if updated:
             con.commit()
         con.commit()
@@ -448,11 +466,11 @@ def get_goodformat(name_good, shop_id=1):
     except:
         return 'text'
 
-def get_profit():
+def get_profit(shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT price FROM purchases;")
+        cursor.execute("SELECT price FROM purchases WHERE shop_id = ?;", (shop_id,))
         price_amount = 0
         for row in cursor.fetchall(): 
             price_amount += int(row[0])
@@ -460,11 +478,11 @@ def get_profit():
     except:
         return 0
 
-def get_amountsbayers():
+def get_amountsbayers(shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT COUNT(*) FROM buyers;")
+        cursor.execute("SELECT COUNT(*) FROM buyers WHERE shop_id = ?;", (shop_id,))
         result = cursor.fetchone()
         return result[0] if result else 0
     except:
@@ -484,7 +502,7 @@ def new_blockuser(his_id):
     except:
         pass
 
-def rasl(group, amount, text):
+def rasl(group, amount, text, shop_id=1):
     good_send = 0
     lose_send = 0
     i = 0
@@ -510,7 +528,10 @@ def rasl(group, amount, text):
         try:
             con = db.get_db_connection()
             cursor = con.cursor()
-            cursor.execute("SELECT id FROM buyers LIMIT ?;", (int(amount),))
+            cursor.execute(
+                "SELECT id FROM buyers WHERE shop_id = ? LIMIT ?;",
+                (shop_id, int(amount))
+            )
             buyers = cursor.fetchall()
             
             for buyer in buyers:
@@ -547,7 +568,7 @@ def _send_media_message(chat_id, text, media):
         bot.send_message(chat_id, text)
 
 
-def broadcast_message(group, amount, text, media=None):
+def broadcast_message(group, amount, text, media=None, shop_id=1):
     """Enviar un anuncio masivo a usuarios o compradores."""
     good_send = 0
     lose_send = 0
@@ -577,7 +598,10 @@ def broadcast_message(group, amount, text, media=None):
         try:
             con = db.get_db_connection()
             cursor = con.cursor()
-            cursor.execute("SELECT id FROM buyers LIMIT ?;", (int(amount),))
+            cursor.execute(
+                "SELECT id FROM buyers WHERE shop_id = ? LIMIT ?;",
+                (shop_id, int(amount))
+            )
             buyers = cursor.fetchall()
 
             for buyer in buyers:
@@ -886,33 +910,42 @@ def get_tovar(name_good):
     except:
         return "Error obteniendo producto"
 
-def new_buy(his_id, username, name_good, amount, price):
+def new_buy(his_id, username, name_good, amount, price, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("INSERT INTO purchases VALUES(?, ?, ?, ?, ?)", (his_id, username, name_good, amount, price))
+        cursor.execute(
+            "INSERT INTO purchases VALUES(?, ?, ?, ?, ?, ?)",
+            (his_id, username, name_good, amount, price, shop_id)
+        )
         con.commit()
     except:
         pass
 
-def new_buyer(his_id, username, payed):
+def new_buyer(his_id, username, payed, shop_id=1):
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
         
-        cursor.execute("SELECT payed FROM buyers WHERE id = ?;", (his_id,))
+        cursor.execute("SELECT payed FROM buyers WHERE id = ? AND shop_id = ?;", (his_id, shop_id))
         result = cursor.fetchone()
         
         if result is None:
-            cursor.execute("INSERT INTO buyers VALUES(?, ?, ?)", (his_id, username, payed))
+            cursor.execute(
+                "INSERT INTO buyers VALUES(?, ?, ?, ?)",
+                (his_id, username, payed, shop_id)
+            )
         else:
             total_payed = int(result[0]) + int(payed)
-            cursor.execute("UPDATE buyers SET payed = ? WHERE id = ?;", (total_payed, his_id))
+            cursor.execute(
+                "UPDATE buyers SET payed = ? WHERE id = ? AND shop_id = ?;",
+                (total_payed, his_id, shop_id)
+            )
         
         con.commit()
     except:
         pass
-def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None):
+def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None, shop_id=1):
     """Versión mejorada de new_buy que incluye método de pago y timestamp"""
     try:
         con = db.get_db_connection()
@@ -922,11 +955,14 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
         from datetime import datetime
         current_time = datetime.now().isoformat()
         
-        cursor.execute("""
-            INSERT INTO purchases 
-            (id, username, name_good, amount, price, payment_method, timestamp) 
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (his_id, username, name_good, amount, price, payment_method, current_time))
+        cursor.execute(
+            """
+            INSERT INTO purchases
+            (id, username, name_good, amount, price, payment_method, timestamp, shop_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (his_id, username, name_good, amount, price, payment_method, current_time, shop_id)
+        )
         
         # También insertar en tabla de validación si existe
         try:
@@ -944,29 +980,37 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
         print(f"Error en new_buy_improved: {e}")
         return False
 
-def get_daily_sales():
+def get_daily_sales(shop_id=1):
     """Obtiene las ventas del día actual"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
         
         # Obtener ventas recientes (aproximación por rowid)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT COUNT(*), SUM(price)
-            FROM purchases 
-            ORDER BY rowid DESC 
+            FROM purchases
+            WHERE shop_id = ?
+            ORDER BY rowid DESC
             LIMIT 100
-        """)
+            """,
+            (shop_id,)
+        )
         
         count, total = cursor.fetchone()
         
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT name_good, COUNT(*), SUM(price)
-            FROM purchases 
+            FROM purchases
+            WHERE shop_id = ?
             GROUP BY name_good
             ORDER BY COUNT(*) DESC
             LIMIT 10
-        """)
+            """,
+            (shop_id,)
+        )
         
         products = cursor.fetchall()
         
@@ -984,7 +1028,7 @@ def get_daily_sales():
     except Exception as e:
         return f"❌ Error: {e}"
 
-def search_user_purchases(search_term):
+def search_user_purchases(search_term, shop_id=1):
     """Busca compras por ID de usuario o username"""
     try:
         con = db.get_db_connection()
@@ -992,21 +1036,27 @@ def search_user_purchases(search_term):
         
         # Si es número, buscar por ID
         if search_term.isdigit():
-            cursor.execute("""
-                SELECT id, username, name_good, amount, price, payment_method, timestamp 
-                FROM purchases 
-                WHERE id = ?
+            cursor.execute(
+                """
+                SELECT id, username, name_good, amount, price, payment_method, timestamp
+                FROM purchases
+                WHERE id = ? AND shop_id = ?
                 ORDER BY rowid DESC
-            """, (int(search_term),))
+                """,
+                (int(search_term), shop_id),
+            )
         else:
             # Si no, buscar por username
             clean_username = search_term.replace('@', '')
-            cursor.execute("""
-                SELECT id, username, name_good, amount, price, payment_method, timestamp 
-                FROM purchases 
-                WHERE username LIKE ?
+            cursor.execute(
+                """
+                SELECT id, username, name_good, amount, price, payment_method, timestamp
+                FROM purchases
+                WHERE username LIKE ? AND shop_id = ?
                 ORDER BY rowid DESC
-            """, (f"%{clean_username}%",))
+                """,
+                (f"%{clean_username}%", shop_id),
+            )
         
         purchases = cursor.fetchall()
         
@@ -1049,13 +1099,13 @@ def search_user_purchases(search_term):
         return f"❌ Error buscando compras: {e}"
 
 
-def get_user_purchases(user_id):
+def get_user_purchases(user_id, shop_id=1):
     con = db.get_db_connection()
     cursor = con.cursor()
     cursor.execute(
         "SELECT name_good, amount, price FROM purchases "
-        "WHERE id = ? ORDER BY rowid DESC",
-        (user_id,)
+        "WHERE id = ? AND shop_id = ? ORDER BY rowid DESC",
+        (user_id, shop_id),
     )
     rows = cursor.fetchall()
     if not rows:

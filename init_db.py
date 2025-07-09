@@ -72,7 +72,8 @@ def create_database():
             username TEXT,
             name_good TEXT,
             amount INTEGER,
-            price INTEGER
+            price INTEGER,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     print("✓ Tabla 'purchases' creada")
@@ -82,7 +83,8 @@ def create_database():
         CREATE TABLE IF NOT EXISTS buyers (
             id INTEGER PRIMARY KEY,
             username TEXT,
-            payed INTEGER
+            payed INTEGER,
+            shop_id INTEGER DEFAULT 1
         )
     ''')
     print("✓ Tabla 'buyers' creada")
