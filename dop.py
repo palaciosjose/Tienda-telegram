@@ -95,6 +95,11 @@ def ensure_database_schema():
             except sqlite3.OperationalError:
                 pass
 
+        # Tabla que relaciona usuarios con tiendas
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS shop_users (user_id INTEGER PRIMARY KEY, shop_id INTEGER DEFAULT 1)"
+        )
+
         if updated:
             con.commit()
         con.commit()
@@ -215,14 +220,20 @@ def user_loger(chat_id=0):
         try:
             with open(files.users_list, encoding='utf-8') as f:
                 if not str(chat_id) in f.read():
-                    with open(files.users_list, 'a', encoding='utf-8') as f: 
+                    with open(files.users_list, 'a', encoding='utf-8') as f:
                         f.write(str(chat_id) + '\n')
         except:
-            with open(files.users_list, 'w', encoding='utf-8') as f: 
+            with open(files.users_list, 'w', encoding='utf-8') as f:
                 f.write(str(chat_id) + '\n')
-    
+        try:
+            # Registrar o actualizar la tienda del usuario
+            current = get_user_shop(chat_id)
+            set_user_shop(chat_id, current)
+        except Exception:
+            pass
+
     try:
-        with open(files.users_list, encoding='utf-8') as f: 
+        with open(files.users_list, encoding='utf-8') as f:
             return len(f.readlines())
     except:
         return 0
@@ -591,11 +602,16 @@ def broadcast_message(group, amount, text, media=None, shop_id=1):
 
     if group == 'all':
         try:
-            with open(files.users_list, encoding='utf-8') as f:
-                users = f.readlines()
+            con = db.get_db_connection()
+            cursor = con.cursor()
+            cursor.execute(
+                "SELECT user_id FROM shop_users WHERE shop_id = ? LIMIT ?;",
+                (shop_id, int(amount)),
+            )
+            users = cursor.fetchall()
 
-            while i < int(amount) and i < len(users):
-                chat_id = int(users[i].strip())
+            while i < len(users) and i < int(amount):
+                chat_id = int(users[i][0])
                 try:
                     if media:
                         _send_media_message(chat_id, text, media)
@@ -746,10 +762,15 @@ def update_shop_name(shop_id, new_name):
 # ------------------------------------------------------------------
 
 def set_user_shop(user_id, shop_id):
-    """Guardar la tienda elegida por un usuario."""
+    """Guardar la tienda elegida por un usuario en la base de datos."""
     try:
-        with shelve.open(files.user_shops_bd) as bd:
-            bd[str(user_id)] = int(shop_id)
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "INSERT OR REPLACE INTO shop_users (user_id, shop_id) VALUES (?, ?)",
+            (int(user_id), int(shop_id)),
+        )
+        con.commit()
     except Exception:
         pass
 
@@ -757,8 +778,14 @@ def set_user_shop(user_id, shop_id):
 def get_user_shop(user_id):
     """Obtener la tienda seleccionada por un usuario (por defecto 1)."""
     try:
-        with shelve.open(files.user_shops_bd) as bd:
-            return bd.get(str(user_id), 1)
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "SELECT shop_id FROM shop_users WHERE user_id = ?",
+            (int(user_id),),
+        )
+        row = cur.fetchone()
+        return int(row[0]) if row else 1
     except Exception:
         return 1
 

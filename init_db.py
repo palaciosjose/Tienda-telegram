@@ -88,6 +88,15 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'buyers' creada")
+
+    # Tabla que relaciona usuarios con su tienda seleccionada
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS shop_users (
+            user_id INTEGER PRIMARY KEY,
+            shop_id INTEGER DEFAULT 1
+        )
+    ''')
+    print("✓ Tabla 'shop_users' creada")
     
 
 
