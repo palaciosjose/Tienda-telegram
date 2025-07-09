@@ -81,6 +81,14 @@ Cada administrador puede renombrar su tienda desde **⚙️ Otros** usando la op
 
 Si vienes de una instalación antigua de una sola tienda, ejecuta `python migrate_add_shop_id.py` (o `init_db.py` si prefieres crear la base desde cero) para añadir la columna `shop_id` requerida.
 
+Para registrar la relación entre usuarios y tiendas existentes, ejecuta:
+
+```bash
+python migrate_create_shop_users.py
+```
+
+Esto creará la tabla `shop_users` necesaria para las difusiones por tienda.
+
 ### Nombre de la tienda
 
 Al crear una tienda se solicitará un nombre, el cual verán los clientes al elegir tienda después de enviar `/start`. Los administradores pueden cambiar este nombre más adelante desde **⚙️ Otros** → **✏️ Renombrar tienda**.
