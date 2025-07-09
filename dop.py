@@ -100,6 +100,19 @@ def ensure_database_schema():
             "CREATE TABLE IF NOT EXISTS shop_users (user_id INTEGER PRIMARY KEY, shop_id INTEGER DEFAULT 1)"
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS discounts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                percent INTEGER,
+                start_time TEXT,
+                end_time TEXT,
+                category_id INTEGER,
+                shop_id INTEGER
+            )
+            """
+        )
+
         if updated:
             con.commit()
         con.commit()
@@ -444,9 +457,13 @@ def order_sum(name_good, amount, shop_id=1):
         )
         result = cursor.fetchone()
         if result:
-            return int(result[0]) * amount
+            price = int(result[0])
+            discount = get_active_discount(name_good, shop_id)
+            if discount:
+                price = int(price * (100 - discount) / 100)
+            return price * amount
         return 0
-    except:
+    except Exception:
         return 0
 
 def read_my_line(filename, linenumber):
@@ -813,17 +830,24 @@ def get_description(name_good, shop_id=1):
         product_description = f"*{name_good}*\n\n"
         product_description += f"📝 *Descripción:*\n{description}\n\n"
         
-        # Mostrar precios con o sin descuento
-        if discount_config['enabled'] and discount_config['show_fake_price']:
-            # Calcular precio "anterior" falso
+        active_percent = get_active_discount(name_good, shop_id)
+
+        if active_percent:
+            new_price = int(price * (100 - active_percent) / 100)
+            orig_str = str(price) + ' USD'
+            array = list(orig_str)
+            crossed_price = "̶" + "̶".join(array) + "̶"
+            product_description += "💰 *Precio:*\n"
+            product_description += f"~~{crossed_price}~~\n"
+            product_description += f"*${new_price} USD* (-{active_percent}% OFF)\n\n"
+        elif discount_config['enabled'] and discount_config['show_fake_price']:
             fake_price = int(price * discount_config['multiplier'])
             fake_price_str = str(fake_price) + ' USD'
             array = list(fake_price_str)
             crossed_price = "̶" + "̶".join(array) + "̶"
-            
-            # Calcular porcentaje de "descuento" para mostrar
+
             discount_percent = int(((fake_price - price) / fake_price) * 100)
-            
+
             product_description += f"💰 *Precio:*\n"
             product_description += f"~~{crossed_price}~~ 🔥\n"
             product_description += f"*${price} USD* (-{discount_percent}% OFF)\n\n"
@@ -1359,6 +1383,61 @@ def setup_discount_system():
         print(f"Error configurando sistema de descuentos: {e}")
         return False
 
+def create_discount(percent, start, end=None, category_id=None, shop_id=1):
+    """Crear un descuento en la tabla discounts"""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            """
+            INSERT INTO discounts (percent, start_time, end_time, category_id, shop_id)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (
+                int(percent),
+                start.isoformat() if hasattr(start, "isoformat") else str(start),
+                end.isoformat() if hasattr(end, "isoformat") and end else (str(end) if end else None),
+                category_id,
+                shop_id,
+            ),
+        )
+        con.commit()
+        return cur.lastrowid
+    except Exception as e:
+        print(f"Error creando descuento: {e}")
+        return None
+
+def get_active_discount(product_or_cat_id, shop_id=1):
+    """Devuelve el porcentaje de descuento activo para un producto o categoría"""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        if isinstance(product_or_cat_id, str):
+            cur.execute(
+                "SELECT category_id FROM goods WHERE name = ? AND shop_id = ?",
+                (product_or_cat_id, shop_id),
+            )
+            row = cur.fetchone()
+            category_id = row[0] if row else None
+        else:
+            category_id = product_or_cat_id
+
+        now = datetime.datetime.utcnow().isoformat()
+        cur.execute(
+            """
+            SELECT percent FROM discounts
+            WHERE shop_id = ? AND (category_id IS NULL OR category_id = ?)
+              AND start_time <= ? AND (end_time IS NULL OR end_time > ?)
+            ORDER BY percent DESC LIMIT 1
+            """,
+            (shop_id, category_id, now, now),
+        )
+        row = cur.fetchone()
+        return int(row[0]) if row else 0
+    except Exception as e:
+        print(f"Error obteniendo descuento activo: {e}")
+        return 0
+
 # ============================================
 # FUNCIONES PARA DESCRIPCIÓN ADICIONAL
 # Agregadas automáticamente por el instalador
@@ -1664,8 +1743,18 @@ def format_product_with_media(product_name, shop_id=1):
             
         name, description, price, file_id, media_type, caption, duration, manual, category = result
 
+        discount = get_active_discount(name, shop_id)
+        display_price = price
         info = f"🎯 **{name}**\n"
-        info += f"💰 **Precio:** ${price} USD\n"
+        if discount:
+            new_price = int(price * (100 - discount) / 100)
+            display_price = new_price
+            orig_str = str(price) + ' USD'
+            array = list(orig_str)
+            crossed = "̶" + "̶".join(array) + "̶"
+            info += f"💰 **Precio:** ~~{crossed}~~ ${new_price} USD (-{discount}% OFF)\n"
+        else:
+            info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"
         if category:
             info += f"🏷️ **Categoría:** {category}\n"

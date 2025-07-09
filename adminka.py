@@ -35,6 +35,7 @@ def show_discount_menu(chat_id):
     user_markup.row(toggle)
     user_markup.row('Cambiar texto', 'Cambiar multiplicador')
     user_markup.row(toggle_fake)
+    user_markup.row('Nuevo descuento')
     user_markup.row('Vista previa', 'Volver al menú principal')
 
     message = (
@@ -459,8 +460,16 @@ def in_adminka(chat_id, message_text, username, name_user):
                     user_markup.row(cname)
                 user_markup.row('Volver al menú principal')
                 bot.send_message(chat_id, 'Seleccione la categoría a eliminar:', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 60
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 60
+
+        elif '💸 Descuentos' == message_text:
+            show_discount_menu(chat_id)
+
+        elif 'Nuevo descuento' == message_text:
+            bot.send_message(chat_id, 'Ingrese porcentaje de descuento:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 71
 
         elif 'Renombrar categoría' == message_text:
             cats = dop.list_categories(shop_id)
@@ -1599,6 +1608,56 @@ def text_analytics(message_text, chat_id):
             except ValueError:
                 bot.send_message(chat_id, '❌ Valor inválido, use punto decimal. Ej: 1.5')
 
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_discount_menu(chat_id)
+
+        elif sost_num == 71:
+            try:
+                percent = int(message_text)
+            except ValueError:
+                bot.send_message(chat_id, '❌ Porcentaje inválido.')
+                return
+            with open(f'data/Temp/{chat_id}_discount.txt', 'w', encoding='utf-8') as f:
+                f.write(str(percent))
+            bot.send_message(chat_id, 'Duración en horas (0 permanente):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 72
+
+        elif sost_num == 72:
+            try:
+                hours = int(message_text)
+            except ValueError:
+                bot.send_message(chat_id, '❌ Valor inválido.')
+                return
+            with open(f'data/Temp/{chat_id}_discount.txt', 'a', encoding='utf-8') as f:
+                f.write('\n' + str(hours))
+            cats = dop.list_categories(shop_id)
+            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            for _cid, cname in cats:
+                user_markup.row(cname)
+            user_markup.row('Sin categoría')
+            bot.send_message(chat_id, 'Seleccione categoría (o "Sin categoría"):', reply_markup=user_markup)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 73
+
+        elif sost_num == 73:
+            try:
+                with open(f'data/Temp/{chat_id}_discount.txt', encoding='utf-8') as f:
+                    lines = f.read().splitlines()
+                percent = int(lines[0])
+                hours = int(lines[1])
+            except Exception:
+                session_expired(chat_id)
+                return
+            os.remove(f'data/Temp/{chat_id}_discount.txt')
+            category_id = None
+            if message_text != 'Sin categoría':
+                category_id = dop.get_category_id(message_text, shop_id)
+            start = datetime.datetime.utcnow()
+            end = start + datetime.timedelta(hours=hours) if hours > 0 else None
+            did = dop.create_discount(percent, start, end, category_id, shop_id)
+            bot.send_message(chat_id, '✅ Descuento creado' if did else '❌ Error creando descuento')
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
             show_discount_menu(chat_id)

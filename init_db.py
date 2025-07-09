@@ -219,6 +219,19 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'binance_data' creada")
+
+    # Tabla de descuentos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS discounts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            percent INTEGER,
+            start_time TEXT,
+            end_time TEXT,
+            category_id INTEGER,
+            shop_id INTEGER
+        )
+    ''')
+    print("✓ Tabla 'discounts' creada")
     
     conn.commit()
     conn.close()
