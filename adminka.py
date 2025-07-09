@@ -672,6 +672,9 @@ def in_adminka(chat_id, message_text, username, name_user):
             if chat_id == config.admin_id:
                 user_markup.row('Añadir nuevo admin', 'Eliminar admin')
             user_markup.row('Cambiar nombre de tienda')
+            user_markup.row('Cambiar descripción de tienda')
+            user_markup.row('Cambiar multimedia de tienda')
+            user_markup.row('Cambiar botones de tienda')
             if chat_id == config.admin_id:
                 user_markup.row('🛍️ Gestionar tiendas')
             user_markup.row('Volver al menú principal')
@@ -709,6 +712,21 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Ingrese el nuevo nombre de la tienda:')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 303
+
+        elif message_text == 'Cambiar descripción de tienda':
+            bot.send_message(chat_id, 'Ingrese la nueva descripción (o "ELIMINAR" para borrar):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 304
+
+        elif message_text == 'Cambiar multimedia de tienda':
+            bot.send_message(chat_id, 'Envía una foto o video para la tienda o escribe "ELIMINAR"')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 305
+
+        elif message_text == 'Cambiar botones de tienda':
+            bot.send_message(chat_id, 'Texto para el primer botón (o "ninguno"):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 306
 
         elif message_text == '🛍️ Gestionar tiendas' and chat_id == config.admin_id:
             shops = dop.list_shops()
@@ -1388,6 +1406,70 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 
+        elif sost_num == 304:
+            shop_id = dop.get_shop_id(chat_id)
+            desc = '' if message_text.upper() == 'ELIMINAR' else message_text
+            dop.update_shop_info(shop_id, description=desc)
+            bot.send_message(chat_id, 'Descripción actualizada.')
+            in_adminka(chat_id, '⚙️ Otros', None, None)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+
+        elif sost_num == 305:
+            if message_text.upper() == 'ELIMINAR':
+                shop_id = dop.get_shop_id(chat_id)
+                dop.update_shop_info(shop_id, media_file_id=None, media_type=None)
+                bot.send_message(chat_id, 'Multimedia eliminada.')
+                in_adminka(chat_id, '⚙️ Otros', None, None)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+            else:
+                bot.send_message(chat_id, 'Envía una foto o video o escribe ELIMINAR.')
+
+        elif sost_num == 306:
+            with open(f'data/Temp/{chat_id}_shop_buttons.txt', 'w', encoding='utf-8') as f:
+                f.write(('' if message_text.lower() == 'ninguno' else message_text) + '\n')
+            bot.send_message(chat_id, 'URL del primer botón (o "ninguno"):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 307
+
+        elif sost_num == 307:
+            path = f'data/Temp/{chat_id}_shop_buttons.txt'
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(('' if message_text.lower() == 'ninguno' else message_text) + '\n')
+            bot.send_message(chat_id, 'Texto del segundo botón (o "ninguno"):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 308
+
+        elif sost_num == 308:
+            path = f'data/Temp/{chat_id}_shop_buttons.txt'
+            with open(path, 'a', encoding='utf-8') as f:
+                f.write(('' if message_text.lower() == 'ninguno' else message_text) + '\n')
+            bot.send_message(chat_id, 'URL del segundo botón (o "ninguno"):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 309
+
+        elif sost_num == 309:
+            path = f'data/Temp/{chat_id}_shop_buttons.txt'
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    b1_text = f.readline().rstrip('\n')
+                    b1_url = f.readline().rstrip('\n')
+                    b2_text = f.readline().rstrip('\n')
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            b2_url = '' if message_text.lower() == 'ninguno' else message_text
+            shop_id = dop.get_shop_id(chat_id)
+            dop.update_shop_info(shop_id,
+                                button1_text=b1_text, button1_url=b1_url,
+                                button2_text=b2_text, button2_url=b2_url)
+            bot.send_message(chat_id, 'Botones actualizados.')
+            in_adminka(chat_id, '⚙️ Otros', None, None)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            os.remove(path)
+
         elif sost_num == 21:
             if chat_id != config.admin_id:
                 bot.send_message(chat_id, '❌ No tiene permiso para agregar administradores.')
@@ -2029,7 +2111,7 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200, 42, 162, 165):
+        if state not in (32, 200, 42, 162, 165, 305):
             return
 
         if state == 32:
@@ -2040,6 +2122,8 @@ def handle_multimedia(message):
             temp_path = None
             media_path = f'data/Temp/{chat_id}_campaign_media.txt'
         elif state == 165:
+            temp_path = None
+        elif state == 305:
             temp_path = None
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
@@ -2137,6 +2221,13 @@ def handle_multimedia(message):
                 bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 166
+                return
+            elif state == 305:
+                dop.update_shop_info(shop_id, media_file_id=file_id, media_type=media_type)
+                bot.send_message(chat_id, 'Multimedia de tienda actualizada.')
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                in_adminka(chat_id, '⚙️ Otros', None, None)
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:

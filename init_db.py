@@ -28,7 +28,14 @@ def create_database():
         CREATE TABLE IF NOT EXISTS shops (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             admin_id INTEGER,
-            name TEXT UNIQUE NOT NULL
+            name TEXT UNIQUE NOT NULL,
+            description TEXT,
+            media_file_id TEXT,
+            media_type TEXT,
+            button1_text TEXT,
+            button1_url TEXT,
+            button2_text TEXT,
+            button2_url TEXT
         )
     ''')
     print("✓ Tabla 'shops' creada")
