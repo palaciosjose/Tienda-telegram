@@ -80,7 +80,8 @@ def in_adminka(chat_id, message_text, username, name_user):
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('💬 Respuestas')
+            if chat_id == config.admin_id:
+                user_markup.row('💬 Respuestas')
             user_markup.row('📦 Surtido', '➕ Producto')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
@@ -91,7 +92,10 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, '¡Has ingresado al panel de administración del bot!\nPara salir, presiona /start', reply_markup=user_markup)
 
         elif message_text == '💬 Respuestas':
-            if dop.check_message('start') is True: 
+            if chat_id != config.admin_id:
+                bot.send_message(chat_id, '❌ Solo el super admin puede modificar las respuestas.')
+                return
+            if dop.check_message('start') is True:
                 start = 'Cambiar'
             else: 
                 start = 'Añadir'
@@ -720,7 +724,8 @@ def text_analytics(message_text, chat_id):
                     success = False
             if success:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-                user_markup.row('💬 Respuestas')
+                if chat_id == config.admin_id:
+                    user_markup.row('💬 Respuestas')
                 user_markup.row('📦 Surtido', '➕ Producto')
                 user_markup.row('💰 Pagos')
                 user_markup.row('📊 Stats', '📣 Difusión')
@@ -1735,7 +1740,8 @@ def ad_inline(callback_data, chat_id, message_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-        user_markup.row('💬 Respuestas')
+        if chat_id == config.admin_id:
+            user_markup.row('💬 Respuestas')
         user_markup.row('📦 Surtido', '➕ Producto')
         user_markup.row('💰 Pagos')
         user_markup.row('📊 Stats', '📣 Difusión')

@@ -13,7 +13,8 @@ def in_adminka(chat_id, message_text, username, name_user):
                         del bd[str(chat_id)]
             
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('💬 Respuestas')
+            if chat_id == config.admin_id:
+                user_markup.row('💬 Respuestas')
             user_markup.row('📦 Surtido', '➕ Producto')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
@@ -21,6 +22,12 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, '¡Panel de administración!\nPara salir: /start', reply_markup=user_markup)
 
         
+        elif message_text == '💬 Respuestas':
+            if chat_id != config.admin_id:
+                bot.send_message(chat_id, '❌ Solo el super admin puede modificar las respuestas.')
+                return
+            bot.send_message(chat_id, 'Función no disponible en esta versión.')
+
         elif message_text == '📊 Stats':
             try:
                 result = dop.get_daily_sales()
@@ -68,7 +75,8 @@ def ad_inline(callback_data, chat_id, message_id):
                     del bd[str(chat_id)]
         
         user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-        user_markup.row('💬 Respuestas')
+        if chat_id == config.admin_id:
+            user_markup.row('💬 Respuestas')
         user_markup.row('📦 Surtido', '➕ Producto')
         user_markup.row('💰 Pagos')
         user_markup.row('⚙️ Otros')
