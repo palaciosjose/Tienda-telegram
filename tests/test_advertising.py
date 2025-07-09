@@ -143,6 +143,7 @@ def test_send_campaign_now(tmp_path, monkeypatch):
 
     ok, msg = manager.send_campaign_now(camp_id, ["telegram"])
     assert ok
+    assert msg == "Campaña enviada"
 
     conn = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -189,4 +190,36 @@ def test_update_campaign_updates_text(tmp_path):
     row = cur.fetchone()
     conn.close()
     assert row[0] == "Bye"
+
+
+def test_send_campaign_now_failure(tmp_path, monkeypatch):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "Camp", "message_text": "Hi", "created_by": 1})
+    manager.add_target_group("telegram", "111")
+
+    class DummyTG:
+        def __init__(self, *a, **k):
+            pass
+
+        def send_message(self, *a, **k):
+            return False, "err"
+
+    import advertising_system.ad_manager as mod
+    monkeypatch.setattr(mod, "TelegramMultiBot", DummyTG)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "x")
+
+    ok, msg = manager.send_campaign_now(camp_id, ["telegram"])
+    assert not ok
+    assert msg == "err"
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT status, error_message FROM send_logs")
+    rows = cur.fetchall()
+    conn.close()
+
+    assert rows == [("failed", "err")]
 

@@ -299,4 +299,4 @@ class AdvertisingManager:
         conn.commit()
         if not shared:
             conn.close()
-        return True, 'Campaña enviada'
+        return (True, 'Campaña enviada') if success else (False, resp)
