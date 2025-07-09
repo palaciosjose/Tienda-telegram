@@ -711,6 +711,21 @@ def assign_admin_to_shop(shop_id, admin_id):
         print(f"Error asignando admin a tienda: {e}")
         return False
 
+def update_shop_name(shop_id, new_name):
+    """Cambiar el nombre de una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE shops SET name = ? WHERE id = ?",
+            (new_name, shop_id),
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error actualizando nombre de tienda: {e}")
+        return False
+
 # ------------------------------------------------------------------
 # Funciones para la tienda seleccionada por cada usuario
 # ------------------------------------------------------------------
