@@ -37,6 +37,14 @@ python migrate_drop_subscriptions.py
 
 antes de iniciar la nueva versión del bot para eliminarlas de forma segura.
 
+Si ya habías usado el sistema de publicidad antes de soportar múltiples
+tiendas, ejecuta también:
+
+```bash
+python migrate_add_shop_id_ads.py
+```
+para añadir la columna `shop_id` en sus tablas.
+
 ## Uso
 
 Antes de iniciar el bot por primera vez se debe crear la estructura de la base de datos. Ejecuta:
