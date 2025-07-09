@@ -634,7 +634,8 @@ def in_adminka(chat_id, message_text, username, name_user):
 
         elif '⚙️ Otros' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            user_markup.row('Añadir nuevo admin', 'Eliminar admin')
+            if chat_id == config.admin_id:
+                user_markup.row('Añadir nuevo admin', 'Eliminar admin')
             user_markup.row('Cambiar nombre de tienda')
             if chat_id == config.admin_id:
                 user_markup.row('🛍️ Gestionar tiendas')
@@ -642,26 +643,32 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Seleccione qué desea hacer', reply_markup=user_markup)
 
         elif 'Añadir nuevo admin' == message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text = 'Cancelar y volver al menú principal de administración', callback_data = 'Volver al menú principal de administración'))
-            bot.send_message(chat_id, 'Ingrese la ID del nuevo admin')
-            with shelve.open(files.sost_bd) as bd: 
-                bd[str(chat_id)] = 21
+            if chat_id != config.admin_id:
+                bot.send_message(chat_id, '❌ Solo el super admin puede gestionar administradores.')
+            else:
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+                bot.send_message(chat_id, 'Ingrese la ID del nuevo admin')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 21
 
         elif 'Eliminar admin' == message_text:
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-            a = 0
-            for admin_id in dop.get_adminlist():
-                a += 1
-                if int(admin_id) != config.admin_id:
-                    user_markup.row(str(admin_id))
-            if a == 1:
-                bot.send_message(chat_id, '¡Todavía no ha añadido admins!')
+            if chat_id != config.admin_id:
+                bot.send_message(chat_id, '❌ Solo el super admin puede gestionar administradores.')
             else:
-                user_markup.row('Volver al menú principal')
-                bot.send_message(chat_id, 'Seleccione qué admin desea eliminar', reply_markup=user_markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 22
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                a = 0
+                for admin_id in dop.get_adminlist():
+                    a += 1
+                    if int(admin_id) != config.admin_id:
+                        user_markup.row(str(admin_id))
+                if a == 1:
+                    bot.send_message(chat_id, '¡Todavía no ha añadido admins!')
+                else:
+                    user_markup.row('Volver al menú principal')
+                    bot.send_message(chat_id, 'Seleccione qué admin desea eliminar', reply_markup=user_markup)
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 22
 
         elif message_text == 'Cambiar nombre de tienda':
             bot.send_message(chat_id, 'Ingrese el nuevo nombre de la tienda:')
@@ -1365,25 +1372,35 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
 
         elif sost_num == 21:
-            dop.new_admin(message_text)
-            user_markup = telebot.types.ReplyKeyboardMarkup(True, True) 
-            user_markup.row('Añadir nuevo admin', 'Eliminar admin')
-            user_markup.row('Volver al menú principal')
-            bot.send_message(chat_id, 'Nuevo admin añadido con éxito', reply_markup=user_markup)
-            with shelve.open(files.sost_bd) as bd: 
-                del bd[str(chat_id)]
+            if chat_id != config.admin_id:
+                bot.send_message(chat_id, '❌ No tiene permiso para agregar administradores.')
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+            else:
+                dop.new_admin(message_text)
+                user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
+                user_markup.row('Añadir nuevo admin', 'Eliminar admin')
+                user_markup.row('Volver al menú principal')
+                bot.send_message(chat_id, 'Nuevo admin añadido con éxito', reply_markup=user_markup)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
 
         elif sost_num == 22:
-            with open(files.admins_list, encoding='utf-8') as f:
-                if str(message_text) in f.read():
-                    dop.del_id(files.admins_list, message_text)
-                    bot.send_message(chat_id, 'Admin eliminado con éxito de la lista')
-                    with shelve.open(files.sost_bd) as bd: 
-                        del bd[str(chat_id)]
-                else: 
-                    bot.send_message(chat_id, '¡La ID no se encontró en la lista de administradores! Seleccione la ID correcta.')
-                    with shelve.open(files.sost_bd) as bd : 
-                        bd[str(chat_id)] = 22
+            if chat_id != config.admin_id:
+                bot.send_message(chat_id, '❌ No tiene permiso para eliminar administradores.')
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+            else:
+                with open(files.admins_list, encoding='utf-8') as f:
+                    if str(message_text) in f.read():
+                        dop.del_id(files.admins_list, message_text)
+                        bot.send_message(chat_id, 'Admin eliminado con éxito de la lista')
+                        with shelve.open(files.sost_bd) as bd:
+                            del bd[str(chat_id)]
+                    else:
+                        bot.send_message(chat_id, '¡La ID no se encontró en la lista de administradores! Seleccione la ID correcta.')
+                        with shelve.open(files.sost_bd) as bd :
+                            bd[str(chat_id)] = 22
 
         elif sost_num == 28:  # Seleccionar producto para editar descripción adicional
             con = db.get_db_connection()
