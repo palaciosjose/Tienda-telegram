@@ -1709,6 +1709,7 @@ def text_analytics(message_text, chat_id):
 
 
 def ad_inline(callback_data, chat_id, message_id):
+    shop_id = dop.get_shop_id(chat_id)
     if 'Volver al menú principal de administración' == callback_data:
         if dop.get_sost(chat_id) is True:
             with shelve.open(files.sost_bd) as bd:
@@ -1774,7 +1775,6 @@ def ad_inline(callback_data, chat_id, message_id):
                     cap = mlines[2] if len(mlines) > 2 else None
                     media = {'file_id': fid, 'type': mtype, 'caption': cap}
 
-        shop_id = dop.get_shop_id(chat_id)
         result = dop.broadcast_message(group, amount, text, media, shop_id)
         bot.edit_message_reply_markup(chat_id, message_id)
         bot.send_message(chat_id, result)
