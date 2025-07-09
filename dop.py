@@ -238,12 +238,12 @@ def user_loger(chat_id=0):
     except:
         return 0
 
-def get_productcatalog():
-    """Catálogo limpio - solo muestra texto de descuento"""
+def get_productcatalog(shop_id=1):
+    """Catálogo limpio para una tienda específica"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        cursor.execute("SELECT COUNT(*) FROM goods;")
+        cursor.execute("SELECT COUNT(*) FROM goods WHERE shop_id = ?;", (shop_id,))
         product_count = cursor.fetchone()[0]
         
         if product_count == 0:
