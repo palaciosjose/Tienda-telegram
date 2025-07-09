@@ -332,6 +332,21 @@ def get_category_name(cat_id, shop_id=1):
         print(f"Error obteniendo nombre de categoría: {e}")
         return None
 
+def update_category_name(cat_id, new_name, shop_id=1):
+    """Cambiar el nombre de una categoría."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "UPDATE categories SET name = ? WHERE id = ? AND shop_id = ?",
+            (new_name, cat_id, shop_id),
+        )
+        con.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        print(f"Error actualizando nombre de categoría: {e}")
+        return False
+
 def assign_product_category(product, category_id, shop_id=1):
     """Asigna una categoría a un producto."""
     try:

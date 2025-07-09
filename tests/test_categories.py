@@ -68,3 +68,16 @@ def test_category_creation_and_assignment(monkeypatch, tmp_path):
     assert row[0] == cat_id
     assert row[1] == 1
     conn.close()
+
+
+def test_update_category_name(monkeypatch, tmp_path):
+    dop = setup_dop(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+
+    cat_id = dop.create_category("Old")
+    assert cat_id
+
+    ok = dop.update_category_name(cat_id, "New", 1)
+    assert ok
+    assert dop.get_category_name(cat_id, 1) == "New"
+
