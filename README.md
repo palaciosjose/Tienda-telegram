@@ -60,6 +60,8 @@ el bot.
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.
 
+Desde ese menú también podrás pulsar **"Mis compras"** para revisar un resumen de todos los productos que hayas adquirido.
+
 ## Panel de administración
 
 Al entrar verás botones para gestionar las distintas funciones del bot. Entre
