@@ -300,3 +300,56 @@ class AdvertisingManager:
         if not shared:
             conn.close()
         return (True, 'Campaña enviada') if success else (False, resp)
+
+    def send_campaign_to_group(self, campaign_id, group_id, platform='telegram'):
+        """Enviar una campaña a un único grupo y registrar el resultado."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            """SELECT name, message_text, media_file_id, media_type,
+                      button1_text, button1_url, button2_text, button2_url
+                   FROM campaigns WHERE id = ? AND status = 'active'""",
+            (campaign_id,),
+        )
+        campaign = cur.fetchone()
+        if not campaign:
+            if not shared:
+                conn.close()
+            return False, 'Campaña no encontrada'
+
+        telegram_tokens = [t.strip() for t in os.getenv('TELEGRAM_TOKEN', '').split(',') if t.strip()]
+        telegram_bot = TelegramMultiBot(telegram_tokens) if telegram_tokens else None
+
+        if platform == 'telegram' and telegram_bot:
+            success, resp = telegram_bot.send_message(
+                group_id,
+                campaign[1],
+                media_file_id=campaign[2],
+                media_type=campaign[3],
+                buttons={
+                    'button1_text': campaign[4],
+                    'button1_url': campaign[5],
+                    'button2_text': campaign[6],
+                    'button2_url': campaign[7],
+                },
+            )
+        else:
+            success, resp = False, 'Plataforma no soportada'
+
+        cur.execute(
+            """INSERT INTO send_logs
+                   (campaign_id, group_id, platform, status, sent_date, response_time, error_message)
+                   VALUES (?, ?, ?, ?, ?, 0, ?)""",
+            (
+                campaign_id,
+                str(group_id),
+                platform,
+                'sent' if success else 'failed',
+                datetime.now().isoformat(),
+                '' if success else str(resp),
+            ),
+        )
+        conn.commit()
+        if not shared:
+            conn.close()
+        return (True, 'Campaña enviada') if success else (False, resp)
