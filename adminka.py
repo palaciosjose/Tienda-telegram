@@ -984,17 +984,10 @@ def text_analytics(message_text, chat_id):
                 in_adminka(chat_id, '🏷️ Categorías', None, None)
 
         elif sost_num == 6:
-            con = db.get_db_connection()
-            cursor = con.cursor()
-            a = 0
-            cursor.execute("SELECT description FROM goods WHERE name = ?", (message_text,))
-            for i in cursor.fetchall():
-                a += 1
-            if a == 0:
+            if message_text not in dop.get_goods(shop_id):
                 bot.send_message(chat_id, '¡La posición seleccionada no se encontró! Selecciónela haciendo clic en el botón correspondiente.')
             else:
-                cursor.execute("DELETE FROM goods WHERE name = ?", (message_text,))
-                con.commit()
+                dop.delete_product(message_text, shop_id)
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                 user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -1006,14 +999,7 @@ def text_analytics(message_text, chat_id):
                     del bd[str(chat_id)]
 
         elif sost_num == 7:
-            con = db.get_db_connection()
-            cursor = con.cursor()
-            a = 0
-            cursor.execute("SELECT description FROM goods WHERE name = ?", (message_text,))
-            for i in cursor.fetchall():
-                a += 1
-
-            if a == 0:
+            if message_text not in dop.get_goods(shop_id):
                 bot.send_message(chat_id, '¡No hay una posición con ese nombre!\n¡Seleccione de nuevo!')
             else:
                 with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
@@ -1038,10 +1024,8 @@ def text_analytics(message_text, chat_id):
             except FileNotFoundError:
                 session_expired(chat_id)
                 return
-            con = db.get_db_connection()
-            cursor = con.cursor()
-            cursor.execute("UPDATE goods SET description = ? WHERE name = ?", (message_text, name_good))
-            con.commit()
+
+            dop.update_product_description(name_good, message_text, shop_id)
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
             user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -1081,10 +1065,7 @@ def text_analytics(message_text, chat_id):
                     return
                 try:
                     price = int(message_text)
-                    con = db.get_db_connection()
-                    cursor = con.cursor()
-                    cursor.execute("UPDATE goods SET price = ? WHERE name = ?", (price, name_good))
-                    con.commit()
+                    dop.update_product_price(name_good, price, shop_id)
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                     user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -1408,19 +1389,13 @@ def text_analytics(message_text, chat_id):
                             bd[str(chat_id)] = 22
 
         elif sost_num == 28:  # Seleccionar producto para editar descripción adicional
-            con = db.get_db_connection()
-            cursor = con.cursor()
-            a = 0
-            cursor.execute("SELECT name FROM goods WHERE name = ?", (message_text,))
-            for i in cursor.fetchall():
-                a += 1
-            if a == 0:
+            if message_text not in dop.get_goods(shop_id):
                 bot.send_message(chat_id, '¡La posición seleccionada no se encontró! Selecciónela haciendo clic en el botón correspondiente.')
             else:
                 # Mostrar descripción adicional actual
-                cursor.execute("SELECT additional_description FROM goods WHERE name = ?", (message_text,))
-                current_desc = cursor.fetchone()
-                current_additional = current_desc[0] if current_desc and current_desc[0] else "Sin descripción adicional"
+                current_additional = dop.get_additional_description(message_text, shop_id)
+                if not current_additional:
+                    current_additional = "Sin descripción adicional"
 
                 with open('data/Temp/' + str(chat_id) + 'edit_additional_desc.txt', 'w', encoding='utf-8') as f:
                     f.write(message_text)
@@ -1449,7 +1424,7 @@ def text_analytics(message_text, chat_id):
                     new_additional_desc = message_text
                     success_message = "La descripción adicional ha sido actualizada."
 
-                if dop.set_additional_description(product_name, new_additional_desc):
+                if dop.set_additional_description(product_name, new_additional_desc, shop_id):
                     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                     user_markup.row('Añadir nueva posición en el escaparate', 'Eliminar posición')
                     user_markup.row('Cambiar descripción de posición', 'Cambiar precio')
@@ -1836,8 +1811,6 @@ def ad_inline(callback_data, chat_id, message_id):
             bot.delete_message(chat_id, message_id)
             return
 
-        con = db.get_db_connection()
-        cursor = con.cursor()
         media_temp = 'data/Temp/' + str(chat_id) + 'new_media.txt'
         media_id = None
         media_type = None
@@ -1859,28 +1832,22 @@ def ad_inline(callback_data, chat_id, message_id):
         except Exception:
             pass
 
-        cursor.execute(
-            """
-            INSERT INTO goods (name, description, format, minimum, price, stored, additional_description, media_file_id, media_type, media_caption, duration_days, manual_delivery, category_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                name,
-                description,
-                format_type,
-                minimum,
-                price,
-                'data/goods/' + name + '.txt',
-                '',
-                media_id,
-                media_type,
-                media_caption,
-                duration_days,
-                int(manual_flag),
-                category_id,
-            ),
+        dop.create_product(
+            name,
+            description,
+            format_type,
+            minimum,
+            price,
+            'data/goods/' + name + '.txt',
+            additional_description='',
+            media_file_id=media_id,
+            media_type=media_type,
+            media_caption=media_caption,
+            duration_days=duration_days,
+            manual_delivery=int(manual_flag),
+            category_id=category_id,
+            shop_id=shop_id,
         )
-        con.commit()
         goods_file = f"data/goods/{name}.txt"
         open(goods_file, "a", encoding="utf-8").close()
         # Mostrar información del producto con la multimedia que se haya adjuntado
