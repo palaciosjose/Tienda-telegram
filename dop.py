@@ -22,10 +22,34 @@ def ensure_database_schema():
             CREATE TABLE IF NOT EXISTS shops (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 admin_id INTEGER,
-                name TEXT UNIQUE NOT NULL
+                name TEXT UNIQUE NOT NULL,
+                description TEXT,
+                media_file_id TEXT,
+                media_type TEXT,
+                button1_text TEXT,
+                button1_url TEXT,
+                button2_text TEXT,
+                button2_url TEXT
             )
             """
         )
+
+        cursor.execute("PRAGMA table_info(shops)")
+        shop_cols = [c[1] for c in cursor.fetchall()]
+        if 'description' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN description TEXT")
+        if 'media_file_id' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN media_file_id TEXT")
+        if 'media_type' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN media_type TEXT")
+        if 'button1_text' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN button1_text TEXT")
+        if 'button1_url' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN button1_url TEXT")
+        if 'button2_text' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN button2_text TEXT")
+        if 'button2_url' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN button2_url TEXT")
 
         cursor.execute("PRAGMA table_info(categories)")
         cat_cols = [c[1] for c in cursor.fetchall()]
@@ -773,6 +797,74 @@ def update_shop_name(shop_id, new_name):
     except Exception as e:
         print(f"Error actualizando nombre de tienda: {e}")
         return False
+
+def update_shop_info(shop_id, description=None, media_file_id=None, media_type=None,
+                     button1_text=None, button1_url=None, button2_text=None, button2_url=None):
+    """Actualizar campos de información de una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        updates = []
+        params = []
+        if description is not None:
+            updates.append("description = ?")
+            params.append(description)
+        if media_file_id is not None:
+            updates.append("media_file_id = ?")
+            params.append(media_file_id)
+        if media_type is not None:
+            updates.append("media_type = ?")
+            params.append(media_type)
+        if button1_text is not None:
+            updates.append("button1_text = ?")
+            params.append(button1_text)
+        if button1_url is not None:
+            updates.append("button1_url = ?")
+            params.append(button1_url)
+        if button2_text is not None:
+            updates.append("button2_text = ?")
+            params.append(button2_text)
+        if button2_url is not None:
+            updates.append("button2_url = ?")
+            params.append(button2_url)
+        if not updates:
+            return False
+        params.append(shop_id)
+        cur.execute(f"UPDATE shops SET {', '.join(updates)} WHERE id = ?", params)
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        print(f"Error actualizando información de tienda: {e}")
+        return False
+
+def get_shop_info(shop_id):
+    """Obtener descripción, multimedia y botones de una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT description, media_file_id, media_type,
+                   button1_text, button1_url, button2_text, button2_url
+            FROM shops WHERE id = ?
+            """,
+            (shop_id,),
+        )
+        row = cur.fetchone()
+        if row:
+            return {
+                'description': row[0],
+                'media_file_id': row[1],
+                'media_type': row[2],
+                'button1_text': row[3],
+                'button1_url': row[4],
+                'button2_text': row[5],
+                'button2_url': row[6],
+            }
+        return None
+    except Exception as e:
+        print(f"Error obteniendo información de tienda: {e}")
+        return None
 
 # ------------------------------------------------------------------
 # Funciones para la tienda seleccionada por cada usuario
