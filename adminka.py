@@ -611,10 +611,29 @@ def in_adminka(chat_id, message_text, username, name_user):
             else:
                 try:
                     camp_id = int(params.split()[0])
-                    ok, msg = advertising.send_campaign_now(camp_id)
-                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
                 except ValueError:
                     bot.send_message(chat_id, '❌ ID de campaña inválido')
+                    return
+
+                groups = advertising.get_target_groups()
+                if not groups:
+                    bot.send_message(chat_id, 'No hay grupos activos registrados.')
+                    return
+
+                markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for g in groups:
+                    title = g['group_name'] or g['group_id']
+                    markup.row(f"{title} ({g['group_id']})")
+                markup.row('Cancelar')
+
+                os.makedirs('data/Temp', exist_ok=True)
+                tmp = f'data/Temp/{chat_id}_manual_send.json'
+                with open(tmp, 'w', encoding='utf-8') as f:
+                    json.dump({'camp_id': camp_id, 'groups': groups}, f)
+
+                bot.send_message(chat_id, 'Seleccione el grupo destino:', reply_markup=markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 176
 
 
         elif 'Vista previa' == message_text:
@@ -1766,6 +1785,39 @@ def text_analytics(message_text, chat_id):
             bot.send_message(chat_id, '✅ Configuración de Telegram actualizada')
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
+
+        elif sost_num == 176:  # Envío manual a grupo
+            tmp = f'data/Temp/{chat_id}_manual_send.json'
+            if message_text == 'Cancelar':
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+                in_adminka(chat_id, '📢 Marketing', None, None)
+            else:
+                try:
+                    with open(tmp, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except FileNotFoundError:
+                    session_expired(chat_id)
+                    return
+                camp_id = data['camp_id']
+                groups = data['groups']
+                key = f"{message_text}"
+                selected = next(
+                    (g for g in groups if f"{g['group_name'] or g['group_id']} ({g['group_id']})" == key),
+                    None
+                )
+                if not selected:
+                    bot.send_message(chat_id, 'Selección inválida. Intente nuevamente.')
+                    return
+                ok, msg = advertising.send_campaign_to_group(camp_id, selected['group_id'])
+                bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+                in_adminka(chat_id, '📢 Marketing', None, None)
 
 
 def ad_inline(callback_data, chat_id, message_id):
