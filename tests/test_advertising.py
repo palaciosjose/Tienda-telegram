@@ -223,3 +223,34 @@ def test_send_campaign_now_failure(tmp_path, monkeypatch):
 
     assert rows == [("failed", "err")]
 
+
+def test_send_campaign_to_group_fails(tmp_path, monkeypatch):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "Camp", "message_text": "Hi", "created_by": 1})
+
+    class DummyTG:
+        def __init__(self, *a, **k):
+            pass
+
+        def send_message(self, *a, **k):
+            return False, "err"
+
+    import advertising_system.ad_manager as mod
+    monkeypatch.setattr(mod, "TelegramMultiBot", DummyTG)
+    monkeypatch.setenv("TELEGRAM_TOKEN", "x")
+
+    ok, msg = manager.send_campaign_to_group(camp_id, "999")
+    assert not ok
+    assert msg == "err"
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT status, error_message FROM send_logs")
+    rows = cur.fetchall()
+    conn.close()
+
+    assert rows == [("failed", "err")]
+
