@@ -11,6 +11,9 @@ from advertising_system.admin_integration import (
     get_admin_telegram_groups,
 )
 from bot_instance import bot
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 
 def session_expired(chat_id):
@@ -1825,7 +1828,7 @@ def text_analytics(message_text, chat_id):
             except FileNotFoundError:
                 session_expired(chat_id)
             except Exception as e:
-                print(f"Error en estado 29: {e}")
+                logging.error(f"Error en estado 29: {e}")
                 bot.send_message(chat_id, '❌ Error procesando la descripción adicional. Inténtelo de nuevo.')
 
         elif sost_num == 30:  # Seleccionar producto para agregar multimedia
