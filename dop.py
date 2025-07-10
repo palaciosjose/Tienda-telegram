@@ -57,6 +57,10 @@ def ensure_database_schema():
         if 'button2_url' not in shop_cols:
             cursor.execute("ALTER TABLE shops ADD COLUMN button2_url TEXT")
 
+        cursor.execute(
+            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, shop_id INTEGER)"
+        )
+
         cursor.execute("PRAGMA table_info(categories)")
         cat_cols = [c[1] for c in cursor.fetchall()]
         if "shop_id" not in cat_cols:
@@ -66,7 +70,27 @@ def ensure_database_schema():
                 pass
 
         cursor.execute(
-            "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, shop_id INTEGER)"
+            """
+            CREATE TABLE IF NOT EXISTS goods (
+                name TEXT,
+                description TEXT,
+                format TEXT,
+                minimum INTEGER,
+                price INTEGER,
+                stored TEXT,
+                additional_description TEXT DEFAULT '',
+                media_file_id TEXT,
+                media_type TEXT,
+                media_caption TEXT,
+                duration_days INTEGER DEFAULT NULL,
+                manual_delivery INTEGER DEFAULT 0,
+                manual_stock INTEGER DEFAULT 0,
+                category_id INTEGER,
+                shop_id INTEGER DEFAULT 1,
+                PRIMARY KEY (name, shop_id),
+                FOREIGN KEY (category_id) REFERENCES categories(id)
+            )
+            """
         )
 
         cursor.execute("PRAGMA table_info(goods)")
@@ -101,6 +125,29 @@ def ensure_database_schema():
             cursor.execute("ALTER TABLE goods ADD COLUMN shop_id INTEGER DEFAULT 1")
             updated = True
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS campaigns (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT UNIQUE NOT NULL,
+                message_text TEXT NOT NULL,
+                media_file_id TEXT,
+                media_type TEXT,
+                media_caption TEXT,
+                button1_text TEXT,
+                button1_url TEXT,
+                button2_text TEXT,
+                button2_url TEXT,
+                status TEXT DEFAULT 'active',
+                created_date TEXT,
+                created_by INTEGER,
+                shop_id INTEGER DEFAULT 1,
+                daily_limit INTEGER DEFAULT 3,
+                priority INTEGER DEFAULT 1
+            )
+            """
+        )
+
         cursor.execute("PRAGMA table_info(campaigns)")
         camp_cols = [c[1] for c in cursor.fetchall()]
         if 'shop_id' not in camp_cols:
@@ -110,6 +157,19 @@ def ensure_database_schema():
             except sqlite3.OperationalError:
                 pass
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS purchases (
+                id INTEGER,
+                username TEXT,
+                name_good TEXT,
+                amount INTEGER,
+                price INTEGER,
+                shop_id INTEGER DEFAULT 1
+            )
+            """
+        )
+
         cursor.execute("PRAGMA table_info(purchases)")
         purch_cols = [c[1] for c in cursor.fetchall()]
         if 'shop_id' not in purch_cols:
@@ -118,6 +178,17 @@ def ensure_database_schema():
                 updated = True
             except sqlite3.OperationalError:
                 pass
+
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS buyers (
+                id INTEGER PRIMARY KEY,
+                username TEXT,
+                payed INTEGER,
+                shop_id INTEGER DEFAULT 1
+            )
+            """
+        )
 
         cursor.execute("PRAGMA table_info(buyers)")
         buyer_cols = [c[1] for c in cursor.fetchall()]
