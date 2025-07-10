@@ -2541,7 +2541,7 @@ def handle_multimedia(message):
                     group = lines[0]
                     amount = int(lines[1])
                     text = lines[2]
-                except Exception:
+                except (FileNotFoundError, ValueError, IndexError):
                     session_expired(chat_id)
                     return
 
@@ -2653,5 +2653,5 @@ def handle_multimedia(message):
                 bot.send_message(chat_id, '❌ Error guardando multimedia')
         else:
             bot.send_message(chat_id, '❌ Tipo de archivo no soportado. Envía: foto, video, documento, audio o GIF')
-    except:
-        pass
+    except Exception:
+        logging.error('Unhandled exception in handle_multimedia', exc_info=True)
