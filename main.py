@@ -169,9 +169,18 @@ def message_send(message):
             dop.user_loger(chat_id=message.chat.id)
 			
     elif '/adm' == message.text:
-        if message.chat.id not in in_admin:
-            in_admin.append(message.chat.id)
-        adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
+        admin_list = dop.get_adminlist()
+        # Limpiar IDs que ya no son administradores
+        for uid in list(in_admin):
+            if uid not in admin_list:
+                in_admin.remove(uid)
+
+        if message.chat.id in admin_list:
+            if message.chat.id not in in_admin:
+                in_admin.append(message.chat.id)
+            adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
+        else:
+            bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
     elif isinstance(message.text, str):
         cmd = message.text.split()[0].lower()
