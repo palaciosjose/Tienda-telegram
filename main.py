@@ -14,7 +14,8 @@ import sys
 import time
 import logging
 
-logging.basicConfig(level=logging.INFO)
+LOGLEVEL = os.getenv("LOGLEVEL", "INFO").upper()
+logging.basicConfig(level=getattr(logging, LOGLEVEL, logging.INFO))
 
 # Files older than this many seconds will be removed from the Temp folder
 TEMP_FILE_MAX_AGE = 24 * 60 * 60  # 24 hours
@@ -170,15 +171,31 @@ def message_send(message):
 			
     elif '/adm' == message.text:
         admin_list = dop.get_adminlist()
+        logging.debug("Current admin_list: %s", admin_list)
+
         # Limpiar IDs que ya no son administradores
         for uid in list(in_admin):
             if uid not in admin_list:
                 in_admin.remove(uid)
+                logging.debug("Removed %s from in_admin", uid)
 
-        if message.chat.id in admin_list:
+        authorized = message.chat.id in admin_list
+        logging.debug(
+            "User %s requested admin mode. Authorized=%s",
+            message.chat.id,
+            authorized,
+        )
+
+        if authorized:
             if message.chat.id not in in_admin:
                 in_admin.append(message.chat.id)
-            adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
+                logging.debug("Added %s to in_admin", message.chat.id)
+            adminka.in_adminka(
+                message.chat.id,
+                message.text,
+                message.chat.username,
+                message.from_user.first_name,
+            )
         else:
             bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
