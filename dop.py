@@ -6,6 +6,9 @@ import logging
 
 logging.basicConfig(level=logging.INFO)
 
+# Flag to avoid repeated logging when initializing discounts
+_discount_initialized = False
+
 # ---------------------------------------------------------------------------
 # Utilidad para asegurar que la base de datos tenga las columnas necesarias
 # para la descripción adicional y la gestión de multimedia. Algunas
@@ -1570,6 +1573,7 @@ def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_p
 
 def setup_discount_system():
     """Configura el sistema de descuentos por primera vez"""
+    global _discount_initialized
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
@@ -1595,7 +1599,9 @@ def setup_discount_system():
             )
         
         con.commit()
-        logging.info("✅ Sistema de descuentos configurado")
+        if not _discount_initialized:
+            logging.info("✅ Sistema de descuentos configurado")
+            _discount_initialized = True
         return True
         
     except Exception as e:
