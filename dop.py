@@ -258,6 +258,8 @@ def check_message(message):
 
 def get_adminlist():
     admins_list = [config.admin_id]  # Siempre incluir el admin principal
+    cleaned = []
+    dirty = False
     try:
         with open(files.admins_list, encoding='utf-8') as f:
             for admin_id in f.readlines():
@@ -265,9 +267,13 @@ def get_adminlist():
                     admin_id = int(admin_id.strip())
                     if admin_id not in admins_list:
                         admins_list.append(admin_id)
+                    cleaned.append(f"{admin_id}\n")
                 except Exception as e:
                     print(f"Error leyendo id de admin: {e}")
-                    continue
+                    dirty = True
+        if dirty:
+            with open(files.admins_list, 'w', encoding='utf-8') as f:
+                f.writelines(cleaned)
     except Exception as e:
         print(f"Error obteniendo lista de admins: {e}")
         pass
