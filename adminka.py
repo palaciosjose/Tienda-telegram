@@ -575,6 +575,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             )
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('➕ Agregar grupo', '➖ Eliminar grupo')
+            user_markup.row('Introducir ID manual')
             user_markup.row('📋 Listar grupos')
             user_markup.row('📢 Marketing')
             bot.send_message(chat_id, msg, reply_markup=user_markup, parse_mode='Markdown')
@@ -600,6 +601,15 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Envía el ID del grupo a eliminar:')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 172
+
+        elif message_text == 'Introducir ID manual':
+            bot.send_message(
+                chat_id,
+                'Envía el ID del grupo y opcionalmente el nombre.\n'
+                'Formato: <ID> [Nombre]'
+            )
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 171
 
         elif message_text == '📋 Listar grupos':
             conn = db.get_db_connection()
@@ -2033,6 +2043,21 @@ def text_analytics(message_text, chat_id):
                     del bd[str(chat_id)]
                 if os.path.exists(tmp):
                     os.remove(tmp)
+
+        elif sost_num == 171:  # Agregar grupo introduciendo ID manual
+            text = message_text.strip()
+            parts = text.split(maxsplit=1)
+            if not parts or not parts[0].lstrip('-').isdigit():
+                bot.send_message(chat_id, '❌ ID de grupo inválido')
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+            else:
+                gid = parts[0]
+                name = parts[1] if len(parts) > 1 else None
+                ok, msg = add_target_group_from_admin('telegram', gid, name)
+                bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
 
         elif sost_num == 172:  # Eliminar grupo
             gid = message_text.strip()
