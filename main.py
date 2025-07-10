@@ -57,8 +57,8 @@ def send_main_menu(chat_id, username, name):
     """Enviar el mensaje de inicio con el teclado principal"""
     key = telebot.types.InlineKeyboardMarkup()
     key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
-    key.add(telebot.types.InlineKeyboardButton(
-        text='📜 Mis compras', callback_data='Ver mis compras'))
+    key.add(telebot.types.InlineKeyboardButton(text='📜 Mis compras', callback_data='Ver mis compras'))
+    key.add(telebot.types.InlineKeyboardButton(text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
     if dop.check_message('start'):
         with shelve.open(files.bot_message_bd) as bd:
             start_message = bd['start']
@@ -422,27 +422,24 @@ def inline(callback):
             dop.safe_edit_message(bot, callback.message,
                                   history, reply_markup=key, parse_mode='Markdown')
 
+        elif callback.data == 'Ver tiendas':
+            dop.clear_recent_messages(bot, callback.message.chat.id, callback.message.message_id)
+            show_shop_selection(callback.message.chat.id)
+            bot.answer_callback_query(callback.id)
 
+        
         elif callback.data == 'Volver al inicio':
             if callback.message.chat.username:
+                dop.clear_recent_messages(bot, callback.message.chat.id, callback.message.message_id)
                 if dop.get_sost(callback.message.chat.id) is True:
                     with shelve.open(files.sost_bd) as bd:
                         if str(callback.message.chat.id) in bd:
                             del bd[str(callback.message.chat.id)]
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
-                key.add(telebot.types.InlineKeyboardButton(
-                    text='📜 Mis compras', callback_data='Ver mis compras'))
-                if dop.check_message('start'):
-                    with shelve.open(files.bot_message_bd) as bd:
-                        start_message = bd['start']
-                    start_message = start_message.replace('username', callback.message.chat.username)
-                    start_message = start_message.replace('name', callback.message.from_user.first_name)
-                    if callback.message.content_type != 'text':
-                        bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                        bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
-                    else:
-                        dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
+                send_main_menu(
+                    callback.message.chat.id,
+                    callback.message.chat.username,
+                    callback.message.from_user.first_name,
+                )
 
         elif callback.data == 'Comprar':
             try:

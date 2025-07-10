@@ -185,6 +185,18 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
                 return False
 
 
+def clear_recent_messages(bot, chat_id, last_message_id, limit=15):
+    """Borrar los últimos mensajes en un chat."""
+    try:
+        for mid in range(last_message_id, max(last_message_id - limit, 0), -1):
+            try:
+                bot.delete_message(chat_id, mid)
+            except Exception:
+                continue
+    except Exception as e:
+        print(f"Error limpiando mensajes: {e}")
+
+
 def it_first(chat_id):
     try:
         with open(files.working_log, encoding='utf-8') as f:
@@ -227,7 +239,8 @@ def log(text):
     try:
         with open(files.working_log, 'a', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
-    except Exception:
+    except Exception as e:
+        print(f"Error writing log file: {e}")
         with open(files.working_log, 'w', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
 
@@ -244,19 +257,32 @@ def check_message(message):
 
 def get_adminlist():
     admins_list = [config.admin_id]  # Siempre incluir el admin principal
+    invalid_ids = []
     try:
         with open(files.admins_list, encoding='utf-8') as f:
-            for admin_id in f.readlines():
-                try:
-                    admin_id = int(admin_id.strip())
-                    if admin_id not in admins_list:
-                        admins_list.append(admin_id)
-                except Exception as e:
-                    print(f"Error leyendo id de admin: {e}")
-                    continue
+            lines = f.readlines()
+        valid_lines = []
+        for raw in lines:
+            raw = raw.strip()
+            if raw.lstrip('-').isdigit():
+                admin_id = int(raw)
+                if admin_id not in admins_list:
+                    admins_list.append(admin_id)
+                valid_lines.append(raw + "\n")
+            elif raw:
+                invalid_ids.append(raw)
+        if invalid_ids:
+            try:
+                with open(files.admins_list, 'w', encoding='utf-8') as f:
+                    f.writelines(valid_lines)
+                print(
+                    "IDs de admin inválidos eliminados: "
+                    + ", ".join(invalid_ids)
+                )
+            except Exception as e:
+                print(f"Error limpiando lista de admins: {e}")
     except Exception as e:
         print(f"Error obteniendo lista de admins: {e}")
-        pass
     return admins_list
 
 def user_loger(chat_id=0):
@@ -274,8 +300,8 @@ def user_loger(chat_id=0):
             # Registrar o actualizar la tienda del usuario
             current = get_user_shop(chat_id)
             set_user_shop(chat_id, current)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error updating user shop: {e}")
 
     try:
         with open(files.users_list, encoding='utf-8') as f:
@@ -703,12 +729,13 @@ def broadcast_message(group, amount, text, media=None, shop_id=1):
                     else:
                         bot.send_message(chat_id, text)
                     good_send += 1
-                except Exception:
+                except Exception as e:
                     lose_send += 1
+                    print(f"Error sending message to {chat_id}: {e}")
                     new_blockuser(chat_id)
                 i += 1
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error sending broadcast to all users: {e}")
 
     elif group == 'buyers':
         try:
@@ -927,8 +954,8 @@ def set_user_shop(user_id, shop_id):
             (int(user_id), int(shop_id)),
         )
         con.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error setting user shop: {e}")
 
 
 def get_user_shop(user_id):
@@ -942,7 +969,8 @@ def get_user_shop(user_id):
         )
         row = cur.fetchone()
         return int(row[0]) if row else 1
-    except Exception:
+    except Exception as e:
+        print(f"Error getting user shop: {e}")
         return 1
 
 def get_description(name_good, shop_id=1):
@@ -1017,7 +1045,8 @@ def get_paypaldata(shop_id=1):
         if result:
             return result[0], result[1], bool(result[2])
         return None
-    except Exception:
+    except Exception as e:
+        print(f"Error getting PayPal data: {e}")
         return None
 
 def get_binancedata(shop_id=1):
@@ -1033,7 +1062,8 @@ def get_binancedata(shop_id=1):
         if result:
             return result[0], result[1], result[2]
         return None
-    except Exception:
+    except Exception as e:
+        print(f"Error getting Binance data: {e}")
         return None
 
 def save_paypaldata(client_id, client_secret, sandbox=1, shop_id=1):
@@ -1424,6 +1454,8 @@ def get_discount_config(shop_id=1):
             }
     except Exception as e:
         print(f"Error obteniendo configuración de descuentos: {e}")
+        if "no such table" in str(e):
+            setup_discount_system()
         return {
             'enabled': True,
             'text': '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
@@ -1493,6 +1525,11 @@ def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_p
         
     except Exception as e:
         print(f"Error actualizando configuración de descuentos: {e}")
+        if "no such table" in str(e):
+            if setup_discount_system():
+                return update_discount_config(
+                    enabled, text, multiplier, show_fake_price, shop_id
+                )
         return False
 
 def setup_discount_system():
@@ -1670,7 +1707,8 @@ def get_manual_delivery_message(username, name):
     try:
         with shelve.open(files.bot_message_bd) as bd:
             text = bd.get('manual_delivery', 'Gracias por su compra, username')
-    except Exception:
+    except Exception as e:
+        print(f"Error retrieving manual delivery message: {e}")
         text = 'Gracias por su compra, username'
     text = text.replace('username', username).replace('name', name)
     return text
