@@ -2,6 +2,9 @@ import telebot, shelve, datetime, sqlite3, random, os
 import files, config
 import db
 from bot_instance import bot
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # ---------------------------------------------------------------------------
 # Utilidad para asegurar que la base de datos tenga las columnas necesarias
@@ -156,7 +159,7 @@ def ensure_database_schema():
             con.commit()
         con.commit()
     except Exception as e:
-        print(f"Error asegurando esquema de base de datos: {e}")
+        logging.error(f"Error asegurando esquema de base de datos: {e}")
 ensure_database_schema()
 
 # -------------------------------------------------
@@ -174,7 +177,7 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
         )
         return True
     except Exception as e:
-        print(f"Error editando mensaje de texto: {e}")
+        logging.error(f"Error editando mensaje de texto: {e}")
         try:
             bot.edit_message_caption(
                 chat_id=message.chat.id,
@@ -185,7 +188,7 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
             )
             return True
         except Exception as e:
-            print(f"Error editando caption del mensaje: {e}")
+            logging.error(f"Error editando caption del mensaje: {e}")
             try:
                 bot.delete_message(message.chat.id, message.message_id)
                 bot.send_message(
@@ -196,7 +199,7 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
                 )
                 return True
             except Exception as e:
-                print(f"Error enviando nuevo mensaje: {e}")
+                logging.error(f"Error enviando nuevo mensaje: {e}")
                 return False
 
 
@@ -205,7 +208,7 @@ def it_first(chat_id):
         with open(files.working_log, encoding='utf-8') as f:
             return False
     except Exception as e:
-        print(f"Error verificando primer arranque: {e}")
+        logging.error(f"Error verificando primer arranque: {e}")
         return True
 
 def main(chat_id):
@@ -232,7 +235,7 @@ Para salir, presiona /start
             bd['paypal'] = '❌'
             bd['binance'] = '❌'
     except Exception as e:
-        print(f"Error inicializando base de pagos: {e}")
+        logging.error(f"Error inicializando base de pagos: {e}")
 
     log('Primer arranque del bot')
     new_admin(chat_id)
@@ -243,7 +246,7 @@ def log(text):
         with open(files.working_log, 'a', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
     except Exception as e:
-        print(f"Error writing log file: {e}")
+        logging.error(f"Error writing log file: {e}")
         with open(files.working_log, 'w', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
 
@@ -255,7 +258,7 @@ def check_message(message):
             else:
                 return False
     except Exception as e:
-        print(f"Error comprobando mensaje: {e}")
+        logging.error(f"Error comprobando mensaje: {e}")
         return False
 
 def get_adminlist():
@@ -271,13 +274,13 @@ def get_adminlist():
                         admins_list.append(admin_id)
                     cleaned.append(f"{admin_id}\n")
                 except Exception as e:
-                    print(f"Error leyendo id de admin: {e}")
+                    logging.error(f"Error leyendo id de admin: {e}")
                     dirty = True
         if dirty:
             with open(files.admins_list, 'w', encoding='utf-8') as f:
                 f.writelines(cleaned)
     except Exception as e:
-        print(f"Error obteniendo lista de admins: {e}")
+        logging.error(f"Error obteniendo lista de admins: {e}")
         pass
     return admins_list
 
@@ -289,7 +292,7 @@ def user_loger(chat_id=0):
                     with open(files.users_list, 'a', encoding='utf-8') as f:
                         f.write(str(chat_id) + '\n')
         except Exception as e:
-            print(f"Error registrando usuario: {e}")
+            logging.error(f"Error registrando usuario: {e}")
             with open(files.users_list, 'w', encoding='utf-8') as f:
                 f.write(str(chat_id) + '\n')
         try:
@@ -297,13 +300,13 @@ def user_loger(chat_id=0):
             current = get_user_shop(chat_id)
             set_user_shop(chat_id, current)
         except Exception as e:
-            print(f"Error updating user shop: {e}")
+            logging.error(f"Error updating user shop: {e}")
 
     try:
         with open(files.users_list, encoding='utf-8') as f:
             return len(f.readlines())
     except Exception as e:
-        print(f"Error contando usuarios: {e}")
+        logging.error(f"Error contando usuarios: {e}")
         return 0
 
 def get_productcatalog(shop_id=1):
@@ -332,7 +335,7 @@ def get_productcatalog(shop_id=1):
         return catalog_text
         
     except Exception as e:
-        print(f"Error obteniendo catálogo: {e}")
+        logging.error(f"Error obteniendo catálogo: {e}")
         return None
 
 def get_goods(shop_id=1):
@@ -345,7 +348,7 @@ def get_goods(shop_id=1):
             goods.append(row[0])
         return goods
     except Exception as e:
-        print(f"Error obteniendo productos: {e}")
+        logging.error(f"Error obteniendo productos: {e}")
         return []
 
 def list_products_by_category(cat_id=None, shop_id=1):
@@ -365,7 +368,7 @@ def list_products_by_category(cat_id=None, shop_id=1):
             )
         return [row[0] for row in cursor.fetchall()]
     except Exception as e:
-        print(f"Error listando productos por categoría: {e}")
+        logging.error(f"Error listando productos por categoría: {e}")
         return []
 
 def list_categories(shop_id=1):
@@ -379,7 +382,7 @@ def list_categories(shop_id=1):
         )
         return cursor.fetchall()
     except Exception as e:
-        print(f"Error listando categorías: {e}")
+        logging.error(f"Error listando categorías: {e}")
         return []
 
 def create_category(name, shop_id=1):
@@ -401,7 +404,7 @@ def create_category(name, shop_id=1):
         row = cursor.fetchone()
         return row[0] if row else None
     except Exception as e:
-        print(f"Error creando categoría: {e}")
+        logging.error(f"Error creando categoría: {e}")
         return None
 
 def get_category_id(name, shop_id=1):
@@ -415,7 +418,7 @@ def get_category_id(name, shop_id=1):
         row = cursor.fetchone()
         return row[0] if row else None
     except Exception as e:
-        print(f"Error obteniendo id de categoría: {e}")
+        logging.error(f"Error obteniendo id de categoría: {e}")
         return None
 
 def get_category_name(cat_id, shop_id=1):
@@ -429,7 +432,7 @@ def get_category_name(cat_id, shop_id=1):
         row = cursor.fetchone()
         return row[0] if row else None
     except Exception as e:
-        print(f"Error obteniendo nombre de categoría: {e}")
+        logging.error(f"Error obteniendo nombre de categoría: {e}")
         return None
 
 def update_category_name(cat_id, new_name, shop_id=1):
@@ -444,7 +447,7 @@ def update_category_name(cat_id, new_name, shop_id=1):
         con.commit()
         return cursor.rowcount > 0
     except Exception as e:
-        print(f"Error actualizando nombre de categoría: {e}")
+        logging.error(f"Error actualizando nombre de categoría: {e}")
         return False
 
 def assign_product_category(product, category_id, shop_id=1):
@@ -459,7 +462,7 @@ def assign_product_category(product, category_id, shop_id=1):
         con.commit()
         return True
     except Exception as e:
-        print(f"Error asignando categoría: {e}")
+        logging.error(f"Error asignando categoría: {e}")
         return False
 
 def get_stored(name_good, shop_id=1):
@@ -475,7 +478,7 @@ def get_stored(name_good, shop_id=1):
             return result[0]
         return None
     except Exception as e:
-        print(f"Error obteniendo ruta de almacen: {e}")
+        logging.error(f"Error obteniendo ruta de almacen: {e}")
         return None
 
 def amount_of_goods(name_good, shop_id=1):
@@ -489,7 +492,7 @@ def amount_of_goods(name_good, shop_id=1):
             lines = f.readlines()
             return len([line for line in lines if line.strip()])
     except Exception as e:
-        print(f"Error contando items en almacen: {e}")
+        logging.error(f"Error contando items en almacen: {e}")
         return 0
 
 def get_stock_overview(shop_id=1):
@@ -507,7 +510,7 @@ def get_stock_overview(shop_id=1):
 
         return overview
     except Exception as e:
-        print(f"Error generando resumen de stock: {e}")
+        logging.error(f"Error generando resumen de stock: {e}")
         return []
 
 def get_minimum(name_good, shop_id=1):
@@ -523,7 +526,7 @@ def get_minimum(name_good, shop_id=1):
             return result[0]
         return 1
     except Exception as e:
-        print(f"Error obteniendo mínimo: {e}")
+        logging.error(f"Error obteniendo mínimo: {e}")
         return 1
 
 def order_sum(name_good, amount, shop_id=1):
@@ -543,7 +546,7 @@ def order_sum(name_good, amount, shop_id=1):
             return price * amount
         return 0
     except Exception as e:
-        print(f"Error calculando total del pedido: {e}")
+        logging.error(f"Error calculando total del pedido: {e}")
         return 0
 
 def read_my_line(filename, linenumber):
@@ -554,7 +557,7 @@ def read_my_line(filename, linenumber):
                     return line
         return ""
     except Exception as e:
-        print(f"Error leyendo línea {linenumber} de {filename}: {e}")
+        logging.error(f"Error leyendo línea {linenumber} de {filename}: {e}")
         return ""
 
 def normal_read_line(filename, linenumber):
@@ -566,7 +569,7 @@ def get_sost(chat_id):
         with shelve.open(files.sost_bd) as bd:
             return str(chat_id) in bd
     except Exception as e:
-        print(f"Error verificando sost para {chat_id}: {e}")
+        logging.error(f"Error verificando sost para {chat_id}: {e}")
         return False
 
 def check_vklpayments(name):
@@ -574,7 +577,7 @@ def check_vklpayments(name):
         with shelve.open(files.payments_bd) as bd: 
             return bd.get(name, '❌')
     except Exception as e:
-        print(f"Error verificando pago habilitado {name}: {e}")
+        logging.error(f"Error verificando pago habilitado {name}: {e}")
         return '❌'
 
 def get_goodformat(name_good, shop_id=1):
@@ -590,7 +593,7 @@ def get_goodformat(name_good, shop_id=1):
             return result[0]
         return 'text'
     except Exception as e:
-        print(f"Error obteniendo formato: {e}")
+        logging.error(f"Error obteniendo formato: {e}")
         return 'text'
 
 def get_profit(shop_id=1):
@@ -603,7 +606,7 @@ def get_profit(shop_id=1):
             price_amount += int(row[0])
         return price_amount
     except Exception as e:
-        print(f"Error calculando ganancias: {e}")
+        logging.error(f"Error calculando ganancias: {e}")
         return 0
 
 def get_amountsbayers(shop_id=1):
@@ -614,7 +617,7 @@ def get_amountsbayers(shop_id=1):
         result = cursor.fetchone()
         return result[0] if result else 0
     except Exception as e:
-        print(f"Error contando compradores: {e}")
+        logging.error(f"Error contando compradores: {e}")
         return 0
 
 def get_amountblock():
@@ -622,7 +625,7 @@ def get_amountblock():
         with open(files.blockusers_list, encoding='utf-8') as f: 
             return len(f.readlines())
     except Exception as e:
-        print(f"Error contando usuarios bloqueados: {e}")
+        logging.error(f"Error contando usuarios bloqueados: {e}")
         return 0
 
 def new_blockuser(his_id):
@@ -630,7 +633,7 @@ def new_blockuser(his_id):
         with open(files.blockusers_list, 'a', encoding='utf-8') as f: 
             f.write(str(his_id) + '\n')
     except Exception as e:
-        print(f"Error eliminando id de archivo {file}: {e}")
+        logging.error(f"Error eliminando id de archivo {file}: {e}")
         pass
 
 def rasl(group, amount, text, shop_id=1):
@@ -650,11 +653,11 @@ def rasl(group, amount, text, shop_id=1):
                     good_send += 1
                 except Exception as e:
                     lose_send += 1
-                    print(f"Error enviando mensaje a {chat_id}: {e}")
+                    logging.error(f"Error enviando mensaje a {chat_id}: {e}")
                     new_blockuser(chat_id)
                 i += 1
         except Exception as e:
-            print(f"Error enviando mensajes a todos: {e}")
+            logging.error(f"Error enviando mensajes a todos: {e}")
     
     elif group == 'buyers':
         try:
@@ -673,10 +676,10 @@ def rasl(group, amount, text, shop_id=1):
                     good_send += 1
                 except Exception as e:
                     lose_send += 1
-                    print(f"Error enviando mensaje a comprador {chat_id}: {e}")
+                    logging.error(f"Error enviando mensaje a comprador {chat_id}: {e}")
                     new_blockuser(chat_id)
         except Exception as e:
-            print(f"Error obteniendo compradores: {e}")
+            logging.error(f"Error obteniendo compradores: {e}")
 
     return f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
 
@@ -727,11 +730,11 @@ def broadcast_message(group, amount, text, media=None, shop_id=1):
                     good_send += 1
                 except Exception as e:
                     lose_send += 1
-                    print(f"Error sending message to {chat_id}: {e}")
+                    logging.error(f"Error sending message to {chat_id}: {e}")
                     new_blockuser(chat_id)
                 i += 1
         except Exception as e:
-            print(f"Error sending broadcast to all users: {e}")
+            logging.error(f"Error sending broadcast to all users: {e}")
 
     elif group == 'buyers':
         try:
@@ -753,10 +756,10 @@ def broadcast_message(group, amount, text, media=None, shop_id=1):
                     good_send += 1
                 except Exception as e:
                     lose_send += 1
-                    print(f"Error enviando mensaje a comprador {chat_id}: {e}")
+                    logging.error(f"Error enviando mensaje a comprador {chat_id}: {e}")
                     new_blockuser(chat_id)
         except Exception as e:
-            print(f"Error obteniendo compradores para broadcast: {e}")
+            logging.error(f"Error obteniendo compradores para broadcast: {e}")
 
     return f'¡{good_send} usuarios recibieron el mensaje exitosamente!\n{lose_send} usuarios bloquearon el bot y fueron agregados a la lista de usuarios bloqueados'
 
@@ -771,7 +774,7 @@ def del_id(file, chat_id):
         with open(file, 'w', encoding='utf-8') as f: 
             f.write(text)
     except Exception as e:
-        print(f"Error actualizando archivo {file}: {e}")
+        logging.error(f"Error actualizando archivo {file}: {e}")
         pass
 
 def new_admin(his_id):
@@ -789,7 +792,7 @@ def new_admin(his_id):
         )
         con.commit()
     except Exception as e:
-        print(f"Error agregando nuevo admin: {e}")
+        logging.error(f"Error agregando nuevo admin: {e}")
         with open(files.admins_list, 'w', encoding='utf-8') as f:
             f.write(str(his_id) + '\n')
 
@@ -809,7 +812,7 @@ def get_shop_id(admin_id):
         con.commit()
         return cur.lastrowid
     except Exception as e:
-        print(f"Error obteniendo shop_id: {e}")
+        logging.error(f"Error obteniendo shop_id: {e}")
         return None
 
 def list_shops():
@@ -820,7 +823,7 @@ def list_shops():
         cur.execute("SELECT id, admin_id, name FROM shops ORDER BY id")
         return cur.fetchall()
     except Exception as e:
-        print(f"Error listando tiendas: {e}")
+        logging.error(f"Error listando tiendas: {e}")
         return []
 
 def create_shop(name, admin_id=None):
@@ -835,7 +838,7 @@ def create_shop(name, admin_id=None):
         con.commit()
         return cur.lastrowid
     except Exception as e:
-        print(f"Error creando tienda: {e}")
+        logging.error(f"Error creando tienda: {e}")
         return None
 
 def assign_admin_to_shop(shop_id, admin_id):
@@ -850,7 +853,7 @@ def assign_admin_to_shop(shop_id, admin_id):
         con.commit()
         return cur.rowcount > 0
     except Exception as e:
-        print(f"Error asignando admin a tienda: {e}")
+        logging.error(f"Error asignando admin a tienda: {e}")
         return False
 
 def update_shop_name(shop_id, new_name):
@@ -865,7 +868,7 @@ def update_shop_name(shop_id, new_name):
         con.commit()
         return cur.rowcount > 0
     except Exception as e:
-        print(f"Error actualizando nombre de tienda: {e}")
+        logging.error(f"Error actualizando nombre de tienda: {e}")
         return False
 
 def update_shop_info(shop_id, description=None, media_file_id=None, media_type=None,
@@ -904,7 +907,7 @@ def update_shop_info(shop_id, description=None, media_file_id=None, media_type=N
         con.commit()
         return cur.rowcount > 0
     except Exception as e:
-        print(f"Error actualizando información de tienda: {e}")
+        logging.error(f"Error actualizando información de tienda: {e}")
         return False
 
 def get_shop_info(shop_id):
@@ -933,7 +936,7 @@ def get_shop_info(shop_id):
             }
         return None
     except Exception as e:
-        print(f"Error obteniendo información de tienda: {e}")
+        logging.error(f"Error obteniendo información de tienda: {e}")
         return None
 
 # ------------------------------------------------------------------
@@ -951,7 +954,7 @@ def set_user_shop(user_id, shop_id):
         )
         con.commit()
     except Exception as e:
-        print(f"Error setting user shop: {e}")
+        logging.error(f"Error setting user shop: {e}")
 
 
 def get_user_shop(user_id):
@@ -966,7 +969,7 @@ def get_user_shop(user_id):
         row = cur.fetchone()
         return int(row[0]) if row else 1
     except Exception as e:
-        print(f"Error getting user shop: {e}")
+        logging.error(f"Error getting user shop: {e}")
         return 1
 
 def get_description(name_good, shop_id=1):
@@ -1025,7 +1028,7 @@ def get_description(name_good, shop_id=1):
         return product_description
         
     except Exception as e:
-        print(f"Error obteniendo descripción: {e}")
+        logging.error(f"Error obteniendo descripción: {e}")
         return "Error obteniendo información del producto"
 
 def get_paypaldata(shop_id=1):
@@ -1042,7 +1045,7 @@ def get_paypaldata(shop_id=1):
             return result[0], result[1], bool(result[2])
         return None
     except Exception as e:
-        print(f"Error getting PayPal data: {e}")
+        logging.error(f"Error getting PayPal data: {e}")
         return None
 
 def get_binancedata(shop_id=1):
@@ -1059,7 +1062,7 @@ def get_binancedata(shop_id=1):
             return result[0], result[1], result[2]
         return None
     except Exception as e:
-        print(f"Error getting Binance data: {e}")
+        logging.error(f"Error getting Binance data: {e}")
         return None
 
 def save_paypaldata(client_id, client_secret, sandbox=1, shop_id=1):
@@ -1075,7 +1078,7 @@ def save_paypaldata(client_id, client_secret, sandbox=1, shop_id=1):
         con.commit()
         return True
     except Exception as e:
-        print(f"Error guardando PayPal data: {e}")
+        logging.error(f"Error guardando PayPal data: {e}")
         return False
 
 def save_binancedata(api_key, api_secret, merchant_id, shop_id=1):
@@ -1091,7 +1094,7 @@ def save_binancedata(api_key, api_secret, merchant_id, shop_id=1):
         con.commit()
         return True
     except Exception as e:
-        print(f"Error guardando Binance data: {e}")
+        logging.error(f"Error guardando Binance data: {e}")
         return False
 
 def check_paypal_valid(client_id, client_secret, sandbox=True):
@@ -1121,7 +1124,7 @@ def check_paypal_valid(client_id, client_secret, sandbox=True):
         })
         return True
     except Exception as e:
-        print(f"Error validando PayPal: {e}")
+        logging.error(f"Error validando PayPal: {e}")
         return False
 
 def check_binance_valid(api_key, api_secret):
@@ -1131,7 +1134,7 @@ def check_binance_valid(api_key, api_secret):
         client.get_account()
         return True
     except Exception as e:
-        print(f"Error validando Binance: {e}")
+        logging.error(f"Error validando Binance: {e}")
         return False
 
 def payments_checkvkl(shop_id=1):
@@ -1146,12 +1149,12 @@ def payments_checkvkl(shop_id=1):
             try:
                 bot.send_message(admin_id, '¡Faltan datos de PayPal en la base de datos! Se desactivó automáticamente para recibir pagos.')
             except Exception as e:
-                print(f"Error notificando admin {admin_id} por PayPal: {e}")
+                logging.error(f"Error notificando admin {admin_id} por PayPal: {e}")
         try:
             with shelve.open(files.payments_bd) as bd:
                 bd['paypal'] = '❌'
         except Exception as e:
-            print(f"Error desactivando PayPal: {e}")
+            logging.error(f"Error desactivando PayPal: {e}")
 
     # Verificar Binance
     if check_vklpayments('binance') == '✅' and get_binancedata(shop_id) != None:
@@ -1161,12 +1164,12 @@ def payments_checkvkl(shop_id=1):
             try:
                 bot.send_message(admin_id, '¡Faltan datos de Binance en la base de datos! Se desactivó automáticamente para recibir pagos.')
             except Exception as e:
-                print(f"Error notificando admin {admin_id} por Binance: {e}")
+                logging.error(f"Error notificando admin {admin_id} por Binance: {e}")
         try:
             with shelve.open(files.payments_bd) as bd:
                 bd['binance'] = '❌'
         except Exception as e:
-            print(f"Error desactivando Binance: {e}")
+            logging.error(f"Error desactivando Binance: {e}")
 
     if len(active_payment) > 0: 
         return active_payment
@@ -1200,7 +1203,7 @@ def get_tovar(name_good, shop_id=1):
         
         return first_line
     except Exception as e:
-        print(f"Error obteniendo producto: {e}")
+        logging.error(f"Error obteniendo producto: {e}")
         return "Error obteniendo producto"
 
 def new_buy(his_id, username, name_good, amount, price, shop_id=1):
@@ -1213,7 +1216,7 @@ def new_buy(his_id, username, name_good, amount, price, shop_id=1):
         )
         con.commit()
     except Exception as e:
-        print(f"Error registrando compra: {e}")
+        logging.error(f"Error registrando compra: {e}")
         pass
 
 def new_buyer(his_id, username, payed, shop_id=1):
@@ -1238,7 +1241,7 @@ def new_buyer(his_id, username, payed, shop_id=1):
         
         con.commit()
     except Exception as e:
-        print(f"Error actualizando comprador: {e}")
+        logging.error(f"Error actualizando comprador: {e}")
         pass
 def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None, shop_id=1):
     """Versión mejorada de new_buy que incluye método de pago y timestamp"""
@@ -1267,13 +1270,13 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'completed')
             """, (his_id, username, name_good, amount, price, payment_method, payment_id, current_time))
         except Exception as e:
-            print(f"Error insertando en tabla de validación: {e}")
+            logging.error(f"Error insertando en tabla de validación: {e}")
             pass  # Si la tabla no existe, continuar
         
         con.commit()
         return True
     except Exception as e:
-        print(f"Error en new_buy_improved: {e}")
+        logging.error(f"Error en new_buy_improved: {e}")
         return False
 
 def get_daily_sales(shop_id=1):
@@ -1376,7 +1379,7 @@ def search_user_purchases(search_term, shop_id=1):
                 else:
                     date_str = str(timestamp) if timestamp else "Fecha no disponible"
             except Exception as e:
-                print(f"Error formateando fecha {timestamp}: {e}")
+                logging.error(f"Error formateando fecha {timestamp}: {e}")
                 date_str = str(timestamp) if timestamp else "Fecha no disponible"
             
             response += f"🛒 **Compra #{i}**\n"
@@ -1450,7 +1453,7 @@ def get_discount_config(shop_id=1):
                 'show_fake_price': True
             }
     except Exception as e:
-        print(f"Error obteniendo configuración de descuentos: {e}")
+        logging.error(f"Error obteniendo configuración de descuentos: {e}")
         return {
             'enabled': True,
             'text': '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
@@ -1520,7 +1523,7 @@ def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_p
         return True
         
     except Exception as e:
-        print(f"Error actualizando configuración de descuentos: {e}")
+        logging.error(f"Error actualizando configuración de descuentos: {e}")
         return False
 
 def setup_discount_system():
@@ -1550,11 +1553,11 @@ def setup_discount_system():
             )
         
         con.commit()
-        print("✅ Sistema de descuentos configurado")
+        logging.info("✅ Sistema de descuentos configurado")
         return True
         
     except Exception as e:
-        print(f"Error configurando sistema de descuentos: {e}")
+        logging.error(f"Error configurando sistema de descuentos: {e}")
         return False
 
 def create_discount(percent, start, end=None, category_id=None, shop_id=1):
@@ -1578,7 +1581,7 @@ def create_discount(percent, start, end=None, category_id=None, shop_id=1):
         con.commit()
         return cur.lastrowid
     except Exception as e:
-        print(f"Error creando descuento: {e}")
+        logging.error(f"Error creando descuento: {e}")
         return None
 
 def get_active_discount(product_or_cat_id, shop_id=1):
@@ -1609,7 +1612,7 @@ def get_active_discount(product_or_cat_id, shop_id=1):
         row = cur.fetchone()
         return int(row[0]) if row else 0
     except Exception as e:
-        print(f"Error obteniendo descuento activo: {e}")
+        logging.error(f"Error obteniendo descuento activo: {e}")
         return 0
 
 # ============================================
@@ -1630,7 +1633,7 @@ def get_additional_description(good_name, shop_id=1):
         else:
             return "No hay información adicional disponible para este producto."
     except Exception as e:
-        print(f"Error obteniendo descripción adicional: {e}")
+        logging.error(f"Error obteniendo descripción adicional: {e}")
         return "Error al cargar información adicional."
 
 def set_additional_description(good_name, additional_description, shop_id=1):
@@ -1643,7 +1646,7 @@ def set_additional_description(good_name, additional_description, shop_id=1):
         con.commit()
         return True
     except Exception as e:
-        print(f"Error estableciendo descripción adicional: {e}")
+        logging.error(f"Error estableciendo descripción adicional: {e}")
         return False
 
 def get_duration_days(product_name, shop_id=1):
@@ -1660,7 +1663,7 @@ def get_duration_days(product_name, shop_id=1):
             return result[0]
         return None
     except Exception as e:
-        print(f"Error obteniendo duración: {e}")
+        logging.error(f"Error obteniendo duración: {e}")
         return None
 
 def set_duration_days(product_name, days, shop_id=1):
@@ -1675,7 +1678,7 @@ def set_duration_days(product_name, days, shop_id=1):
         con.commit()
         return True
     except Exception as e:
-        print(f"Error estableciendo duración: {e}")
+        logging.error(f"Error estableciendo duración: {e}")
         return False
 
 def is_manual_delivery(product_name, shop_id=1):
@@ -1690,7 +1693,7 @@ def is_manual_delivery(product_name, shop_id=1):
         result = cursor.fetchone()
         return bool(result and result[0])
     except Exception as e:
-        print(f"Error comprobando entrega manual: {e}")
+        logging.error(f"Error comprobando entrega manual: {e}")
         return False
 
 def get_manual_delivery_message(username, name):
@@ -1699,7 +1702,7 @@ def get_manual_delivery_message(username, name):
         with shelve.open(files.bot_message_bd) as bd:
             text = bd.get('manual_delivery', 'Gracias por su compra, username')
     except Exception as e:
-        print(f"Error retrieving manual delivery message: {e}")
+        logging.error(f"Error retrieving manual delivery message: {e}")
         text = 'Gracias por su compra, username'
     text = text.replace('username', username).replace('name', name)
     return text
@@ -1736,7 +1739,7 @@ def get_product_full_info(good_name, shop_id=1):
         else:
             return None
     except Exception as e:
-        print(f"Error obteniendo información completa del producto: {e}")
+        logging.error(f"Error obteniendo información completa del producto: {e}")
         return None
 
 def format_product_basic_info(good_name, shop_id=1):
@@ -1776,7 +1779,7 @@ def format_product_basic_info(good_name, shop_id=1):
         
         return info_text
     except Exception as e:
-        print(f"Error formateando información básica: {e}")
+        logging.error(f"Error formateando información básica: {e}")
         return "Error al cargar información del producto"
 
 def format_product_additional_info(good_name, shop_id=1):
@@ -1792,7 +1795,7 @@ def format_product_additional_info(good_name, shop_id=1):
         
         return info_text
     except Exception as e:
-        print(f"Error formateando información adicional: {e}")
+        logging.error(f"Error formateando información adicional: {e}")
         return "Error al cargar información adicional"
 
 def has_additional_description(good_name, shop_id=1):
@@ -1801,7 +1804,7 @@ def has_additional_description(good_name, shop_id=1):
         additional_desc = get_additional_description(good_name, shop_id)
         return additional_desc and additional_desc.strip() != "" and additional_desc != "No hay información adicional disponible para este producto."
     except Exception as e:
-        print(f"Error verificando descripción adicional: {e}")
+        logging.error(f"Error verificando descripción adicional: {e}")
         return False
 
 def save_product_media(product_name, file_id, media_type, caption=None, shop_id=1):
@@ -1817,7 +1820,7 @@ def save_product_media(product_name, file_id, media_type, caption=None, shop_id=
         con.commit()
         return True
     except Exception as e:
-        print(f"Error guardando multimedia: {e}")
+        logging.error(f"Error guardando multimedia: {e}")
         return False
 
 def get_product_media(product_name, shop_id=1):
@@ -1843,7 +1846,7 @@ def get_product_media(product_name, shop_id=1):
             }
         return None
     except Exception as e:
-        print(f"Error obteniendo multimedia: {e}")
+        logging.error(f"Error obteniendo multimedia: {e}")
         return None
 
 def has_product_media(product_name, shop_id=1):
@@ -1867,7 +1870,7 @@ def remove_product_media(product_name, shop_id=1):
         con.commit()
         return True
     except Exception as e:
-        print(f"Error eliminando multimedia: {e}")
+        logging.error(f"Error eliminando multimedia: {e}")
         return False
 
 def get_products_with_media(shop_id=1):
@@ -1881,7 +1884,7 @@ def get_products_with_media(shop_id=1):
         )
         return cursor.fetchall()
     except Exception as e:
-        print(f"Error obteniendo productos con multimedia: {e}")
+        logging.error(f"Error obteniendo productos con multimedia: {e}")
         return []
 
 def get_products_without_media(shop_id=1):
@@ -1895,7 +1898,7 @@ def get_products_without_media(shop_id=1):
         )
         return [row[0] for row in cursor.fetchall()]
     except Exception as e:
-        print(f"Error obteniendo productos sin multimedia: {e}")
+        logging.error(f"Error obteniendo productos sin multimedia: {e}")
         return []
 
 def format_product_with_media(product_name, shop_id=1):
@@ -1957,7 +1960,7 @@ def format_product_with_media(product_name, shop_id=1):
         return info
         
     except Exception as e:
-        print(f"Error formateando producto: {e}")
+        logging.error(f"Error formateando producto: {e}")
         return None
 
 def save_message(message_type, message_text):
@@ -1967,7 +1970,7 @@ def save_message(message_type, message_text):
             bd[message_type] = message_text
         return True
     except Exception as e:
-        print(f"Error guardando mensaje: {e}")
+        logging.error(f"Error guardando mensaje: {e}")
         return False
 
 
@@ -1998,7 +2001,7 @@ def create_product(name, description, format_type, minimum, price, stored,
         con.commit()
         return True
     except Exception as e:
-        print(f"Error creando producto: {e}")
+        logging.error(f"Error creando producto: {e}")
         return False
 
 
@@ -2014,7 +2017,7 @@ def delete_product(name, shop_id=1):
         con.commit()
         return cur.rowcount > 0
     except Exception as e:
-        print(f"Error eliminando producto: {e}")
+        logging.error(f"Error eliminando producto: {e}")
         return False
 
 
@@ -2030,7 +2033,7 @@ def update_product_description(name, new_description, shop_id=1):
         con.commit()
         return cur.rowcount > 0
     except Exception as e:
-        print(f"Error actualizando descripción: {e}")
+        logging.error(f"Error actualizando descripción: {e}")
         return False
 
 
@@ -2046,5 +2049,5 @@ def update_product_price(name, new_price, shop_id=1):
         con.commit()
         return cur.rowcount > 0
     except Exception as e:
-        print(f"Error actualizando precio: {e}")
+        logging.error(f"Error actualizando precio: {e}")
         return False

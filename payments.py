@@ -2,6 +2,9 @@ import telebot, time, shelve, requests, json
 from datetime import datetime, timedelta
 import dop, config, files
 from bot_instance import bot
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 he_client = []
 pending_payments = {}  # Para almacenar pagos pendientes
@@ -11,14 +14,14 @@ try:
     PAYPAL_AVAILABLE = True
 except ImportError:
     PAYPAL_AVAILABLE = False
-    print("Advertencia: paypalrestsdk no instalado. Los pagos PayPal no funcionarán.")
+    logging.info("Advertencia: paypalrestsdk no instalado. Los pagos PayPal no funcionarán.")
 
 try:
     from binance.client import Client as BinanceClient
     BINANCE_AVAILABLE = True
 except ImportError:
     BINANCE_AVAILABLE = False
-    print("Advertencia: python-binance no instalado. Los pagos Binance no funcionarán.")
+    logging.info("Advertencia: python-binance no instalado. Los pagos Binance no funcionarán.")
 
 def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, amount):
     """Crear factura PayPal - función sin cambios"""
@@ -110,7 +113,7 @@ def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, a
                 reply_markup=key
             )
         except Exception as e:
-            print(f"Error editando mensaje de pago PayPal: {e}")
+            logging.error(f"Error editando mensaje de pago PayPal: {e}")
         
         he_client.append(chat_id)
     else:
@@ -146,7 +149,7 @@ def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
                         '¡Pago de PayPal confirmado!\nAhora recibirás tu producto'
                     )
                 except Exception as e:
-                    print(f"Error confirmando pago PayPal: {e}")
+                    logging.error(f"Error confirmando pago PayPal: {e}")
                 
                 # Entregar producto
                 deliver_product(chat_id, username, first_name, name_good, amount, sum_amount, "PayPal")
@@ -154,7 +157,7 @@ def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
             else:
                 bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='El pago aún no ha sido confirmado!')
         except Exception as e:
-            print(f"Error verificando pago PayPal: {e}")
+            logging.error(f"Error verificando pago PayPal: {e}")
             bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Error verificando el pago!')
 
 def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, amount):
@@ -173,7 +176,7 @@ def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, 
         api_key, api_secret, binance_pay_id = dop.get_binancedata(shop_id)
         # binance_pay_id es tu 294603789
     except Exception as e:
-        print(f"Error obteniendo Binance Pay ID: {e}")
+        logging.error(f"Error obteniendo Binance Pay ID: {e}")
         binance_pay_id = "294603789"  # fallback
     
     # Generar ID único para el pago
@@ -236,7 +239,7 @@ En el campo **"Concepto"** o **"Nota"** escribe:
             reply_markup=key
         )
     except Exception as e:
-        print(f"Error editando mensaje: {e}")
+        logging.error(f"Error editando mensaje: {e}")
     
     he_client.append(chat_id)
 
@@ -245,7 +248,7 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
     if not BINANCE_AVAILABLE:
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Binance Pay no está disponible!')
         return
-    print(f"DEBUG: check_oplata_binance llamado para chat_id: {chat_id}")
+    logging.info(f"DEBUG: check_oplata_binance llamado para chat_id: {chat_id}")
     
     if chat_id not in he_client:
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='❌ No hay pago pendiente')
@@ -267,7 +270,7 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
         shop_id = dop.get_user_shop(chat_id)
         api_key, api_secret, binance_pay_id = dop.get_binancedata(shop_id)
     except Exception as e:
-        print(f"Error obteniendo Binance Pay ID: {e}")
+        logging.error(f"Error obteniendo Binance Pay ID: {e}")
         binance_pay_id = "294603789"  # fallback
     
     # **SISTEMA DE VERIFICACIÓN MANUAL**
@@ -311,9 +314,9 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
     for admin_id in admin_list:
         try:
             bot.send_message(admin_id, admin_message, parse_mode='Markdown', reply_markup=key_admin)
-            print(f"DEBUG: Notificación enviada a admin {admin_id}")
+            logging.info(f"DEBUG: Notificación enviada a admin {admin_id}")
         except Exception as e:
-            print(f"DEBUG: Error enviando a admin {admin_id}: {e}")
+            logging.error(f"DEBUG: Error enviando a admin {admin_id}: {e}")
     
     # Responder al cliente
     try:
@@ -341,13 +344,13 @@ def check_oplata_binance(chat_id, username, callback_id, first_name, message_id)
             parse_mode='Markdown'
         )
     except Exception as e:
-        print(f"DEBUG: Error editando mensaje del cliente: {e}")
+        logging.error(f"DEBUG: Error editando mensaje del cliente: {e}")
     
     bot.answer_callback_query(callback_query_id=callback_id, show_alert=False, text='📤 Solicitud enviada al administrador')
 
 def handle_admin_payment_decision(callback_data, admin_chat_id, callback_id, message_id):
     """Manejar decisión del administrador sobre pagos"""
-    print(f"DEBUG: handle_admin_payment_decision llamado: {callback_data}")
+    logging.info(f"DEBUG: handle_admin_payment_decision llamado: {callback_data}")
     
     try:
         parts = callback_data.split('_')
@@ -386,7 +389,7 @@ def handle_admin_payment_decision(callback_data, admin_chat_id, callback_id, mes
 
 Gracias por tu compra.""", parse_mode='Markdown')
                     except Exception as e:
-                        print(f"DEBUG: Error notificando cliente: {e}")
+                        logging.error(f"DEBUG: Error notificando cliente: {e}")
                     
                     # Confirmar al admin
                     try:
@@ -401,14 +404,14 @@ Gracias por tu compra.""", parse_mode='Markdown')
                             parse_mode='Markdown'
                         )
                     except Exception as e:
-                        print(f"DEBUG: Error editando mensaje admin: {e}")
+                        logging.error(f"DEBUG: Error editando mensaje admin: {e}")
                     
                     bot.answer_callback_query(callback_query_id=callback_id, show_alert=False, text='✅ Pago aprobado y producto entregado')
                 else:
                     bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='❌ Error entregando producto')
                 
             except Exception as e:
-                print(f"Error procesando aprobación: {e}")
+                logging.error(f"Error procesando aprobación: {e}")
                 bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='❌ Error procesando aprobación')
         
         elif action == 'RECHAZAR':
@@ -440,12 +443,12 @@ Tu pago de ${payment_info['amount']} USD no pudo ser verificado.
                         parse_mode='Markdown'
                     )
                 except Exception as e:
-                    print(f"DEBUG: Error editando mensaje admin: {e}")
+                    logging.error(f"DEBUG: Error editando mensaje admin: {e}")
                 
                 bot.answer_callback_query(callback_query_id=callback_id, show_alert=False, text='❌ Pago rechazado')
                 
             except Exception as e:
-                print(f"Error procesando rechazo: {e}")
+                logging.error(f"Error procesando rechazo: {e}")
         
         # Limpiar pago pendiente
         if user_chat_id in he_client:
@@ -454,13 +457,13 @@ Tu pago de ${payment_info['amount']} USD no pudo ser verificado.
             del pending_payments[user_chat_id]
         
     except Exception as e:
-        print(f"Error en handle_admin_payment_decision: {e}")
+        logging.error(f"Error en handle_admin_payment_decision: {e}")
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='❌ Error procesando decisión')
 
 def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount, payment_method):
     """Función común para entregar productos"""
     try:
-        print(f"DEBUG: Entregando producto {name_good} a usuario {chat_id}")
+        logging.info(f"DEBUG: Entregando producto {name_good} a usuario {chat_id}")
 
         shop_id = dop.get_user_shop(chat_id)
 
@@ -500,15 +503,15 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
             try:
                 bot.send_message(admin_id, f'*Venta Completada*\nID: `{chat_id}`\nUsername: @{username}\nCompró *{name_good}* x{amount}\nPor ${sum_amount} USD ({payment_method})', parse_mode='Markdown')
             except Exception as e:
-                print(f"DEBUG: Error notificando admin {admin_id}: {e}")
+                logging.error(f"DEBUG: Error notificando admin {admin_id}: {e}")
         
         # Registrar compra asociada a la tienda del usuario
         dop.new_buy(chat_id, username, name_good, amount, sum_amount, shop_id)
         dop.new_buyer(chat_id, username, sum_amount, shop_id)
         
-        print(f"DEBUG: Producto entregado exitosamente a {chat_id}")
+        logging.info(f"DEBUG: Producto entregado exitosamente a {chat_id}")
         return True
         
     except Exception as e:
-        print(f"Error entregando producto: {e}")
+        logging.error(f"Error entregando producto: {e}")
         return False
