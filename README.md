@@ -56,6 +56,11 @@ python init_db.py
 
 Esto crea las carpetas y la base de datos en `data/`.
 
+> **Nota**: las tablas necesarias para el sistema de descuentos se
+> crean automáticamente la primera vez que ejecutes el bot. Si ves el
+> error `no such table: discount_config`, puedes generarlas manualmente
+> con `python setup_discounts.py`.
+
 Luego puedes iniciar el bot con:
 
 ```bash
