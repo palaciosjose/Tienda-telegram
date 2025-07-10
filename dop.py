@@ -137,6 +137,7 @@ def ensure_database_schema():
             """
         )
 
+        # Tabla de configuración de descuentos por tienda
         cursor.execute(
             """
             CREATE TABLE IF NOT EXISTS discount_config (
