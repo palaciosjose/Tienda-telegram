@@ -68,6 +68,7 @@ def create_database():
             media_caption TEXT,
             duration_days INTEGER DEFAULT NULL,
             manual_delivery INTEGER DEFAULT 0,
+            manual_stock INTEGER DEFAULT 0,
             category_id INTEGER,
             shop_id INTEGER DEFAULT 1,
             PRIMARY KEY (name, shop_id),
