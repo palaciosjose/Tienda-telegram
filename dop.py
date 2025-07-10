@@ -245,19 +245,32 @@ def check_message(message):
 
 def get_adminlist():
     admins_list = [config.admin_id]  # Siempre incluir el admin principal
+    invalid_ids = []
     try:
         with open(files.admins_list, encoding='utf-8') as f:
-            for admin_id in f.readlines():
-                try:
-                    admin_id = int(admin_id.strip())
-                    if admin_id not in admins_list:
-                        admins_list.append(admin_id)
-                except Exception as e:
-                    print(f"Error leyendo id de admin: {e}")
-                    continue
+            lines = f.readlines()
+        valid_lines = []
+        for raw in lines:
+            raw = raw.strip()
+            if raw.lstrip('-').isdigit():
+                admin_id = int(raw)
+                if admin_id not in admins_list:
+                    admins_list.append(admin_id)
+                valid_lines.append(raw + "\n")
+            elif raw:
+                invalid_ids.append(raw)
+        if invalid_ids:
+            try:
+                with open(files.admins_list, 'w', encoding='utf-8') as f:
+                    f.writelines(valid_lines)
+                print(
+                    "IDs de admin inválidos eliminados: "
+                    + ", ".join(invalid_ids)
+                )
+            except Exception as e:
+                print(f"Error limpiando lista de admins: {e}")
     except Exception as e:
         print(f"Error obteniendo lista de admins: {e}")
-        pass
     return admins_list
 
 def user_loger(chat_id=0):
@@ -1429,6 +1442,8 @@ def get_discount_config(shop_id=1):
             }
     except Exception as e:
         print(f"Error obteniendo configuración de descuentos: {e}")
+        if "no such table" in str(e):
+            setup_discount_system()
         return {
             'enabled': True,
             'text': '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
@@ -1498,6 +1513,11 @@ def update_discount_config(enabled=None, text=None, multiplier=None, show_fake_p
         
     except Exception as e:
         print(f"Error actualizando configuración de descuentos: {e}")
+        if "no such table" in str(e):
+            if setup_discount_system():
+                return update_discount_config(
+                    enabled, text, multiplier, show_fake_price, shop_id
+                )
         return False
 
 def setup_discount_system():
