@@ -1,3 +1,4 @@
+import sqlite3, datetime
 from tests.test_categories import setup_dop
 
 
@@ -18,3 +19,17 @@ def test_toggle_discount_features(monkeypatch, tmp_path):
     conf = dop.get_discount_config()
     assert conf['text'] == 'X'
     assert conf['multiplier'] == 2.0
+
+    conn = sqlite3.connect(tmp_path / "main.db")
+    cur = conn.cursor()
+    cur.execute("INSERT INTO goods (name, description, format, minimum, price, stored, shop_id) VALUES ('P','d','text',1,100,'x',1)")
+    conn.commit()
+    conn.close()
+
+    start = datetime.datetime.utcnow() - datetime.timedelta(hours=1)
+    dop.create_discount(10, start, None, None, 1)
+    assert dop.get_active_discount('P', 1) == 10
+
+    dop.update_active_discount_percent(25, shop_id=1)
+    assert dop.get_active_discount('P', 1) == 25
+

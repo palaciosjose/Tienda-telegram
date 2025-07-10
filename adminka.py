@@ -34,7 +34,7 @@ def show_discount_menu(chat_id):
     toggle = 'Desactivar descuentos' if config_dis['enabled'] else 'Activar descuentos'
     toggle_fake = 'Ocultar precios tachados' if config_dis['show_fake_price'] else 'Mostrar precios tachados'
     user_markup.row(toggle)
-    user_markup.row('Cambiar texto', 'Cambiar multiplicador')
+    user_markup.row('Cambiar texto', 'Cambiar porcentaje')
     user_markup.row(toggle_fake)
     user_markup.row('Nuevo descuento')
     user_markup.row('Vista previa', 'Volver al menú principal')
@@ -525,8 +525,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 33
 
-        elif message_text == 'Cambiar multiplicador':
-            bot.send_message(chat_id, 'Envíe el nuevo multiplicador (ej. 1.5):')
+        elif message_text == 'Cambiar porcentaje':
+            bot.send_message(chat_id, 'Envíe el nuevo porcentaje de descuento:')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 34
 
@@ -1942,16 +1942,16 @@ def text_analytics(message_text, chat_id):
 
 
 
-        elif sost_num == 34:  # Recibir nuevo multiplicador
+        elif sost_num == 34:  # Recibir nuevo porcentaje de descuento
             try:
-                multiplier = float(message_text)
+                percent = int(message_text)
                 shop_id = dop.get_shop_id(chat_id)
-                if dop.update_discount_config(multiplier=multiplier, shop_id=shop_id):
-                    bot.send_message(chat_id, f'✅ Multiplicador actualizado a {multiplier}')
+                if dop.update_active_discount_percent(percent, shop_id=shop_id):
+                    bot.send_message(chat_id, f'✅ Porcentaje actualizado a {percent}%')
                 else:
-                    bot.send_message(chat_id, '❌ Error actualizando multiplicador')
+                    bot.send_message(chat_id, '❌ Error actualizando porcentaje')
             except ValueError:
-                bot.send_message(chat_id, '❌ Valor inválido, use punto decimal. Ej: 1.5')
+                bot.send_message(chat_id, '❌ Porcentaje inválido. Use solo números enteros.')
 
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]

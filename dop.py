@@ -1721,6 +1721,27 @@ def get_active_discount(product_or_cat_id, shop_id=1):
         logging.error(f"Error obteniendo descuento activo: {e}")
         return 0
 
+def update_active_discount_percent(new_percent, shop_id=1):
+    """Actualizar el porcentaje de cualquier descuento activo para la tienda"""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        now = datetime.datetime.utcnow().isoformat()
+        cur.execute(
+            """
+            UPDATE discounts
+            SET percent = ?
+            WHERE shop_id = ? AND start_time <= ?
+              AND (end_time IS NULL OR end_time > ?)
+            """,
+            (int(new_percent), shop_id, now, now),
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        logging.error(f"Error actualizando porcentaje de descuento: {e}")
+        return False
+
 # ============================================
 # FUNCIONES PARA DESCRIPCIÓN ADICIONAL
 # Agregadas automáticamente por el instalador
