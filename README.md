@@ -16,7 +16,9 @@ pip install -r requirements.txt
 4. Copia el archivo `.env.example` a `.env` (o crea uno nuevo).  El
    archivo de ejemplo incluye los campos `TELEGRAM_BOT_TOKEN`,
    `TELEGRAM_ADMIN_ID` y `TELEGRAM_TOKEN` como referencia, así que sólo
-   debes reemplazar sus valores con tus credenciales.  Si utilizarás el
+   debes reemplazar sus valores con tus credenciales.  Las variables
+   `TELEGRAM_BOT_TOKEN` y `TELEGRAM_ADMIN_ID` son obligatorias, el bot
+   fallará si no se definen. Si utilizarás el
    sistema de publicidad, **debes** definir `TELEGRAM_TOKEN` con el token
    (o los tokens separados por comas) que empleará `advertising_cron.py`;
    el script fallará si no se configura esta variable.

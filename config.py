@@ -5,7 +5,10 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Obtener valores de las variables de entorno
-admin_id = int(os.getenv('TELEGRAM_ADMIN_ID', '723745098'))
+admin_id_env = os.getenv('TELEGRAM_ADMIN_ID')
+if not admin_id_env:
+    raise RuntimeError('TELEGRAM_ADMIN_ID must be set')
+admin_id = int(admin_id_env)
 token = os.getenv('TELEGRAM_BOT_TOKEN')
 
 # Parámetros opcionales para telebot.polling
