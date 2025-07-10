@@ -194,6 +194,17 @@ Para ejecutar las pruebas automatizadas instala las dependencias y luego ejecuta
 pytest
 ```
 
+## Depuración
+
+Para verificar que la conexión con el administrador funcione correctamente puedes ejecutar:
+
+```bash
+python verify_admin_connection.py
+```
+
+El script imprime el ID de administrador configurado y la lista completa de administradores.
+Luego intenta enviar un mensaje de prueba al ID principal mostrando el resultado en la consola.
+
 ## Licencia
 
 Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
