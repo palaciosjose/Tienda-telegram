@@ -2,6 +2,11 @@ import telebot, shelve, sqlite3, os, types
 import config, dop, payments, adminka, files
 import db
 from bot_instance import bot
+
+try:
+    bot_username = bot.get_me().username.lower()
+except Exception:
+    bot_username = ''
 from advertising_system.admin_integration import add_bot_group, remove_bot_group
 import atexit
 import glob
@@ -167,6 +172,15 @@ def message_send(message):
         if message.chat.id not in in_admin:
             in_admin.append(message.chat.id)
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
+
+    elif isinstance(message.text, str):
+        cmd = message.text.split()[0].lower()
+        if cmd in ('/report', '/reporte', f'/report@{bot_username}', f'/reporte@{bot_username}'):
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+            bot.send_message(message.chat.id, '📝 Por favor escribe tu reporte:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(message.chat.id)] = 23
 
     elif dop.get_sost(message.chat.id) is True:
         if message.chat.id in in_admin:
