@@ -1,3 +1,6 @@
+#!/usr/bin/env python3
+"""Script para inicializar la base de datos y estructura del proyecto."""
+
 import sqlite3
 import os
 
@@ -105,9 +108,6 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'shop_users' creada")
-    
-
-
 
     # Tablas para sistema de publicidad
     cursor.execute('''
@@ -130,6 +130,8 @@ def create_database():
             priority INTEGER DEFAULT 1
         )
     ''')
+    print("✓ Tabla 'campaigns' creada")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS campaign_schedules (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -145,7 +147,9 @@ def create_database():
             FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
         )
     ''')
-        cursor.execute('''
+    print("✓ Tabla 'campaign_schedules' creada")
+
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS target_groups (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             platform TEXT NOT NULL,
@@ -160,6 +164,8 @@ def create_database():
             shop_id INTEGER DEFAULT 1
         )
     ''')
+    print("✓ Tabla 'target_groups' creada")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS bot_groups (
             group_id TEXT PRIMARY KEY,
@@ -167,6 +173,8 @@ def create_database():
             added_date TEXT
         )
     ''')
+    print("✓ Tabla 'bot_groups' creada")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS platform_config (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -177,6 +185,8 @@ def create_database():
             shop_id INTEGER DEFAULT 1
         )
     ''')
+    print("✓ Tabla 'platform_config' creada")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS send_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,6 +201,8 @@ def create_database():
             FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
         )
     ''')
+    print("✓ Tabla 'send_logs' creada")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS daily_stats (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -203,6 +215,8 @@ def create_database():
             shop_id INTEGER DEFAULT 1
         )
     ''')
+    print("✓ Tabla 'daily_stats' creada")
+
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS rate_limit_logs (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -212,6 +226,7 @@ def create_database():
             shop_id INTEGER DEFAULT 1
         )
     ''')
+    print("✓ Tabla 'rate_limit_logs' creada")
 
     # Crear tabla para datos de PayPal
     cursor.execute('''
@@ -247,6 +262,19 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'discounts' creada")
+
+    # Tabla de configuración de descuentos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS discount_config (
+            id INTEGER PRIMARY KEY,
+            discount_enabled INTEGER DEFAULT 1,
+            discount_text TEXT DEFAULT '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
+            discount_multiplier REAL DEFAULT 1.5,
+            show_fake_price INTEGER DEFAULT 1,
+            shop_id INTEGER UNIQUE
+        )
+    ''')
+    print("✓ Tabla 'discount_config' creada")
     
     conn.commit()
     conn.close()
