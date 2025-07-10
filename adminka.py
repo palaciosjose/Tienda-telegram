@@ -98,6 +98,7 @@ def show_marketing_menu(chat_id):
 
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
+        logging.debug("Admin %s selected option: %s", chat_id, message_text)
         shop_id = dop.get_shop_id(chat_id)
         set_shop_id(shop_id)
         normalized = message_text.strip().lower()
