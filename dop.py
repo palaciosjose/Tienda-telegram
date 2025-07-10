@@ -172,11 +172,10 @@ ensure_database_schema()
 # Utilidad para editar mensajes con o sin multimedia
 # -------------------------------------------------
 def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
-    """TRIPLE_FALLBACK - Edita mensajes de forma segura"""
-    content_type = getattr(message, "content_type", "text")
+    """Edita mensajes según su tipo y registra un error solo si ambos intentos fallan."""
 
     try:
-        if content_type == "text":
+        if getattr(message, "content_type", "text") == "text":
             bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
@@ -197,7 +196,7 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
         pass
 
     try:
-        if content_type == "text":
+        if getattr(message, "content_type", "text") == "text":
             bot.edit_message_caption(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
