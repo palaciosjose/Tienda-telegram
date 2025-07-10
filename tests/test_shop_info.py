@@ -114,8 +114,14 @@ def test_shop_selection_shows_info(monkeypatch, tmp_path):
             self.from_user = types.SimpleNamespace(first_name="a")
     cb = types.SimpleNamespace(data=f"SELECT_SHOP_{sid}", message=Msg(), id="1", from_user=types.SimpleNamespace(username="u"))
     main.inline(cb)
-    assert any(c[0] == "send_photo" for c in calls)
-    assert any("CATEGORÍA" in c[1][1] for c in calls if c[0] == "send_message")
+    photo_calls = [c for c in calls if c[0] == "send_photo"]
+    assert photo_calls
+    buttons = photo_calls[0][2]["reply_markup"].buttons
+    texts = [b.text for b in buttons]
+    assert "B1" in texts
+    assert "🛍️ Catálogo" in texts
+    assert "📜 Mis compras" in texts
+    assert not any("CATEGORÍA" in c[1][1] for c in calls if c[0] == "send_message")
 
 
 def test_category_selection_lists_products(monkeypatch, tmp_path):

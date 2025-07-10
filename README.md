@@ -110,8 +110,8 @@ En **💬 Respuestas** puedes definir distintos textos que el bot enviará. Se a
 **Agregar/Cambiar mensaje de entrega manual**, utilizado cuando un producto requiere
 entrega manual. En ese mensaje puedes incluir las palabras `username` y `name` para
 personalizarlo. Configurar **💬 Respuestas** es un privilegio exclusivo del super admin.
-Además, la bienvenida al usuario ahora admite multimedia. Al elegir *Añadir/Cambiar bienvenida al usuario* puedes
-subir una foto, video o documento opcional que se enviará junto al texto de bienvenida.
+Para modificar el mensaje mostrado al usar `/start`, selecciona **Configurar mensaje /start**.
+Podrás subir una foto, video o documento opcional que se enviará junto al texto de bienvenida.
 
 ### Carga y edición de unidades
 
