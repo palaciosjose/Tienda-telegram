@@ -526,6 +526,43 @@ def decrement_manual_stock(name_good, quantity, shop_id=1):
         logging.error(f"Error decrementando manual_stock: {e}")
 
 
+def add_manual_stock(name_good, quantity, shop_id=1):
+    """Increase manual stock for a product."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT manual_stock FROM goods WHERE name = ? AND shop_id = ?",
+            (name_good, shop_id),
+        )
+        row = cursor.fetchone()
+        current = int(row[0]) if row and row[0] is not None else 0
+        new_val = current + int(quantity)
+        if new_val < 0:
+            new_val = 0
+        cursor.execute(
+            "UPDATE goods SET manual_stock = ? WHERE name = ? AND shop_id = ?",
+            (new_val, name_good, shop_id),
+        )
+        con.commit()
+    except Exception as e:
+        logging.error(f"Error incrementando manual_stock: {e}")
+
+
+def set_manual_stock(name_good, quantity, shop_id=1):
+    """Set manual stock to a specific value."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "UPDATE goods SET manual_stock = ? WHERE name = ? AND shop_id = ?",
+            (int(quantity), name_good, shop_id),
+        )
+        con.commit()
+    except Exception as e:
+        logging.error(f"Error estableciendo manual_stock: {e}")
+
+
 def amount_of_goods(name_good, shop_id=1):
     if is_manual_delivery(name_good, shop_id):
         return get_manual_stock(name_good, shop_id)
