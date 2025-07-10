@@ -137,6 +137,19 @@ def ensure_database_schema():
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS discount_config (
+                id INTEGER PRIMARY KEY,
+                discount_enabled INTEGER DEFAULT 1,
+                discount_text TEXT DEFAULT '🔥 DESCUENTOS ESPECIALES ACTIVOS 🔥',
+                discount_multiplier REAL DEFAULT 1.5,
+                show_fake_price INTEGER DEFAULT 1,
+                shop_id INTEGER UNIQUE
+            )
+            """
+        )
+
 
         if updated:
             con.commit()
