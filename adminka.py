@@ -511,6 +511,34 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '💸 Descuentos' == message_text:
             show_discount_menu(chat_id)
 
+        elif message_text in ('Desactivar descuentos', 'Activar descuentos'):
+            enable = message_text == 'Activar descuentos'
+            if dop.update_discount_config(enabled=enable, shop_id=shop_id):
+                status = 'activados' if enable else 'desactivados'
+                bot.send_message(chat_id, f'✅ Descuentos {status}')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando estado')
+            show_discount_menu(chat_id)
+
+        elif message_text == 'Cambiar texto':
+            bot.send_message(chat_id, 'Envíe el nuevo texto de descuento:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 33
+
+        elif message_text == 'Cambiar multiplicador':
+            bot.send_message(chat_id, 'Envíe el nuevo multiplicador (ej. 1.5):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 34
+
+        elif message_text in ('Ocultar precios tachados', 'Mostrar precios tachados'):
+            show = message_text == 'Mostrar precios tachados'
+            if dop.update_discount_config(show_fake_price=show, shop_id=shop_id):
+                msg = 'Mostrando precios tachados' if show else 'Ocultando precios tachados'
+                bot.send_message(chat_id, f'✅ {msg}')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando configuración')
+            show_discount_menu(chat_id)
+
         elif 'Nuevo descuento' == message_text:
             bot.send_message(chat_id, 'Ingrese porcentaje de descuento:')
             with shelve.open(files.sost_bd) as bd:
