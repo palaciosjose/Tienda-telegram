@@ -5,6 +5,7 @@ from tests.test_categories import setup_dop
 def test_discount_config_table_created(monkeypatch, tmp_path):
     dop = setup_dop(monkeypatch, tmp_path)
     dop.ensure_database_schema()
+    dop.get_discount_config()
 
     conn = sqlite3.connect(tmp_path / "main.db")
     cur = conn.cursor()
