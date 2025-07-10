@@ -173,22 +173,22 @@ ensure_database_schema()
 # -------------------------------------------------
 def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
     """TRIPLE_FALLBACK - Edita mensajes de forma segura"""
-    first_try_caption = getattr(message, "content_type", "text") != "text"
+    content_type = getattr(message, "content_type", "text")
 
     try:
-        if first_try_caption:
-            bot.edit_message_caption(
-                chat_id=message.chat.id,
-                message_id=message.message_id,
-                caption=text,
-                reply_markup=reply_markup,
-                parse_mode=parse_mode,
-            )
-        else:
+        if content_type == "text":
             bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
                 text=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        else:
+            bot.edit_message_caption(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                caption=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode,
             )
@@ -197,19 +197,19 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
         pass
 
     try:
-        if first_try_caption:
-            bot.edit_message_text(
-                chat_id=message.chat.id,
-                message_id=message.message_id,
-                text=text,
-                reply_markup=reply_markup,
-                parse_mode=parse_mode,
-            )
-        else:
+        if content_type == "text":
             bot.edit_message_caption(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
                 caption=text,
+                reply_markup=reply_markup,
+                parse_mode=parse_mode,
+            )
+        else:
+            bot.edit_message_text(
+                chat_id=message.chat.id,
+                message_id=message.message_id,
+                text=text,
                 reply_markup=reply_markup,
                 parse_mode=parse_mode,
             )
