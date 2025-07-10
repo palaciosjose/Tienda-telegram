@@ -159,6 +159,10 @@ def check_oplata_paypal(chat_id, username, callback_id, first_name, message_id):
 
 def creat_bill_binance(chat_id, callback_id, message_id, sum_amount, name_good, amount):
     """Crear solicitud de pago Binance CORREGIDA - Con ID en instrucciones"""
+    if not BINANCE_AVAILABLE:
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Binance Pay no está disponible!')
+        return
+
     shop_id = dop.get_user_shop(chat_id)
     if dop.get_binancedata(shop_id) == None:
         bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Binance Pay no está configurado en este momento!')
@@ -238,6 +242,9 @@ En el campo **"Concepto"** o **"Nota"** escribe:
 
 def check_oplata_binance(chat_id, username, callback_id, first_name, message_id):
     """Verificación MANUAL de pago Binance - SISTEMA CORREGIDO"""
+    if not BINANCE_AVAILABLE:
+        bot.answer_callback_query(callback_query_id=callback_id, show_alert=True, text='Binance Pay no está disponible!')
+        return
     print(f"DEBUG: check_oplata_binance llamado para chat_id: {chat_id}")
     
     if chat_id not in he_client:

@@ -62,6 +62,7 @@ def setup_payments(monkeypatch, tmp_path):
 
 def test_creat_bill_binance_records_payment(tmp_path, monkeypatch):
     payments, _ = setup_payments(monkeypatch, tmp_path)
+    monkeypatch.setattr(payments, "BINANCE_AVAILABLE", True)
     monkeypatch.setattr(payments.dop, "get_binancedata", lambda shop_id=1: ("a", "b", "ID"))
 
     captured = {}
