@@ -36,3 +36,27 @@ def test_manual_stock_decrements(monkeypatch, tmp_path):
     assert dop.amount_of_goods("M1", 1) == 5
     payments.deliver_product(1, "u", "User", "M1", 2, 4, "PayPal")
     assert dop.amount_of_goods("M1", 1) == 3
+
+
+def test_manual_stock_modifications(monkeypatch, tmp_path):
+    from tests.test_categories import setup_dop
+
+    dop = setup_dop(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+    dop.create_product(
+        "M2",
+        "desc",
+        "manual",
+        1,
+        1,
+        "x",
+        manual_delivery=1,
+        manual_stock=2,
+        shop_id=1,
+    )
+
+    assert dop.get_manual_stock("M2", 1) == 2
+    dop.add_manual_stock("M2", 3, 1)
+    assert dop.get_manual_stock("M2", 1) == 5
+    dop.set_manual_stock("M2", 10, 1)
+    assert dop.get_manual_stock("M2", 1) == 10

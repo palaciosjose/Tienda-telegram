@@ -29,12 +29,23 @@ def show_discount_menu(chat_id):
 
     status = 'Activado ✅' if config_dis['enabled'] else 'Desactivado ❌'
     show_fake = 'Sí' if config_dis['show_fake_price'] else 'No'
+    fake_percent = dop.multiplier_to_percent(config_dis['multiplier'])
+    active = dop.get_active_discount_info(None, shop_id)
+    if active:
+        if active.get('end_time'):
+            rem = active['end_time'] - datetime.datetime.utcnow()
+            hrs = int(rem.total_seconds() // 3600)
+            active_msg = f"-{active['percent']}% ({hrs}h restantes)"
+        else:
+            active_msg = f"-{active['percent']}%"
+    else:
+        active_msg = 'Ninguno'
 
     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
     toggle = 'Desactivar descuentos' if config_dis['enabled'] else 'Activar descuentos'
     toggle_fake = 'Ocultar precios tachados' if config_dis['show_fake_price'] else 'Mostrar precios tachados'
     user_markup.row(toggle)
-    user_markup.row('Cambiar texto', 'Cambiar multiplicador')
+    user_markup.row('Cambiar texto', 'Cambiar porcentaje')
     user_markup.row(toggle_fake)
     user_markup.row('Nuevo descuento')
     user_markup.row('Vista previa', 'Volver al menú principal')
@@ -43,8 +54,9 @@ def show_discount_menu(chat_id):
         f"💸 *Configuración de Descuentos*\n\n"
         f"Estado: {status}\n"
         f"Texto: {config_dis['text']}\n"
-        f"Multiplicador: x{config_dis['multiplier']}\n"
-        f"Mostrar precios tachados: {show_fake}"
+        f"Porcentaje ficticio: {fake_percent}%\n"
+        f"Mostrar precios tachados: {show_fake}\n"
+        f"Descuento activo: {active_msg}"
     )
 
     bot.send_message(chat_id, message, reply_markup=user_markup, parse_mode='Markdown')
@@ -509,6 +521,34 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bd[str(chat_id)] = 60
 
         elif '💸 Descuentos' == message_text:
+            show_discount_menu(chat_id)
+
+        elif message_text in ('Desactivar descuentos', 'Activar descuentos'):
+            enable = message_text == 'Activar descuentos'
+            if dop.update_discount_config(enabled=enable, shop_id=shop_id):
+                status = 'activados' if enable else 'desactivados'
+                bot.send_message(chat_id, f'✅ Descuentos {status}')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando estado')
+            show_discount_menu(chat_id)
+
+        elif message_text == 'Cambiar texto':
+            bot.send_message(chat_id, 'Envíe el nuevo texto de descuento:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 33
+
+        elif message_text == 'Cambiar porcentaje':
+            bot.send_message(chat_id, 'Envíe el nuevo porcentaje (1-99):')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 34
+
+        elif message_text in ('Ocultar precios tachados', 'Mostrar precios tachados'):
+            show = message_text == 'Mostrar precios tachados'
+            if dop.update_discount_config(show_fake_price=show, shop_id=shop_id):
+                msg = 'Mostrando precios tachados' if show else 'Ocultando precios tachados'
+                bot.send_message(chat_id, f'✅ {msg}')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando configuración')
             show_discount_menu(chat_id)
 
         elif 'Nuevo descuento' == message_text:
@@ -1327,39 +1367,57 @@ def text_analytics(message_text, chat_id):
                 return
 
             action = message_text.strip().lower()
-            file_path = f'data/goods/{shop_id}_{product}.txt'
-            if action == 'añadir unidades':
-                bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 180
-            elif action == 'editar unidades':
-                if not os.path.exists(file_path):
-                    bot.send_message(chat_id, 'El producto aún no tiene unidades.')
-                    show_product_menu(chat_id)
+            if dop.is_manual_delivery(product, shop_id):
+                if action == 'añadir unidades':
+                    bot.send_message(chat_id, 'Indique cuántas unidades desea agregar:')
                     with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-                    return
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    lines = [ln.rstrip('\n') for ln in f.readlines()]
-                text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 181
-            elif action == 'eliminar unidades':
-                if not os.path.exists(file_path):
-                    bot.send_message(chat_id, 'El producto aún no tiene unidades.')
-                    show_product_menu(chat_id)
+                        bd[str(chat_id)] = 183
+                elif action == 'editar unidades':
+                    current = dop.get_manual_stock(product, shop_id)
+                    bot.send_message(chat_id, f'Stock actual: {current}\nIndique la nueva cantidad total:')
                     with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-                    return
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    lines = [ln.rstrip('\n') for ln in f.readlines()]
-                text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 182
+                        bd[str(chat_id)] = 184
+                elif action == 'eliminar unidades':
+                    current = dop.get_manual_stock(product, shop_id)
+                    bot.send_message(chat_id, f'Stock actual: {current}\nIndique cuántas unidades desea eliminar:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 185
+                else:
+                    show_product_menu(chat_id)
             else:
-                show_product_menu(chat_id)
+                file_path = f'data/goods/{shop_id}_{product}.txt'
+                if action == 'añadir unidades':
+                    bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 180
+                elif action == 'editar unidades':
+                    if not os.path.exists(file_path):
+                        bot.send_message(chat_id, 'El producto aún no tiene unidades.')
+                        show_product_menu(chat_id)
+                        with shelve.open(files.sost_bd) as bd:
+                            del bd[str(chat_id)]
+                        return
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = [ln.rstrip('\n') for ln in f.readlines()]
+                    text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
+                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 181
+                elif action == 'eliminar unidades':
+                    if not os.path.exists(file_path):
+                        bot.send_message(chat_id, 'El producto aún no tiene unidades.')
+                        show_product_menu(chat_id)
+                        with shelve.open(files.sost_bd) as bd:
+                            del bd[str(chat_id)]
+                        return
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = [ln.rstrip('\n') for ln in f.readlines()]
+                    text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
+                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 182
+                else:
+                    show_product_menu(chat_id)
 
         elif sost_num == 180:
             try:
@@ -1434,6 +1492,66 @@ def text_analytics(message_text, chat_id):
             with open(file_path, 'w', encoding='utf-8') as f:
                 for line in new_lines:
                     f.write(line + '\n')
+            bot.send_message(chat_id, '¡Unidades eliminadas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 183:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            try:
+                qty = int(message_text)
+                if qty < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, 'Cantidad inválida.')
+                return
+            dop.add_manual_stock(product, qty, shop_id)
+            bot.send_message(chat_id, '¡Unidades añadidas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 184:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            try:
+                qty = int(message_text)
+                if qty < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, 'Cantidad inválida.')
+                return
+            dop.set_manual_stock(product, qty, shop_id)
+            bot.send_message(chat_id, '¡Unidades editadas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 185:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            try:
+                qty = int(message_text)
+                if qty < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, 'Cantidad inválida.')
+                return
+            dop.decrement_manual_stock(product, qty, shop_id)
             bot.send_message(chat_id, '¡Unidades eliminadas con éxito!')
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
@@ -1836,16 +1954,19 @@ def text_analytics(message_text, chat_id):
 
 
 
-        elif sost_num == 34:  # Recibir nuevo multiplicador
+        elif sost_num == 34:  # Recibir nuevo porcentaje
             try:
-                multiplier = float(message_text)
+                percent = float(message_text)
+                if percent <= 0 or percent >= 100:
+                    raise ValueError
+                multiplier = dop.percent_to_multiplier(percent)
                 shop_id = dop.get_shop_id(chat_id)
                 if dop.update_discount_config(multiplier=multiplier, shop_id=shop_id):
-                    bot.send_message(chat_id, f'✅ Multiplicador actualizado a {multiplier}')
+                    bot.send_message(chat_id, f'✅ Porcentaje actualizado a {percent}%')
                 else:
-                    bot.send_message(chat_id, '❌ Error actualizando multiplicador')
+                    bot.send_message(chat_id, '❌ Error actualizando porcentaje')
             except ValueError:
-                bot.send_message(chat_id, '❌ Valor inválido, use punto decimal. Ej: 1.5')
+                bot.send_message(chat_id, '❌ Valor inválido, ingrese un número entre 1 y 99')
 
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
