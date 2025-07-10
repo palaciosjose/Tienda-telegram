@@ -227,7 +227,8 @@ def log(text):
     try:
         with open(files.working_log, 'a', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
-    except Exception:
+    except Exception as e:
+        print(f"Error writing log file: {e}")
         with open(files.working_log, 'w', encoding='utf-8') as f:
             f.write(time + '    | ' + text + '\n')
 
@@ -274,8 +275,8 @@ def user_loger(chat_id=0):
             # Registrar o actualizar la tienda del usuario
             current = get_user_shop(chat_id)
             set_user_shop(chat_id, current)
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error updating user shop: {e}")
 
     try:
         with open(files.users_list, encoding='utf-8') as f:
@@ -703,12 +704,13 @@ def broadcast_message(group, amount, text, media=None, shop_id=1):
                     else:
                         bot.send_message(chat_id, text)
                     good_send += 1
-                except Exception:
+                except Exception as e:
                     lose_send += 1
+                    print(f"Error sending message to {chat_id}: {e}")
                     new_blockuser(chat_id)
                 i += 1
-        except Exception:
-            pass
+        except Exception as e:
+            print(f"Error sending broadcast to all users: {e}")
 
     elif group == 'buyers':
         try:
@@ -927,8 +929,8 @@ def set_user_shop(user_id, shop_id):
             (int(user_id), int(shop_id)),
         )
         con.commit()
-    except Exception:
-        pass
+    except Exception as e:
+        print(f"Error setting user shop: {e}")
 
 
 def get_user_shop(user_id):
@@ -942,7 +944,8 @@ def get_user_shop(user_id):
         )
         row = cur.fetchone()
         return int(row[0]) if row else 1
-    except Exception:
+    except Exception as e:
+        print(f"Error getting user shop: {e}")
         return 1
 
 def get_description(name_good, shop_id=1):
@@ -1017,7 +1020,8 @@ def get_paypaldata(shop_id=1):
         if result:
             return result[0], result[1], bool(result[2])
         return None
-    except Exception:
+    except Exception as e:
+        print(f"Error getting PayPal data: {e}")
         return None
 
 def get_binancedata(shop_id=1):
@@ -1033,7 +1037,8 @@ def get_binancedata(shop_id=1):
         if result:
             return result[0], result[1], result[2]
         return None
-    except Exception:
+    except Exception as e:
+        print(f"Error getting Binance data: {e}")
         return None
 
 def save_paypaldata(client_id, client_secret, sandbox=1, shop_id=1):
@@ -1670,7 +1675,8 @@ def get_manual_delivery_message(username, name):
     try:
         with shelve.open(files.bot_message_bd) as bd:
             text = bd.get('manual_delivery', 'Gracias por su compra, username')
-    except Exception:
+    except Exception as e:
+        print(f"Error retrieving manual delivery message: {e}")
         text = 'Gracias por su compra, username'
     text = text.replace('username', username).replace('name', name)
     return text
