@@ -274,6 +274,7 @@ def inline(callback):
             for cid, cname in categories:
                 key.add(telebot.types.InlineKeyboardButton(text=cname, callback_data=f'CAT_{cid}'))
             key.add(telebot.types.InlineKeyboardButton(text='Todos los productos', callback_data='CAT_NONE'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
             bot.send_message(
                 callback.message.chat.id,
@@ -289,12 +290,14 @@ def inline(callback):
             con = dop.get_db_connection() if hasattr(dop, 'get_db_connection') else db.get_db_connection()
             cursor = con.cursor()
             cursor.execute("SELECT name, price FROM goods WHERE shop_id = ?;", (shop_id_cb,))
+
             key = telebot.types.InlineKeyboardMarkup()
-            
+
             # Agregar productos con emojis
             for name, price in cursor.fetchall():
                 key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
-            
+
+            key.add(telebot.types.InlineKeyboardButton(text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
 
             if dop.get_productcatalog(shop_id_cb) == None:
@@ -315,6 +318,7 @@ def inline(callback):
             for name in goods:
                 key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
             key.add(telebot.types.InlineKeyboardButton(text='🔙 Categorías', callback_data=f'SELECT_SHOP_{shop_id_cb}'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
             if dop.get_productcatalog(shop_id_cb) is None or not goods:
                 bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, text='📭 No hay productos disponibles en este momento')
@@ -403,6 +407,7 @@ def inline(callback):
             key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=product_name))
             key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar ahora', callback_data='Comprar'))
             key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
+            key.add(telebot.types.InlineKeyboardButton(text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
             key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
             
             # Mostrar información adicional
@@ -416,6 +421,8 @@ def inline(callback):
         elif callback.data == 'Ver mis compras':
             history = dop.get_user_purchases(callback.message.chat.id)
             key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(
+                text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
             key.add(telebot.types.InlineKeyboardButton(
                 text='🏠 Inicio', callback_data='Volver al inicio'))
             bot.answer_callback_query(callback.id)
@@ -455,6 +462,7 @@ def inline(callback):
             else:
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='🔙 Volver al producto', callback_data=name_good))
+                key.add(telebot.types.InlineKeyboardButton(text='🏬 Todas las tiendas', callback_data='Ver tiendas'))
                 key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
                 purchase_text = f"""🛒 **REALIZAR COMPRA**\n{'-'*25}\n\n📦 **Producto:** {name_good}\n\n🔢 **Ingresa la cantidad** que deseas comprar:\n\n📊 **Cantidad mínima:** {str(dop.get_minimum(name_good, shop_id_cb))} unidades\n📦 **Stock disponible:** {str(dop.amount_of_goods(name_good, shop_id_cb))} unidades\n\n💡 **Tip:** Envía solo el número (ej: 5)"""
                 dop.safe_edit_message(bot, callback.message, purchase_text, reply_markup=key, parse_mode='Markdown')
