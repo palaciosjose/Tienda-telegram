@@ -183,10 +183,12 @@ ensure_database_schema()
 # Utilidad para editar mensajes con o sin multimedia
 # -------------------------------------------------
 def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
-    """Edita mensajes según su tipo y registra un error solo si ambos intentos fallan."""
+    """Edita de forma segura mensajes de texto o multimedia."""
+
+    content_type = getattr(message, "content_type", "text")
 
     try:
-        if getattr(message, "content_type", "text") == "text":
+        if content_type == "text":
             bot.edit_message_text(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
@@ -207,7 +209,7 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
         pass
 
     try:
-        if getattr(message, "content_type", "text") == "text":
+        if content_type == "text":
             bot.edit_message_caption(
                 chat_id=message.chat.id,
                 message_id=message.message_id,
