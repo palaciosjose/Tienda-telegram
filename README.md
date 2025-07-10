@@ -78,6 +78,8 @@ El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start
 
 Desde ese menú también podrás pulsar **"Mis compras"** para revisar un resumen de todos los productos que hayas adquirido.
 
+Si tienes problemas con un producto comprado puedes usar el comando `/report` (o `/reporte`) para enviar un reclamo al administrador. El bot te pedirá indicar el producto y una descripción del fallo.
+
 ## Múltiples tiendas
 
 El bot admite gestionar varias tiendas. El usuario cuyo ID figura en `TELEGRAM_ADMIN_ID` es el *super admin* y posee un menú adicional **🛍️ Gestionar tiendas** dentro de **⚙️ Otros**. Solo este super admin puede añadir o eliminar otros administradores.
@@ -110,8 +112,8 @@ En **💬 Respuestas** puedes definir distintos textos que el bot enviará. Se a
 **Agregar/Cambiar mensaje de entrega manual**, utilizado cuando un producto requiere
 entrega manual. En ese mensaje puedes incluir las palabras `username` y `name` para
 personalizarlo. Configurar **💬 Respuestas** es un privilegio exclusivo del super admin.
-Además, la bienvenida al usuario ahora admite multimedia. Al elegir *Añadir/Cambiar bienvenida al usuario* puedes
-subir una foto, video o documento opcional que se enviará junto al texto de bienvenida.
+Para modificar el mensaje mostrado al usar `/start`, selecciona **Configurar mensaje /start**.
+Podrás subir una foto, video o documento opcional que se enviará junto al texto de bienvenida.
 
 ### Carga y edición de unidades
 

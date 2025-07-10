@@ -168,6 +168,13 @@ def message_send(message):
             in_admin.append(message.chat.id)
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
 
+    elif message.text.lower() in ('/report', '/reporte'):
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='cancel_report'))
+        bot.send_message(message.chat.id, '📦 ¿Qué producto presenta fallas?', reply_markup=key)
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(message.chat.id)] = 23
+
     elif dop.get_sost(message.chat.id) is True:
         if message.chat.id in in_admin:
             adminka.text_analytics(message.text, message.chat.id)
@@ -223,6 +230,36 @@ def message_send(message):
                     bot.send_message(message.chat.id,
                                      '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)',
                                      parse_mode='Markdown', reply_markup=key)
+            elif sost_num == 23:
+                with open(f'data/Temp/{message.chat.id}_report_prod.txt', 'w', encoding='utf-8') as f:
+                    f.write(message.text.strip())
+                bot.send_message(message.chat.id, '📝 Describe el problema con el producto:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(message.chat.id)] = 24
+            elif sost_num == 24:
+                try:
+                    with open(f'data/Temp/{message.chat.id}_report_prod.txt', encoding='utf-8') as f:
+                        prod = f.read().strip()
+                except FileNotFoundError:
+                    session_expired(message.chat.id, message.chat.username, message.from_user.first_name)
+                    return
+                desc = message.text
+                shop_id = dop.get_user_shop(message.chat.id)
+                dop.create_product_report(message.chat.id, message.chat.username, prod, desc, shop_id)
+                for admin_id in dop.get_adminlist():
+                    try:
+                        bot.send_message(admin_id,
+                                         f'🆘 *Nuevo reporte*\nUsuario: {message.chat.id} (@{message.chat.username or "sin username"})\nProducto: {prod}\nDescripción: {desc}',
+                                         parse_mode='Markdown')
+                    except Exception:
+                        pass
+                bot.send_message(message.chat.id, '✅ Tu reporte fue enviado al administrador.')
+                try:
+                    os.remove(f'data/Temp/{message.chat.id}_report_prod.txt')
+                except Exception:
+                    pass
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(message.chat.id)]
 
     elif message.chat.id in in_admin:
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
@@ -260,8 +297,21 @@ def inline(callback):
         
         # Manejar envío de comprobantes
         elif callback.data == 'Enviar comprobante Binance':
-            bot.answer_callback_query(callback_query_id=callback.id, show_alert=True, 
+            bot.answer_callback_query(callback_query_id=callback.id, show_alert=True,
                                      text='📱 Envía una captura de pantalla del comprobante de pago como imagen al chat')
+            return
+
+        elif callback.data == 'cancel_report':
+            if dop.get_sost(callback.message.chat.id):
+                with shelve.open(files.sost_bd) as bd:
+                    if str(callback.message.chat.id) in bd:
+                        del bd[str(callback.message.chat.id)]
+            try:
+                os.remove(f'data/Temp/{callback.message.chat.id}_report_prod.txt')
+            except Exception:
+                pass
+            bot.answer_callback_query(callback.id, show_alert=True, text='Reporte cancelado')
+            send_main_menu(callback.message.chat.id, callback.from_user.username, callback.from_user.first_name)
             return
         
         if callback.message.chat.id in in_admin:
@@ -271,43 +321,35 @@ def inline(callback):
             shop_id = int(callback.data.replace('SELECT_SHOP_', ''))
             dop.set_user_shop(callback.message.chat.id, shop_id)
             info = dop.get_shop_info(shop_id)
-            if info and (info.get('description') or info.get('media_file_id')):
-                markup = telebot.types.InlineKeyboardMarkup()
+            markup = telebot.types.InlineKeyboardMarkup()
+            if info:
                 if info.get('button1_text') and info.get('button1_url'):
                     markup.add(telebot.types.InlineKeyboardButton(text=info['button1_text'], url=info['button1_url']))
                 if info.get('button2_text') and info.get('button2_url'):
                     markup.add(telebot.types.InlineKeyboardButton(text=info['button2_text'], url=info['button2_url']))
-                if info.get('media_file_id'):
-                    if info.get('media_type') == 'photo':
-                        bot.send_photo(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
-                    elif info.get('media_type') == 'video':
-                        bot.send_video(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
-                    elif info.get('media_type') == 'document':
-                        bot.send_document(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
-                    elif info.get('media_type') == 'audio':
-                        bot.send_audio(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
-                    elif info.get('media_type') == 'animation':
-                        bot.send_animation(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
-                    else:
-                        bot.send_message(callback.message.chat.id, info.get('description') or '', reply_markup=markup)
-                else:
-                    bot.send_message(callback.message.chat.id, info.get('description'), reply_markup=markup)
+            markup.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
+            markup.add(telebot.types.InlineKeyboardButton(text='📜 Mis compras', callback_data='Ver mis compras'))
 
-            categories = dop.list_categories(shop_id)
-            key = telebot.types.InlineKeyboardMarkup()
-            for cid, cname in categories:
-                key.add(telebot.types.InlineKeyboardButton(text=cname, callback_data=f'CAT_{cid}'))
-            key.add(telebot.types.InlineKeyboardButton(text='Todos los productos', callback_data='CAT_NONE'))
-            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            bot.send_message(
-                callback.message.chat.id,
-                '📂 **SELECCIONA UNA CATEGORÍA**',
-                reply_markup=key,
-                parse_mode='Markdown'
-            )
+            desc = info.get('description') if info else ''
+            if info and info.get('media_file_id'):
+                mtype = info.get('media_type')
+                if mtype == 'photo':
+                    bot.send_photo(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
+                elif mtype == 'video':
+                    bot.send_video(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
+                elif mtype == 'document':
+                    bot.send_document(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
+                elif mtype == 'audio':
+                    bot.send_audio(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
+                elif mtype == 'animation':
+                    bot.send_animation(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
+                else:
+                    bot.send_message(callback.message.chat.id, desc, reply_markup=markup)
+            else:
+                bot.send_message(callback.message.chat.id, desc or 'Tienda seleccionada', reply_markup=markup)
             if callback.message.content_type != 'text':
                 bot.delete_message(callback.message.chat.id, callback.message.message_id)
-
+            
         elif callback.data == 'Ir al catálogo de productos':
             # Optimización: usar conexión eficiente
             con = dop.get_db_connection() if hasattr(dop, 'get_db_connection') else db.get_db_connection()

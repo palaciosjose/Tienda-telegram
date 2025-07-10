@@ -160,6 +160,21 @@ def ensure_database_schema():
             """
         )
 
+        cursor.execute(
+            """
+            CREATE TABLE IF NOT EXISTS product_reports (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER,
+                username TEXT,
+                product_name TEXT,
+                description TEXT,
+                timestamp TEXT,
+                status TEXT DEFAULT 'open',
+                shop_id INTEGER DEFAULT 1
+            )
+            """
+        )
+
 
         if updated:
             con.commit()
@@ -524,6 +539,43 @@ def decrement_manual_stock(name_good, quantity, shop_id=1):
         con.commit()
     except Exception as e:
         logging.error(f"Error decrementando manual_stock: {e}")
+
+
+def add_manual_stock(name_good, quantity, shop_id=1):
+    """Increase manual stock for a product."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT manual_stock FROM goods WHERE name = ? AND shop_id = ?",
+            (name_good, shop_id),
+        )
+        row = cursor.fetchone()
+        current = int(row[0]) if row and row[0] is not None else 0
+        new_val = current + int(quantity)
+        if new_val < 0:
+            new_val = 0
+        cursor.execute(
+            "UPDATE goods SET manual_stock = ? WHERE name = ? AND shop_id = ?",
+            (new_val, name_good, shop_id),
+        )
+        con.commit()
+    except Exception as e:
+        logging.error(f"Error incrementando manual_stock: {e}")
+
+
+def set_manual_stock(name_good, quantity, shop_id=1):
+    """Set manual stock to a specific value."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "UPDATE goods SET manual_stock = ? WHERE name = ? AND shop_id = ?",
+            (int(quantity), name_good, shop_id),
+        )
+        con.commit()
+    except Exception as e:
+        logging.error(f"Error estableciendo manual_stock: {e}")
 
 
 def amount_of_goods(name_good, shop_id=1):
@@ -1041,7 +1093,8 @@ def get_description(name_good, shop_id=1):
         product_description = f"*{name_good}*\n\n"
         product_description += f"📝 *Descripción:*\n{description}\n\n"
         
-        active_percent = get_active_discount(name_good, shop_id)
+        info = get_active_discount_info(name_good, shop_id)
+        active_percent = info['percent'] if info else 0
 
         if active_percent:
             new_price = int(price * (100 - active_percent) / 100)
@@ -1051,6 +1104,11 @@ def get_description(name_good, shop_id=1):
             product_description += "💰 *Precio:*\n"
             product_description += f"~~{crossed_price}~~\n"
             product_description += f"*${new_price} USD* (-{active_percent}% OFF)\n\n"
+            if info.get('end_time'):
+                remaining = info['end_time'] - datetime.datetime.utcnow()
+                hrs = int(remaining.total_seconds() // 3600)
+                if hrs > 0:
+                    product_description += f"⏳ *Tiempo restante:* {hrs}h\n"
         elif discount_config['enabled'] and discount_config['show_fake_price']:
             fake_price = int(price * discount_config['multiplier'])
             fake_price_str = str(fake_price) + ' USD'
@@ -1323,6 +1381,45 @@ def new_buy_improved(his_id, username, name_good, amount, price, payment_method=
     except Exception as e:
         logging.error(f"Error en new_buy_improved: {e}")
         return False
+
+def create_product_report(user_id, username, product_name, description, shop_id=1):
+    """Guardar un reporte de problema enviado por un cliente"""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        now = datetime.datetime.utcnow().isoformat()
+        cursor.execute(
+            """
+            INSERT INTO product_reports
+            (user_id, username, product_name, description, timestamp, shop_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (user_id, username, product_name, description, now, shop_id),
+        )
+        con.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Error creando reporte: {e}")
+        return False
+
+def list_product_reports(shop_id=1, status="open"):
+    """Obtener reportes registrados para una tienda"""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            """
+            SELECT id, user_id, username, product_name, description, timestamp, status
+            FROM product_reports
+            WHERE shop_id = ? AND status = ?
+            ORDER BY timestamp DESC
+            """,
+            (shop_id, status),
+        )
+        return cursor.fetchall()
+    except Exception as e:
+        logging.error(f"Error listando reportes: {e}")
+        return []
 
 def get_daily_sales(shop_id=1):
     """Obtiene las ventas del día actual"""
@@ -1663,6 +1760,57 @@ def get_active_discount(product_or_cat_id, shop_id=1):
         logging.error(f"Error obteniendo descuento activo: {e}")
         return 0
 
+
+def get_active_discount_info(product_or_cat_id, shop_id=1):
+    """Devuelve información del descuento activo para un producto/categoría"""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+
+        if isinstance(product_or_cat_id, str):
+            cur.execute(
+                "SELECT category_id FROM goods WHERE name = ? AND shop_id = ?",
+                (product_or_cat_id, shop_id),
+            )
+            row = cur.fetchone()
+            category_id = row[0] if row else None
+        else:
+            category_id = product_or_cat_id
+
+        now = datetime.datetime.utcnow().isoformat()
+        cur.execute(
+            """
+            SELECT percent, end_time FROM discounts
+            WHERE shop_id = ? AND (category_id IS NULL OR category_id = ?)
+              AND start_time <= ? AND (end_time IS NULL OR end_time > ?)
+            ORDER BY percent DESC LIMIT 1
+            """,
+            (shop_id, category_id, now, now),
+        )
+        row = cur.fetchone()
+        if row:
+            percent = int(row[0])
+            end = row[1]
+            end_dt = datetime.datetime.fromisoformat(end) if end else None
+            return {"percent": percent, "end_time": end_dt}
+        return None
+    except Exception as e:
+        logging.error(f"Error obteniendo info de descuento activo: {e}")
+        return None
+
+
+def multiplier_to_percent(multiplier):
+    """Convierte un multiplicador en porcentaje de descuento falso."""
+    try:
+        return int(round((multiplier - 1) / multiplier * 100))
+    except Exception:
+        return 0
+
+
+def percent_to_multiplier(percent):
+    """Convierte un porcentaje en multiplicador para el precio tachado."""
+    return 100 / (100 - percent)
+
 # ============================================
 # FUNCIONES PARA DESCRIPCIÓN ADICIONAL
 # Agregadas automáticamente por el instalador
@@ -1970,9 +2118,10 @@ def format_product_with_media(product_name, shop_id=1):
             
         name, description, price, file_id, media_type, caption, duration, manual, category = result
 
-        discount = get_active_discount(name, shop_id)
-        display_price = price
         info = f"🎯 **{name}**\n"
+        d_info = get_active_discount_info(name, shop_id)
+        discount = d_info['percent'] if d_info else 0
+        display_price = price
         if discount:
             new_price = int(price * (100 - discount) / 100)
             display_price = new_price
@@ -1980,6 +2129,11 @@ def format_product_with_media(product_name, shop_id=1):
             array = list(orig_str)
             crossed = "̶" + "̶".join(array) + "̶"
             info += f"💰 **Precio:** ~~{crossed}~~ ${new_price} USD (-{discount}% OFF)\n"
+            if d_info.get('end_time'):
+                rem = d_info['end_time'] - datetime.datetime.utcnow()
+                hrs = int(rem.total_seconds() // 3600)
+                if hrs > 0:
+                    info += f"⏳ **Tiempo restante:** {hrs}h\n"
         else:
             info += f"💰 **Precio:** ${price} USD\n"
         info += f"📝 **Descripción:** {description}\n"

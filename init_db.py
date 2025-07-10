@@ -276,6 +276,21 @@ def create_database():
         )
     ''')
     print("✓ Tabla 'discount_config' creada")
+
+    # Tabla para reportes de productos
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS product_reports (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER,
+            username TEXT,
+            product_name TEXT,
+            description TEXT,
+            timestamp TEXT,
+            status TEXT DEFAULT 'open',
+            shop_id INTEGER DEFAULT 1
+        )
+    ''')
+    print("✓ Tabla 'product_reports' creada")
     
     conn.commit()
     conn.close()
