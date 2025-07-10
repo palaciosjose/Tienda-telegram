@@ -6,16 +6,22 @@ from advertising_system.admin_integration import add_bot_group, remove_bot_group
 import atexit
 import glob
 import sys
+import time
+
+# Files older than this many seconds will be removed from the Temp folder
+TEMP_FILE_MAX_AGE = 24 * 60 * 60  # 24 hours
 
 # Limpieza automática de archivos temporales al cerrar
 def cleanup_temp_files():
     """Limpiar archivos temporales al cerrar"""
     try:
+        now = time.time()
         temp_files = glob.glob('data/Temp/*')
         for f in temp_files:
-            if os.path.isfile(f) and os.path.getsize(f) == 0:  # Solo archivos vacíos
-                os.remove(f)
-    except:
+            if os.path.isfile(f):
+                if now - os.path.getmtime(f) > TEMP_FILE_MAX_AGE:
+                    os.remove(f)
+    except Exception:
         pass
 
 # Registrar limpieza al cerrar
