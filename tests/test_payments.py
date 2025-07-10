@@ -33,7 +33,12 @@ def setup_payments(monkeypatch, tmp_path):
     bot_stub = telebot_stub.TeleBot()
     sys.modules["bot_instance"] = types.SimpleNamespace(bot=bot_stub)
     sys.modules.setdefault(
-        "requests", types.SimpleNamespace(post=lambda *a, **k: None, get=lambda *a, **k: None)
+        "requests",
+        types.SimpleNamespace(
+            post=lambda *a, **k: None,
+            get=lambda *a, **k: None,
+            __version__="0",
+        ),
     )
 
     root = Path(__file__).resolve().parents[1]

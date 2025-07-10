@@ -55,7 +55,12 @@ def setup_main(monkeypatch, tmp_path):
     bot = telebot_stub.TeleBot()
     sys.modules["bot_instance"] = types.SimpleNamespace(bot=bot)
     sys.modules.setdefault(
-        "requests", types.SimpleNamespace(post=lambda *a, **k: None, get=lambda *a, **k: None)
+        "requests",
+        types.SimpleNamespace(
+            post=lambda *a, **k: None,
+            get=lambda *a, **k: None,
+            __version__="0",
+        ),
     )
 
     root = Path(__file__).resolve().parents[1]
