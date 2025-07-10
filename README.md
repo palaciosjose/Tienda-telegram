@@ -74,7 +74,12 @@ duplicadas.  Si el archivo existe y corresponde a un proceso activo, el bot se
 detendrá con una advertencia.  El archivo se elimina automáticamente al cerrar
 el bot.
 
-El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.
+El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.  Para
+ver mensajes más detallados establece la variable de entorno `LOGLEVEL` a `DEBUG` al ejecutarlo:
+
+```bash
+LOGLEVEL=DEBUG python main.py
+```
 
 Tras ello, los administradores deben escribir `/adm` para abrir el panel de administración. El comando solo está disponible para los IDs indicados en `TELEGRAM_ADMIN_ID` o en `data/lists/admins_list.txt`.
 
