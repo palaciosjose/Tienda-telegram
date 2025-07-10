@@ -145,10 +145,26 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif ' bienvenida al usuario' in message_text or ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text or 'mensaje de entrega manual' in message_text:
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            if ' bienvenida al usuario' in message_text: 
+            if ' bienvenida al usuario' in message_text:
                 message = 'start'
-                bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de bienvenida! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-            elif ' mensaje después de pagar el producto' in message_text: 
+                media_key = telebot.types.InlineKeyboardMarkup()
+                media_key.add(
+                    telebot.types.InlineKeyboardButton(text='Omitir', callback_data='SKIP_START_MEDIA')
+                )
+                media_key.add(
+                    telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración')
+                )
+                bot.send_message(
+                    chat_id,
+                    'Envíe una foto, video o documento para la bienvenida (opcional) o presione "Omitir"',
+                    reply_markup=media_key
+                )
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+                    f.write(message)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 500
+                return
+            elif ' mensaje después de pagar el producto' in message_text:
                 message = 'after_buy'
                 bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que el bot enviará al usuario después de la compra! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
             elif ' respuesta al comando help' in message_text: 
@@ -812,6 +828,11 @@ def text_analytics(message_text, chat_id):
                 return
             if message == 'manual_delivery':
                 success = dop.save_message('manual_delivery', message_text)
+            elif message == 'start':
+                media = dop.get_start_media()
+                fid = media['file_id'] if media else None
+                mtype = media['type'] if media else None
+                success = dop.save_message('start', message_text, file_id=fid, media_type=mtype)
             else:
                 try:
                     with shelve.open(files.bot_message_bd) as bd:
@@ -2180,6 +2201,25 @@ def ad_inline(callback_data, chat_id, message_id):
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 2
 
+    elif callback_data == 'SKIP_START_MEDIA':
+        dop.remove_start_media()
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(
+            telebot.types.InlineKeyboardButton(
+                text='Cancelar y volver al menú principal de administración',
+                callback_data='Volver al menú principal de administración'
+            )
+        )
+        bot.edit_message_reply_markup(chat_id, message_id)
+        bot.send_message(
+            chat_id,
+            '¡Ingrese un nuevo mensaje de bienvenida! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario',
+            parse_mode='MarkDown',
+            reply_markup=key
+        )
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(chat_id)] = 1
+
     elif callback_data == 'CONFIRM_BROADCAST':
         try:
             with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
@@ -2330,7 +2370,7 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200, 42, 162, 165, 305):
+        if state not in (32, 200, 42, 162, 165, 305, 500):
             return
 
         if state == 32:
@@ -2343,6 +2383,8 @@ def handle_multimedia(message):
         elif state == 165:
             temp_path = None
         elif state == 305:
+            temp_path = None
+        elif state == 500:
             temp_path = None
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
@@ -2447,6 +2489,26 @@ def handle_multimedia(message):
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
                 in_adminka(chat_id, '⚙️ Otros', None, None)
+                return
+            elif state == 500:
+                with shelve.open(files.bot_message_bd) as bd:
+                    bd['start_media_file_id'] = file_id
+                    bd['start_media_type'] = media_type
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(
+                    telebot.types.InlineKeyboardButton(
+                        text='Cancelar y volver al menú principal de administración',
+                        callback_data='Volver al menú principal de administración'
+                    )
+                )
+                bot.send_message(
+                    chat_id,
+                    '¡Ingrese un nuevo mensaje de bienvenida! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario',
+                    parse_mode='MarkDown',
+                    reply_markup=key
+                )
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 1
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:

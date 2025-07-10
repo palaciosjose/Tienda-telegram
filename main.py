@@ -73,7 +73,22 @@ def send_main_menu(chat_id, username, name):
             start_message = bd['start']
         start_message = start_message.replace('username', username or '')
         start_message = start_message.replace('name', name or '')
-        bot.send_message(chat_id, start_message, reply_markup=key)
+        media = dop.get_start_media()
+        if media:
+            if media['type'] == 'photo':
+                bot.send_photo(chat_id, media['file_id'], caption=start_message, reply_markup=key)
+            elif media['type'] == 'video':
+                bot.send_video(chat_id, media['file_id'], caption=start_message, reply_markup=key)
+            elif media['type'] == 'document':
+                bot.send_document(chat_id, media['file_id'], caption=start_message, reply_markup=key)
+            elif media['type'] == 'audio':
+                bot.send_audio(chat_id, media['file_id'], caption=start_message, reply_markup=key)
+            elif media['type'] == 'animation':
+                bot.send_animation(chat_id, media['file_id'], caption=start_message, reply_markup=key)
+            else:
+                bot.send_message(chat_id, start_message, reply_markup=key)
+        else:
+            bot.send_message(chat_id, start_message, reply_markup=key)
     else:
         bot.send_message(chat_id, '🏠 Inicio', reply_markup=key)
 
@@ -447,11 +462,27 @@ def inline(callback):
                         start_message = bd['start']
                     start_message = start_message.replace('username', callback.message.chat.username)
                     start_message = start_message.replace('name', callback.message.from_user.first_name)
-                    if callback.message.content_type != 'text':
+                    media = dop.get_start_media()
+                    if media:
                         bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                        bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
+                        if media['type'] == 'photo':
+                            bot.send_photo(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
+                        elif media['type'] == 'video':
+                            bot.send_video(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
+                        elif media['type'] == 'document':
+                            bot.send_document(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
+                        elif media['type'] == 'audio':
+                            bot.send_audio(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
+                        elif media['type'] == 'animation':
+                            bot.send_animation(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
+                        else:
+                            bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
                     else:
-                        dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
+                        if callback.message.content_type != 'text':
+                            bot.delete_message(callback.message.chat.id, callback.message.message_id)
+                            bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
+                        else:
+                            dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
 
         elif callback.data == 'Comprar':
             try:

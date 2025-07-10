@@ -2005,14 +2005,47 @@ def format_product_with_media(product_name, shop_id=1):
         logging.error(f"Error formateando producto: {e}")
         return None
 
-def save_message(message_type, message_text):
+def save_message(message_type, message_text, file_id=None, media_type=None):
     """Guardar mensaje del bot"""
     try:
         with shelve.open(files.bot_message_bd) as bd:
             bd[message_type] = message_text
+            if message_type == 'start':
+                if file_id:
+                    bd['start_media_file_id'] = file_id
+                    bd['start_media_type'] = media_type
+                else:
+                    bd.pop('start_media_file_id', None)
+                    bd.pop('start_media_type', None)
         return True
     except Exception as e:
         logging.error(f"Error guardando mensaje: {e}")
+        return False
+
+
+def get_start_media():
+    """Obtener multimedia asociada al mensaje de inicio"""
+    try:
+        with shelve.open(files.bot_message_bd) as bd:
+            fid = bd.get('start_media_file_id')
+            mtype = bd.get('start_media_type')
+        if fid:
+            return {'file_id': fid, 'type': mtype}
+        return None
+    except Exception as e:
+        logging.error(f"Error obteniendo multimedia de inicio: {e}")
+        return None
+
+
+def remove_start_media():
+    """Eliminar multimedia del mensaje de inicio"""
+    try:
+        with shelve.open(files.bot_message_bd) as bd:
+            bd.pop('start_media_file_id', None)
+            bd.pop('start_media_type', None)
+        return True
+    except Exception as e:
+        logging.error(f"Error eliminando multimedia de inicio: {e}")
         return False
 
 
