@@ -1,0 +1,22 @@
+from tests.test_shop_info import setup_main
+import shelve, types, os
+
+
+def test_report_command_sets_state(monkeypatch, tmp_path):
+    dop, main, calls, bot = setup_main(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+    os.makedirs('data/bd', exist_ok=True)
+    monkeypatch.setattr(main.files, 'sost_bd', str(tmp_path / 'sost.bd'))
+    monkeypatch.setattr(main.bot, 'get_me', lambda: types.SimpleNamespace(username='mybot'), raising=False)
+    main.bot_username = main.bot.get_me().username.lower()
+
+    class Msg:
+        def __init__(self, text):
+            self.text = text
+            self.chat = types.SimpleNamespace(id=5, username='u')
+            self.from_user = types.SimpleNamespace(first_name='N')
+    msg = Msg('/report@mybot')
+    main.message_send(msg)
+    with shelve.open(main.files.sost_bd) as bd:
+        assert bd[str(msg.chat.id)] == 23
+    assert any(c[0] == 'send_message' for c in calls)
