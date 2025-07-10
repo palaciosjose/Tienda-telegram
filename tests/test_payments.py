@@ -38,6 +38,7 @@ def setup_payments(monkeypatch, tmp_path):
             post=lambda *a, **k: None,
             get=lambda *a, **k: None,
             __version__="0",
+            Session=lambda *a, **k: types.SimpleNamespace(headers={}),
         ),
     )
 
