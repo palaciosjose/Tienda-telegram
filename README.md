@@ -86,6 +86,10 @@ Desde allí puede crear nuevas tiendas y asignar el ID de Telegram de su adminis
 
 Cada administrador puede renombrar su tienda desde **⚙️ Otros** usando la opción *Cambiar nombre de tienda*.
 
+### Calificaciones de tienda
+
+Los clientes pueden puntuar a cada vendedor de 1 a 5 estrellas desde la portada de la tienda. La media de calificaciones aparece bajo la descripción y cada usuario puede actualizar su voto en cualquier momento eligiendo nuevamente el número de estrellas.
+
 Si vienes de una instalación antigua de una sola tienda, ejecuta `python migrate_add_shop_id.py` (o `init_db.py` si prefieres crear la base desde cero) para añadir la columna `shop_id` requerida.
 
 Para registrar la relación entre usuarios y tiendas existentes, ejecuta:

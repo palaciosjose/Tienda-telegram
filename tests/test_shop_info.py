@@ -153,3 +153,33 @@ def test_category_selection_lists_products(monkeypatch, tmp_path):
     btn_texts = [b.text for b in buttons]
     assert any("P1" in t for t in btn_texts)
     assert not any("P2" in t for t in btn_texts)
+
+
+def test_shop_rating_shown(monkeypatch, tmp_path):
+    dop, main, calls, _ = setup_main(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+    sid = dop.create_shop("S1", admin_id=1)
+    dop.update_shop_info(sid, description="desc")
+    dop.submit_shop_rating(sid, 1, 5)
+    dop.submit_shop_rating(sid, 2, 4)
+
+    class Msg:
+        def __init__(self):
+            self.chat = types.SimpleNamespace(id=5)
+            self.message_id = 1
+            self.content_type = "text"
+            self.from_user = types.SimpleNamespace(first_name="a")
+
+    cb = types.SimpleNamespace(data=f"SELECT_SHOP_{sid}", message=Msg(), id="1", from_user=types.SimpleNamespace(username="u"))
+    main.inline(cb)
+
+    first = next(c for c in calls if c[0] in ("send_message", "send_photo"))
+    if first[0] == "send_photo":
+        text = first[2]["caption"]
+        buttons = first[2]["reply_markup"].buttons
+    else:
+        text = first[1][1]
+        buttons = first[2]["reply_markup"].buttons
+
+    assert "4.5" in text
+    assert any(b.text.startswith("⭐") for b in buttons)
