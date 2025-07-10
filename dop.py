@@ -88,6 +88,9 @@ def ensure_database_schema():
         if 'manual_delivery' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN manual_delivery INTEGER DEFAULT 0")
             updated = True
+        if 'manual_stock' not in columns:
+            cursor.execute("ALTER TABLE goods ADD COLUMN manual_stock INTEGER DEFAULT 0")
+            updated = True
         if 'category_id' not in columns:
             cursor.execute("ALTER TABLE goods ADD COLUMN category_id INTEGER")
             updated = True
@@ -481,9 +484,48 @@ def get_stored(name_good, shop_id=1):
         logging.error(f"Error obteniendo ruta de almacen: {e}")
         return None
 
+def get_manual_stock(name_good, shop_id=1):
+    """Return manual stock for a product."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT manual_stock FROM goods WHERE name = ? AND shop_id = ?",
+            (name_good, shop_id),
+        )
+        row = cursor.fetchone()
+        return int(row[0]) if row and row[0] is not None else 0
+    except Exception as e:
+        logging.error(f"Error obteniendo manual_stock: {e}")
+        return 0
+
+
+def decrement_manual_stock(name_good, quantity, shop_id=1):
+    """Decrease manual stock after a purchase."""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT manual_stock FROM goods WHERE name = ? AND shop_id = ?",
+            (name_good, shop_id),
+        )
+        row = cursor.fetchone()
+        current = int(row[0]) if row and row[0] is not None else 0
+        new_val = current - int(quantity)
+        if new_val < 0:
+            new_val = 0
+        cursor.execute(
+            "UPDATE goods SET manual_stock = ? WHERE name = ? AND shop_id = ?",
+            (new_val, name_good, shop_id),
+        )
+        con.commit()
+    except Exception as e:
+        logging.error(f"Error decrementando manual_stock: {e}")
+
+
 def amount_of_goods(name_good, shop_id=1):
     if is_manual_delivery(name_good, shop_id):
-        return 10 ** 9
+        return get_manual_stock(name_good, shop_id)
     stored = get_stored(name_good, shop_id)
     if not stored:
         return 0
@@ -1977,7 +2019,7 @@ def save_message(message_type, message_text):
 def create_product(name, description, format_type, minimum, price, stored,
                    additional_description='', media_file_id=None, media_type=None,
                    media_caption=None, duration_days=None, manual_delivery=0,
-                   category_id=None, shop_id=1):
+                   manual_stock=0, category_id=None, shop_id=1):
     """Crear un producto en la base de datos."""
     try:
         con = db.get_db_connection()
@@ -1988,14 +2030,14 @@ def create_product(name, description, format_type, minimum, price, stored,
                 name, description, format, minimum, price, stored,
                 additional_description, media_file_id, media_type,
                 media_caption, duration_days, manual_delivery,
-                category_id, shop_id
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                manual_stock, category_id, shop_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 name, description, format_type, minimum, price, stored,
                 additional_description, media_file_id, media_type,
                 media_caption, duration_days, manual_delivery,
-                category_id, shop_id,
+                manual_stock, category_id, shop_id,
             ),
         )
         con.commit()

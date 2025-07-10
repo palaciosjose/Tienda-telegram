@@ -470,6 +470,7 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
         if dop.is_manual_delivery(name_good):
             manual_msg = dop.get_manual_delivery_message(username, first_name)
             bot.send_message(chat_id, manual_msg)
+            dop.decrement_manual_stock(name_good, amount, shop_id)
         else:
             # Entregar producto físico/digital
             text = ''

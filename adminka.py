@@ -870,9 +870,9 @@ def text_analytics(message_text, chat_id):
                     f2.write('manual')
                 key = telebot.types.InlineKeyboardMarkup()
                 key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                bot.send_message(chat_id, 'Ahora ingrese la cantidad mínima para comprar', reply_markup=key)
+                bot.send_message(chat_id, 'Ahora ingrese la cantidad disponible en stock', reply_markup=key)
                 with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 5
+                    bd[str(chat_id)] = 12
             else:
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 user_markup.row('En formato de texto', 'En formato de archivo')
@@ -880,6 +880,24 @@ def text_analytics(message_text, chat_id):
                 bot.send_message(chat_id, 'Ahora seleccione el formato del producto', reply_markup=user_markup)
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 4
+
+        elif sost_num == 12:
+            try:
+                stock_val = int(message_text)
+                if stock_val < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, '❌ Por favor ingrese una cantidad válida (0 o más).')
+                return
+
+            with open('data/Temp/' + str(chat_id) + 'good_manual_stock.txt', 'w', encoding='utf-8') as f:
+                f.write(str(stock_val))
+
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Ahora ingrese la cantidad mínima para comprar', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 5
 
         elif sost_num == 4:
             format_map = {
@@ -2233,6 +2251,11 @@ def ad_inline(callback_data, chat_id, message_id):
 
         if manual_flag == '1':
             format_type = 'manual'
+            try:
+                with open('data/Temp/' + str(chat_id) + 'good_manual_stock.txt', encoding='utf-8') as f:
+                    manual_stock = int(f.read())
+            except Exception:
+                manual_stock = 0
         category_id = None
         try:
             with open('data/Temp/' + str(chat_id) + 'good_category.txt', encoding='utf-8') as f:
@@ -2253,11 +2276,13 @@ def ad_inline(callback_data, chat_id, message_id):
             media_caption=media_caption,
             duration_days=duration_days,
             manual_delivery=int(manual_flag),
+            manual_stock=manual_stock if manual_flag == '1' else 0,
             category_id=category_id,
             shop_id=shop_id,
         )
         goods_file = f"data/goods/{shop_id}_{name}.txt"
-        open(goods_file, "a", encoding="utf-8").close()
+        if manual_flag != '1':
+            open(goods_file, "a", encoding="utf-8").close()
         # Mostrar información del producto con la multimedia que se haya adjuntado
         media_info = dop.get_product_media(name, shop_id)
         caption = dop.format_product_with_media(name, shop_id)
@@ -2283,6 +2308,7 @@ def ad_inline(callback_data, chat_id, message_id):
             os.remove(media_temp)
         try:
             os.remove('data/Temp/' + str(chat_id) + 'good_category.txt')
+            os.remove('data/Temp/' + str(chat_id) + 'good_manual_stock.txt')
         except Exception:
             pass
         
