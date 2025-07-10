@@ -7,6 +7,9 @@ import atexit
 import glob
 import sys
 import time
+import logging
+
+logging.basicConfig(level=logging.INFO)
 
 # Files older than this many seconds will be removed from the Temp folder
 TEMP_FILE_MAX_AGE = 24 * 60 * 60  # 24 hours
@@ -92,11 +95,11 @@ def session_expired(chat_id, username, name):
     send_main_menu(chat_id, username, name)
 
 # Solo log crítico
-print("🚀 Bot iniciado.")
+logging.info("🚀 Bot iniciado.")
 
 # Verificar que existe la base de datos
 if not os.path.exists('data/db/main_data.db'):
-    print("❌ ERROR: Base de datos no encontrada. Ejecuta init_db.py primero.")
+    logging.error("❌ ERROR: Base de datos no encontrada. Ejecuta init_db.py primero.")
     exit(1)
 
 
@@ -505,7 +508,7 @@ def inline(callback):
     except Exception as e:
         # Manejo de errores optimizado - no hacer print de todos los errores
         if "bad request" not in str(e).lower():
-            print(f"Error en callback: {e}")
+            logging.error(f"Error en callback: {e}")
 
 
 if hasattr(bot, "my_chat_member_handler"):
@@ -537,16 +540,16 @@ def handle_media_files(message):
 
 if __name__ == '__main__':
     if is_running():
-        print("⚠️ Bot ya está ejecutándose (data/bot.pid)")
+        logging.error("⚠️ Bot ya está ejecutándose (data/bot.pid)")
         sys.exit(1)
     try:
         os.makedirs('data', exist_ok=True)
         with open('data/bot.pid', 'w') as f:
             f.write(str(os.getpid()))
     except Exception:
-        print("⚠️ No se pudo escribir data/bot.pid")
+        logging.error("⚠️ No se pudo escribir data/bot.pid")
 
-    print("✅ Bot iniciando polling optimizado...")
+    logging.info("✅ Bot iniciando polling optimizado...")
     # Polling optimizado configurable mediante variables de entorno
     bot.polling(
         none_stop=True,
