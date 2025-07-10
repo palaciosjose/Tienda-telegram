@@ -1327,39 +1327,57 @@ def text_analytics(message_text, chat_id):
                 return
 
             action = message_text.strip().lower()
-            file_path = f'data/goods/{shop_id}_{product}.txt'
-            if action == 'añadir unidades':
-                bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 180
-            elif action == 'editar unidades':
-                if not os.path.exists(file_path):
-                    bot.send_message(chat_id, 'El producto aún no tiene unidades.')
-                    show_product_menu(chat_id)
+            if dop.is_manual_delivery(product, shop_id):
+                if action == 'añadir unidades':
+                    bot.send_message(chat_id, 'Indique cuántas unidades desea agregar:')
                     with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-                    return
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    lines = [ln.rstrip('\n') for ln in f.readlines()]
-                text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 181
-            elif action == 'eliminar unidades':
-                if not os.path.exists(file_path):
-                    bot.send_message(chat_id, 'El producto aún no tiene unidades.')
-                    show_product_menu(chat_id)
+                        bd[str(chat_id)] = 183
+                elif action == 'editar unidades':
+                    current = dop.get_manual_stock(product, shop_id)
+                    bot.send_message(chat_id, f'Stock actual: {current}\nIndique la nueva cantidad total:')
                     with shelve.open(files.sost_bd) as bd:
-                        del bd[str(chat_id)]
-                    return
-                with open(file_path, 'r', encoding='utf-8') as f:
-                    lines = [ln.rstrip('\n') for ln in f.readlines()]
-                text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 182
+                        bd[str(chat_id)] = 184
+                elif action == 'eliminar unidades':
+                    current = dop.get_manual_stock(product, shop_id)
+                    bot.send_message(chat_id, f'Stock actual: {current}\nIndique cuántas unidades desea eliminar:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 185
+                else:
+                    show_product_menu(chat_id)
             else:
-                show_product_menu(chat_id)
+                file_path = f'data/goods/{shop_id}_{product}.txt'
+                if action == 'añadir unidades':
+                    bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 180
+                elif action == 'editar unidades':
+                    if not os.path.exists(file_path):
+                        bot.send_message(chat_id, 'El producto aún no tiene unidades.')
+                        show_product_menu(chat_id)
+                        with shelve.open(files.sost_bd) as bd:
+                            del bd[str(chat_id)]
+                        return
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = [ln.rstrip('\n') for ln in f.readlines()]
+                    text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
+                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 181
+                elif action == 'eliminar unidades':
+                    if not os.path.exists(file_path):
+                        bot.send_message(chat_id, 'El producto aún no tiene unidades.')
+                        show_product_menu(chat_id)
+                        with shelve.open(files.sost_bd) as bd:
+                            del bd[str(chat_id)]
+                        return
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        lines = [ln.rstrip('\n') for ln in f.readlines()]
+                    text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
+                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
+                    with shelve.open(files.sost_bd) as bd:
+                        bd[str(chat_id)] = 182
+                else:
+                    show_product_menu(chat_id)
 
         elif sost_num == 180:
             try:
@@ -1434,6 +1452,66 @@ def text_analytics(message_text, chat_id):
             with open(file_path, 'w', encoding='utf-8') as f:
                 for line in new_lines:
                     f.write(line + '\n')
+            bot.send_message(chat_id, '¡Unidades eliminadas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 183:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            try:
+                qty = int(message_text)
+                if qty < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, 'Cantidad inválida.')
+                return
+            dop.add_manual_stock(product, qty, shop_id)
+            bot.send_message(chat_id, '¡Unidades añadidas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 184:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            try:
+                qty = int(message_text)
+                if qty < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, 'Cantidad inválida.')
+                return
+            dop.set_manual_stock(product, qty, shop_id)
+            bot.send_message(chat_id, '¡Unidades editadas con éxito!')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_product_menu(chat_id)
+
+        elif sost_num == 185:
+            try:
+                with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
+                    product = f.read()
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            try:
+                qty = int(message_text)
+                if qty < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, 'Cantidad inválida.')
+                return
+            dop.decrement_manual_stock(product, qty, shop_id)
             bot.send_message(chat_id, '¡Unidades eliminadas con éxito!')
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
