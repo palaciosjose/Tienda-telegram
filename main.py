@@ -1,4 +1,4 @@
-import telebot, shelve, sqlite3, os
+import telebot, shelve, sqlite3, os, types
 import config, dop, payments, adminka, files
 import db
 from bot_instance import bot
@@ -271,27 +271,32 @@ def inline(callback):
             shop_id = int(callback.data.replace('SELECT_SHOP_', ''))
             dop.set_user_shop(callback.message.chat.id, shop_id)
             info = dop.get_shop_info(shop_id)
+            avg, count = dop.get_shop_rating(shop_id)
+            desc = (info.get('description') or '') if info else ''
+            if count:
+                desc = f"{desc}\n⭐ {avg:.1f}/5 ({count})"
             if info and (info.get('description') or info.get('media_file_id')):
                 markup = telebot.types.InlineKeyboardMarkup()
                 if info.get('button1_text') and info.get('button1_url'):
                     markup.add(telebot.types.InlineKeyboardButton(text=info['button1_text'], url=info['button1_url']))
                 if info.get('button2_text') and info.get('button2_url'):
                     markup.add(telebot.types.InlineKeyboardButton(text=info['button2_text'], url=info['button2_url']))
+                markup.add(telebot.types.InlineKeyboardButton(text='⭐ Calificar vendedor', callback_data=f'RATE_SHOP_{shop_id}'))
                 if info.get('media_file_id'):
                     if info.get('media_type') == 'photo':
-                        bot.send_photo(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
+                        bot.send_photo(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
                     elif info.get('media_type') == 'video':
-                        bot.send_video(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
+                        bot.send_video(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
                     elif info.get('media_type') == 'document':
-                        bot.send_document(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
+                        bot.send_document(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
                     elif info.get('media_type') == 'audio':
-                        bot.send_audio(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
+                        bot.send_audio(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
                     elif info.get('media_type') == 'animation':
-                        bot.send_animation(callback.message.chat.id, info['media_file_id'], caption=info.get('description') or '', reply_markup=markup)
+                        bot.send_animation(callback.message.chat.id, info['media_file_id'], caption=desc, reply_markup=markup)
                     else:
-                        bot.send_message(callback.message.chat.id, info.get('description') or '', reply_markup=markup)
+                        bot.send_message(callback.message.chat.id, desc or '', reply_markup=markup)
                 else:
-                    bot.send_message(callback.message.chat.id, info.get('description'), reply_markup=markup)
+                    bot.send_message(callback.message.chat.id, desc, reply_markup=markup)
 
             categories = dop.list_categories(shop_id)
             key = telebot.types.InlineKeyboardMarkup()
@@ -307,6 +312,24 @@ def inline(callback):
             )
             if callback.message.content_type != 'text':
                 bot.delete_message(callback.message.chat.id, callback.message.message_id)
+
+        elif callback.data.startswith('RATE_SHOP_'):
+            shop_id = int(callback.data.replace('RATE_SHOP_', ''))
+            key = telebot.types.InlineKeyboardMarkup()
+            for i in range(1, 6):
+                key.add(telebot.types.InlineKeyboardButton(text='⭐' * i, callback_data=f'RATE_VAL_{shop_id}_{i}'))
+            bot.answer_callback_query(callback.id)
+            bot.send_message(callback.message.chat.id, 'Elige una calificación:', reply_markup=key)
+
+        elif callback.data.startswith('RATE_VAL_'):
+            parts = callback.data.split('_')
+            if len(parts) == 4:
+                shop_id = int(parts[2])
+                value = int(parts[3])
+                dop.submit_shop_rating(shop_id, callback.from_user.id, value)
+                bot.answer_callback_query(callback.id, text='¡Gracias por calificar!', show_alert=True)
+                cb = types.SimpleNamespace(data=f'SELECT_SHOP_{shop_id}', message=callback.message, id=callback.id, from_user=callback.from_user)
+                inline(cb)
 
         elif callback.data == 'Ir al catálogo de productos':
             # Optimización: usar conexión eficiente

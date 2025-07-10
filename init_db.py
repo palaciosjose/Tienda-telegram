@@ -110,6 +110,16 @@ def create_database():
     ''')
     print("✓ Tabla 'shop_users' creada")
 
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS shop_ratings (
+            shop_id INTEGER,
+            user_id INTEGER,
+            rating INTEGER,
+            PRIMARY KEY (shop_id, user_id)
+        )
+    ''')
+    print("✓ Tabla 'shop_ratings' creada")
+
     # Tablas para sistema de publicidad
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS campaigns (

@@ -135,6 +135,17 @@ def ensure_database_schema():
 
         cursor.execute(
             """
+            CREATE TABLE IF NOT EXISTS shop_ratings (
+                shop_id INTEGER,
+                user_id INTEGER,
+                rating INTEGER,
+                PRIMARY KEY (shop_id, user_id)
+            )
+            """
+        )
+
+        cursor.execute(
+            """
             CREATE TABLE IF NOT EXISTS discounts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 percent INTEGER,
@@ -1073,6 +1084,39 @@ def get_user_shop(user_id):
     except Exception as e:
         logging.error(f"Error getting user shop: {e}")
         return 1
+
+def submit_shop_rating(shop_id, user_id, rating):
+    """Insertar o actualizar la calificación de un usuario para una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "INSERT OR REPLACE INTO shop_ratings (shop_id, user_id, rating) VALUES (?, ?, ?)",
+            (int(shop_id), int(user_id), int(rating)),
+        )
+        con.commit()
+        return True
+    except Exception as e:
+        logging.error(f"Error submitting shop rating: {e}")
+        return False
+
+def get_shop_rating(shop_id):
+    """Obtener promedio y cantidad de calificaciones de una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "SELECT AVG(rating), COUNT(*) FROM shop_ratings WHERE shop_id = ?",
+            (int(shop_id),),
+        )
+        row = cur.fetchone()
+        if row:
+            avg = float(row[0]) if row[0] is not None else 0.0
+            return avg, row[1]
+        return (0.0, 0)
+    except Exception as e:
+        logging.error(f"Error getting shop rating: {e}")
+        return (0.0, 0)
 
 def get_description(name_good, shop_id=1):
     """Descripción del producto con sistema de descuentos"""
