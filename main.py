@@ -199,7 +199,7 @@ def message_send(message):
         else:
             bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
-    elif isinstance(message.text, str) and (
+    elif isinstance(message.text, str) and message.text.split() and (
         message.text.split()[0].lower()
         in ('/report', '/reporte', f'/report@{bot_username}', f'/reporte@{bot_username}')
     ):
