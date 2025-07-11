@@ -20,3 +20,19 @@ def test_report_command_sets_state(monkeypatch, tmp_path):
     with shelve.open(main.files.sost_bd) as bd:
         assert bd[str(msg.chat.id)] == 23
     assert any(c[0] == 'send_message' for c in calls)
+
+
+def test_whitespace_message_ignored(monkeypatch, tmp_path):
+    dop, main, calls, bot = setup_main(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+
+    class Msg:
+        def __init__(self, text):
+            self.text = text
+            self.chat = types.SimpleNamespace(id=5, username='u')
+            self.from_user = types.SimpleNamespace(first_name='N')
+
+    msg = Msg('   ')
+    main.message_send(msg)
+
+    assert not any('Por favor escribe tu reporte' in c[1][1] for c in calls if c[0] == 'send_message')

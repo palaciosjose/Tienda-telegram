@@ -131,9 +131,9 @@ def message_send(message):
     """Route incoming text messages to the appropriate handlers."""
     first_word = ""
     if isinstance(message.text, str):
-        parts = message.text.strip().split()
-        if parts:
-            first_word = parts[0].lower()
+        stripped = message.text.strip()
+        if stripped:
+            first_word = stripped.split()[0].lower()
     if '/start' == message.text:
         if message.chat.username:
             # Limpiar estado si existe
@@ -204,7 +204,7 @@ def message_send(message):
         else:
             bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
-    elif first_word in (
+    elif first_word and first_word in (
         '/report',
         '/reporte',
         f'/report@{bot_username}',
