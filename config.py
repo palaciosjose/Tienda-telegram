@@ -1,8 +1,12 @@
 import os
+import logging
 from dotenv import load_dotenv
 
 # Cargar variables del archivo .env
 load_dotenv()
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # Obtener valores de las variables de entorno
 admin_id_env = os.getenv('TELEGRAM_ADMIN_ID')
@@ -37,4 +41,4 @@ if not token:
     print("Asegúrate de que el archivo .env existe y contiene tu token")
     exit(1)
 
-print("✅ Configuración cargada correctamente")
+logger.info('✅ Configuración cargada correctamente')
