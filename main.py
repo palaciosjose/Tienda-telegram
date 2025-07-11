@@ -129,6 +129,11 @@ in_admin = []
 @bot.message_handler(content_types=["text"])
 def message_send(message):
     """Route incoming text messages to the appropriate handlers."""
+    first_word = ""
+    if isinstance(message.text, str):
+        parts = message.text.strip().split()
+        if parts:
+            first_word = parts[0].lower()
     if '/start' == message.text:
         if message.chat.username:
             # Limpiar estado si existe
@@ -199,11 +204,12 @@ def message_send(message):
         else:
             bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
-    elif isinstance(message.text, str) and message.text.split() and (
-        message.text.split()[0].lower()
-        in ('/report', '/reporte', f'/report@{bot_username}', f'/reporte@{bot_username}')
+    elif first_word in (
+        '/report',
+        '/reporte',
+        f'/report@{bot_username}',
+        f'/reporte@{bot_username}',
     ):
-        cmd = message.text.split()[0].lower()
         key = telebot.types.InlineKeyboardMarkup()
         key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
         bot.send_message(message.chat.id, '📝 Por favor escribe tu reporte:', reply_markup=key)
