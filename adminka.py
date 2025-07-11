@@ -122,10 +122,6 @@ def in_adminka(chat_id, message_text, username, name_user):
             if chat_id != config.admin_id:
                 bot.send_message(chat_id, '❌ Solo el super admin puede modificar las respuestas.')
                 return
-            if dop.check_message('start') is True:
-                start = 'Cambiar'
-            else: 
-                start = 'Añadir'
             if dop.check_message('after_buy'): 
                 after_buy = 'Cambiar'
             else: 
@@ -139,49 +135,29 @@ def in_adminka(chat_id, message_text, username, name_user):
             else: 
                 userfalse = 'Añadir'
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
-            user_markup.row(start + ' bienvenida al usuario')
             user_markup.row(after_buy + ' mensaje después de pagar el producto')
             user_markup.row(help + ' respuesta al comando help', userfalse + ' mensaje si no hay nombre de usuario')
             user_markup.row('Agregar/Cambiar mensaje de entrega manual')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione qué mensaje desea cambiar.\nDespués de seleccionar, recibirá una breve instrucción', reply_markup=user_markup)
 
-        elif ' bienvenida al usuario' in message_text or ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text or 'mensaje de entrega manual' in message_text:
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-            if ' bienvenida al usuario' in message_text:
-                message = 'start'
-                media_key = telebot.types.InlineKeyboardMarkup()
-                media_key.add(
-                    telebot.types.InlineKeyboardButton(text='Omitir', callback_data='SKIP_START_MEDIA')
-                )
-                media_key.add(
-                    telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración')
-                )
-                bot.send_message(
-                    chat_id,
-                    'Envíe una foto, video o documento para la bienvenida (opcional) o presione "Omitir"',
-                    reply_markup=media_key
-                )
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+            if ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text or 'mensaje de entrega manual' in message_text:
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+                if ' mensaje después de pagar el producto' in message_text:
+                    message = 'after_buy'
+                    bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que el bot enviará al usuario después de la compra! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
+                elif ' respuesta al comando help' in message_text: 
+                    bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de ayuda! En principio, puede poner cualquier cosa allí. En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
+                    message = 'help'
+                elif ' mensaje si no hay nombre de usuario' in message_text:
+                    bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que se enviará si el usuario no tiene `username`! En el texto puede usar `uname`. Se reemplazará automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
+                    message = 'userfalse'
+                elif 'mensaje de entrega manual' in message_text:
+                    bot.send_message(chat_id, 'Ingrese el mensaje que recibirá el comprador para productos de entrega manual. Puede usar `username` y `name`.', parse_mode='MarkDown', reply_markup=key)
+                    message = 'manual_delivery'
+                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding ='utf-8') as f: 
                     f.write(message)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 500
-                return
-            elif ' mensaje después de pagar el producto' in message_text:
-                message = 'after_buy'
-                bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que el bot enviará al usuario después de la compra! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-            elif ' respuesta al comando help' in message_text: 
-                bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de ayuda! En principio, puede poner cualquier cosa allí. En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-                message = 'help'
-            elif ' mensaje si no hay nombre de usuario' in message_text:
-                bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que se enviará si el usuario no tiene `username`! En el texto puede usar `uname`. Se reemplazará automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-                message = 'userfalse'
-            elif 'mensaje de entrega manual' in message_text:
-                bot.send_message(chat_id, 'Ingrese el mensaje que recibirá el comprador para productos de entrega manual. Puede usar `username` y `name`.', parse_mode='MarkDown', reply_markup=key)
-                message = 'manual_delivery'
-            with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding ='utf-8') as f: 
-                f.write(message)
             with shelve.open(files.sost_bd) as bd : 
                 bd[str(chat_id)] = 1
 
@@ -2311,24 +2287,6 @@ def ad_inline(callback_data, chat_id, message_id):
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 2
 
-    elif callback_data == 'SKIP_START_MEDIA':
-        dop.remove_start_media()
-        key = telebot.types.InlineKeyboardMarkup()
-        key.add(
-            telebot.types.InlineKeyboardButton(
-                text='Cancelar y volver al menú principal de administración',
-                callback_data='Volver al menú principal de administración'
-            )
-        )
-        bot.edit_message_reply_markup(chat_id, message_id)
-        bot.send_message(
-            chat_id,
-            '¡Ingrese un nuevo mensaje de bienvenida! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario',
-            parse_mode='MarkDown',
-            reply_markup=key
-        )
-        with shelve.open(files.sost_bd) as bd:
-            bd[str(chat_id)] = 1
 
     elif callback_data == 'CONFIRM_BROADCAST':
         try:
@@ -2480,7 +2438,7 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200, 42, 162, 165, 305, 500):
+        if state not in (32, 200, 42, 162, 165, 305):
             return
 
         if state == 32:
@@ -2493,8 +2451,6 @@ def handle_multimedia(message):
         elif state == 165:
             temp_path = None
         elif state == 305:
-            temp_path = None
-        elif state == 500:
             temp_path = None
         else:
             temp_path = 'data/Temp/' + str(chat_id) + 'new_media.txt'
@@ -2599,26 +2555,6 @@ def handle_multimedia(message):
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
                 in_adminka(chat_id, '⚙️ Otros', None, None)
-                return
-            elif state == 500:
-                with shelve.open(files.bot_message_bd) as bd:
-                    bd['start_media_file_id'] = file_id
-                    bd['start_media_type'] = media_type
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(
-                    telebot.types.InlineKeyboardButton(
-                        text='Cancelar y volver al menú principal de administración',
-                        callback_data='Volver al menú principal de administración'
-                    )
-                )
-                bot.send_message(
-                    chat_id,
-                    '¡Ingrese un nuevo mensaje de bienvenida! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario',
-                    parse_mode='MarkDown',
-                    reply_markup=key
-                )
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 1
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
