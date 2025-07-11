@@ -74,6 +74,7 @@ def send_main_menu(chat_id, username, name):
     key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
     key.add(telebot.types.InlineKeyboardButton(
         text='📜 Mis compras', callback_data='Ver mis compras'))
+    key.add(telebot.types.InlineKeyboardButton(text='Cambiar tienda', callback_data='Cambiar tienda'))
     if dop.check_message('start'):
         with shelve.open(files.bot_message_bd) as bd:
             start_message = bd['start']
@@ -539,6 +540,9 @@ def inline(callback):
             bot.answer_callback_query(callback.id)
             dop.safe_edit_message(bot, callback.message,
                                   history, reply_markup=key, parse_mode='Markdown')
+        elif callback.data == 'Cambiar tienda':
+            bot.answer_callback_query(callback.id)
+            show_shop_selection(callback.message.chat.id)
 
 
         elif callback.data == 'Volver al inicio':
