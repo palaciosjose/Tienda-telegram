@@ -671,6 +671,10 @@ def run_webhook():
             return ''
         return flask.abort(403)
 
+    @app.route('/metrics', methods=['GET'])
+    def metrics():
+        return 'ok'
+
     bot.remove_webhook()
     time.sleep(0.1)
     bot.set_webhook(url=config.WEBHOOK_URL)
@@ -680,6 +684,16 @@ def run_webhook():
         ctx = (config.WEBHOOK_SSL_CERT, config.WEBHOOK_SSL_PRIV)
 
     app.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT, ssl_context=ctx)
+
+
+def run_polling():
+    """Iniciar el bot usando long polling."""
+    bot.remove_webhook()
+    bot.infinity_polling(
+        interval=config.POLL_INTERVAL,
+        timeout=config.POLL_TIMEOUT,
+        long_polling_timeout=config.LONG_POLLING_TIMEOUT,
+    )
 
 
 if __name__ == '__main__':
@@ -693,5 +707,9 @@ if __name__ == '__main__':
     except Exception:
         logging.error("⚠️ No se pudo escribir data/bot.pid")
 
-    logging.info("✅ Bot iniciando en modo webhook...")
-    run_webhook()
+    if config.WEBHOOK_URL:
+        logging.info("✅ Bot iniciando en modo webhook...")
+        run_webhook()
+    else:
+        logging.info("✅ Bot iniciando en modo polling...")
+        run_polling()
