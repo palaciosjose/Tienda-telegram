@@ -199,14 +199,16 @@ def message_send(message):
         else:
             bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
-    elif isinstance(message.text, str):
+    elif isinstance(message.text, str) and (
+        message.text.split()[0].lower()
+        in ('/report', '/reporte', f'/report@{bot_username}', f'/reporte@{bot_username}')
+    ):
         cmd = message.text.split()[0].lower()
-        if cmd in ('/report', '/reporte', f'/report@{bot_username}', f'/reporte@{bot_username}'):
-            key = telebot.types.InlineKeyboardMarkup()
-            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
-            bot.send_message(message.chat.id, '📝 Por favor escribe tu reporte:', reply_markup=key)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(message.chat.id)] = 23
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+        bot.send_message(message.chat.id, '📝 Por favor escribe tu reporte:', reply_markup=key)
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(message.chat.id)] = 23
 
     elif dop.get_sost(message.chat.id) is True:
         if message.chat.id in in_admin:
