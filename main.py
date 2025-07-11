@@ -271,6 +271,22 @@ def message_send(message):
                     bot.send_message(message.chat.id,
                                      '❌ **¡La cantidad debe ser un número válido!**\n\n🔢 Envía solo números (ej: 5)',
                                      parse_mode='Markdown', reply_markup=key)
+            elif sost_num == 23:
+                text = (message.text or '').strip()
+                if not text:
+                    return
+                username = f"@{message.chat.username}" if message.chat.username else ''
+                notification = f"Reporte de {username} ({message.chat.id}):\n{text}"
+                for admin_id in dop.get_adminlist():
+                    try:
+                        bot.send_message(admin_id, notification)
+                    except Exception as e:
+                        logging.error("Error enviando reporte a %s: %s", admin_id, e)
+                bot.send_message(message.chat.id, '✅ Reporte enviado a los administradores.')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(message.chat.id) in bd:
+                        del bd[str(message.chat.id)]
+                send_main_menu(message.chat.id, message.chat.username, message.from_user.first_name)
 
     elif message.chat.id in in_admin:
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
