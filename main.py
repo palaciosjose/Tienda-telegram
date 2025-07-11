@@ -128,7 +128,7 @@ in_admin = []
 
 @bot.message_handler(content_types=["text"])
 def message_send(message):
-    
+    """Route incoming text messages to the appropriate handlers."""
     if '/start' == message.text:
         if message.chat.username:
             # Limpiar estado si existe
