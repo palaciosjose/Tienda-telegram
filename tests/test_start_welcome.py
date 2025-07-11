@@ -19,8 +19,8 @@ def test_start_existing_user_main_menu(monkeypatch, tmp_path):
     def fake_menu(cid, username, name):
         called["menu"] = (cid, username, name)
 
-    def fake_select(cid):
-        called["select"] = cid
+    def fake_select(cid, message=None):
+        called["select"] = (cid, message)
 
     monkeypatch.setattr(main, "send_main_menu", fake_menu)
     monkeypatch.setattr(main, "show_shop_selection", fake_select)
@@ -54,8 +54,8 @@ def test_start_new_user_shows_shop_list(monkeypatch, tmp_path):
     def fake_menu(cid, username, name):
         called["menu"] = (cid, username, name)
 
-    def fake_select(cid):
-        called["select"] = cid
+    def fake_select(cid, message=None):
+        called["select"] = (cid, message)
 
     monkeypatch.setattr(main, "send_main_menu", fake_menu)
     monkeypatch.setattr(main, "show_shop_selection", fake_select)
@@ -69,7 +69,7 @@ def test_start_new_user_shows_shop_list(monkeypatch, tmp_path):
 
     main.message_send(Msg())
 
-    assert called.get("select") == 5
+    assert called.get("select") == (5, None)
     assert "menu" not in called
 
 
@@ -90,7 +90,7 @@ def test_start_new_user_keeps_showing_list(monkeypatch, tmp_path):
     def fake_menu(cid, username, name):
         called.append(("menu", cid))
 
-    def fake_select(cid):
+    def fake_select(cid, message=None):
         called.append(("select", cid))
 
     monkeypatch.setattr(main, "send_main_menu", fake_menu)

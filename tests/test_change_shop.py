@@ -15,12 +15,14 @@ def test_change_shop_callback_invokes_list(monkeypatch, tmp_path):
     dop, main, calls, _ = setup_main(monkeypatch, tmp_path)
     dop.ensure_database_schema()
 
-    called = {}
+    captured = {}
 
-    def fake_select(cid):
-        called['cid'] = cid
+    def fake_edit(bot, msg, text, reply_markup=None, parse_mode=None):
+        captured['msg'] = msg
+        captured['text'] = text
+        return True
 
-    monkeypatch.setattr(main, 'show_shop_selection', fake_select)
+    monkeypatch.setattr(dop, 'safe_edit_message', fake_edit)
     monkeypatch.setattr(main.bot, 'answer_callback_query', lambda *a, **k: None, raising=False)
 
     class Msg:
@@ -30,10 +32,13 @@ def test_change_shop_callback_invokes_list(monkeypatch, tmp_path):
             self.content_type = 'text'
             self.from_user = types.SimpleNamespace(first_name='a')
 
-    cb = types.SimpleNamespace(data='Cambiar tienda', message=Msg(), id='1', from_user=types.SimpleNamespace(username='u'))
+    cb = types.SimpleNamespace(
+        data='Cambiar tienda', message=Msg(), id='1', from_user=types.SimpleNamespace(username='u')
+    )
     main.inline(cb)
 
-    assert called.get('cid') == 5
+    assert captured.get('msg') is cb.message
+    assert captured.get('text') == 'Seleccione una tienda:'
 
 
 def test_reselect_updates_shop(monkeypatch, tmp_path):
