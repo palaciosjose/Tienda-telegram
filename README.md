@@ -29,6 +29,8 @@ pip install -r requirements.txt
   puedes ajustar `WEBHOOK_PORT`, `WEBHOOK_LISTEN` y, si usas HTTPS con
   certificados propios, `WEBHOOK_SSL_CERT` y `WEBHOOK_SSL_PRIV`.  Si
   `WEBHOOK_URL` queda vacío el bot se ejecutará en modo *polling*.
+  Ten en cuenta que el modo webhook requiere que `WEBHOOK_URL` tenga un
+  valor; de lo contrario `run_webhook()` finalizará con un error.
 
 ### Actualización
 
@@ -79,6 +81,8 @@ archivo se elimina automáticamente al cerrar el bot. Además, el servidor expon
 la ruta `/metrics` que puede usarse para comprobar el estado del bot.
 Si `WEBHOOK_URL` se deja vacío, el bot funcionará mediante *polling* en
 intervalos definidos por `POLL_INTERVAL`.
+Si intentas iniciar `run_webhook()` sin definir `WEBHOOK_URL`, el proceso
+terminará con un mensaje de error.
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.  Para
 ver mensajes más detallados establece la variable de entorno `LOGLEVEL` a `DEBUG` al ejecutarlo:
