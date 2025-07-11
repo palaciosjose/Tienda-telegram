@@ -11,7 +11,21 @@ if not admin_id_env:
 admin_id = int(admin_id_env)
 token = os.getenv('TELEGRAM_BOT_TOKEN')
 
-# Parámetros opcionales para telebot.polling
+
+# Configuración para webhook
+WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', '8443'))
+WEBHOOK_LISTEN = os.getenv('WEBHOOK_LISTEN', '0.0.0.0')
+WEBHOOK_SSL_CERT = os.getenv('WEBHOOK_SSL_CERT')
+WEBHOOK_SSL_PRIV = os.getenv('WEBHOOK_SSL_PRIV')
+WEBHOOK_SECRET_TOKEN = os.getenv('WEBHOOK_SECRET_TOKEN')
+if WEBHOOK_URL:
+    from urllib.parse import urlparse
+    WEBHOOK_PATH = urlparse(WEBHOOK_URL).path
+else:
+    WEBHOOK_PATH = f'/{token}'
+
+# Parámetros opcionales para telebot.polling (usados solo en modo polling)
 POLL_INTERVAL = int(os.getenv('POLL_INTERVAL', '2'))
 POLL_TIMEOUT = int(os.getenv('POLL_TIMEOUT', '10'))
 LONG_POLLING_TIMEOUT = int(os.getenv('LONG_POLLING_TIMEOUT', '10'))

@@ -656,6 +656,55 @@ def handle_media_files(message):
     """Manejar archivos multimedia (fotos, videos, audio, GIF)"""
     adminka.handle_multimedia(message)
 
+def run_webhook():
+    """Iniciar el bot usando webhook con Flask."""
+    import flask
+
+    app = flask.Flask(__name__)
+    metrics = {"updates": 0}
+
+    @app.route(config.WEBHOOK_PATH, methods=['POST'])
+    def webhook():
+        if config.WEBHOOK_SECRET_TOKEN:
+            secret = flask.request.headers.get('X-Telegram-Bot-Api-Secret-Token')
+            if secret != config.WEBHOOK_SECRET_TOKEN:
+                logging.warning("Token secreto inválido desde %s", flask.request.remote_addr)
+                return flask.abort(403)
+
+        if flask.request.headers.get('content-type') != 'application/json':
+            logging.warning("Tipo de contenido no soportado: %s", flask.request.headers.get('content-type'))
+            return flask.abort(415)
+
+        try:
+            data = flask.request.get_data().decode('utf-8')
+            update = telebot.types.Update.de_json(data)
+        except Exception as e:  # pylint: disable=broad-except
+            logging.exception("Error al deserializar actualización: %s", e)
+            return flask.abort(400)
+
+        try:
+            bot.process_new_updates([update])
+            metrics["updates"] += 1
+        except Exception as e:  # pylint: disable=broad-except
+            logging.exception("Error procesando actualización: %s", e)
+        return ""
+
+    @app.route('/metrics')
+    def metrics_route():
+        return flask.jsonify(metrics)
+
+    bot.remove_webhook()
+    time.sleep(0.1)
+    bot.set_webhook(url=config.WEBHOOK_URL, secret_token=config.WEBHOOK_SECRET_TOKEN)
+
+    ctx = None
+    if config.WEBHOOK_SSL_CERT and config.WEBHOOK_SSL_PRIV:
+        ctx = (config.WEBHOOK_SSL_CERT, config.WEBHOOK_SSL_PRIV)
+
+    logging.info("Webhook escuchando en %s:%s%s", config.WEBHOOK_LISTEN, config.WEBHOOK_PORT, config.WEBHOOK_PATH)
+    app.run(host=config.WEBHOOK_LISTEN, port=config.WEBHOOK_PORT, ssl_context=ctx)
+
+
 if __name__ == '__main__':
     if is_running():
         logging.error("⚠️ Bot ya está ejecutándose (data/bot.pid)")
@@ -667,25 +716,5 @@ if __name__ == '__main__':
     except Exception:
         logging.error("⚠️ No se pudo escribir data/bot.pid")
 
-    logging.info("✅ Bot iniciando polling optimizado...")
-    # Polling optimizado configurable mediante variables de entorno
-    try:
-        bot.polling(
-            none_stop=True,
-            interval=config.POLL_INTERVAL,
-            timeout=config.POLL_TIMEOUT,
-            long_polling_timeout=config.LONG_POLLING_TIMEOUT
-        )
-    except Exception as e:  # pylint: disable=broad-except
-        if (
-            getattr(e, "error_code", None) == 409
-            or "409" in str(e)
-            or "Conflict" in str(e)
-        ):
-            logging.error(
-                "⚠️ Se detectó un conflicto 409 al iniciar polling. "
-                "Es posible que otra instancia del bot esté activa. "
-                "Finaliza los otros procesos y borra data/bot.pid si es necesario."
-            )
-        else:
-            logging.exception("Error inesperado durante polling: %s", e)
+    logging.info("✅ Bot iniciando en modo webhook...")
+    run_webhook()
