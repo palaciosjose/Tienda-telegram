@@ -160,7 +160,14 @@ def message_send(message):
                     '🚧 **¡El bot aún no está listo para funcionar!**\n\n🔧 Si eres el administrador, entra con la cuenta cuyo ID especificaste al iniciar el bot y prepáralo para funcionar!',
                     parse_mode='Markdown')
             else:
-                show_shop_selection(message.chat.id)
+                if dop.user_has_shop(message.chat.id):
+                    send_main_menu(
+                        message.chat.id,
+                        message.chat.username,
+                        message.from_user.first_name,
+                    )
+                else:
+                    show_shop_selection(message.chat.id)
 
             dop.user_loger(chat_id=message.chat.id)
 

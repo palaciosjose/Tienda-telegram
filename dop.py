@@ -1158,6 +1158,20 @@ def get_user_shop(user_id):
         logging.error(f"Error getting user shop: {e}")
         return 1
 
+def user_has_shop(user_id):
+    """Return True if the user already selected a shop."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "SELECT 1 FROM shop_users WHERE user_id = ?",
+            (int(user_id),),
+        )
+        return cur.fetchone() is not None
+    except Exception as e:
+        logging.error(f"Error checking user shop: {e}")
+        return False
+
 def submit_shop_rating(shop_id, user_id, rating):
     """Insertar o actualizar la calificación de un usuario para una tienda."""
     try:
