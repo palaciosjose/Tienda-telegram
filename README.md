@@ -119,6 +119,15 @@ Esto creará la tabla `shop_users` necesaria para las difusiones por tienda.
 
 Al crear una tienda se solicitará un nombre, el cual verán los clientes al elegir tienda después de enviar `/start`. Los administradores pueden cambiar este nombre más adelante desde **⚙️ Otros** → **✏️ Renombrar tienda**.
 
+### Presentación de la tienda
+
+Para ajustar la información que se muestra al entrar a una tienda abre el **menú de administración** y selecciona **⚙️ Otros**. Allí encontrarás las opciones:
+
+- *Cambiar nombre de tienda*
+- *Cambiar descripción de tienda*
+- *Cambiar multimedia de tienda*
+- *Cambiar botones de tienda*
+
 ## Panel de administración
 
 Al entrar verás botones para gestionar las distintas funciones del bot. Entre
@@ -129,8 +138,7 @@ En **💬 Respuestas** puedes definir distintos textos que el bot enviará. Se a
 **Agregar/Cambiar mensaje de entrega manual**, utilizado cuando un producto requiere
 entrega manual. En ese mensaje puedes incluir las palabras `username` y `name` para
 personalizarlo. Configurar **💬 Respuestas** es un privilegio exclusivo del super admin.
-Además, la bienvenida al usuario ahora admite multimedia. Al elegir *Añadir/Cambiar bienvenida al usuario* puedes
-subir una foto, video o documento opcional que se enviará junto al texto de bienvenida.
+Además, la bienvenida al usuario ahora admite multimedia. Para cambiarla abre el **menú de administración** y entra en **💬 Respuestas** → **Cambiar bienvenida al usuario**. Allí puedes escribir el mensaje y, opcionalmente, adjuntar una foto, video o documento.
 
 ### Carga y edición de unidades
 

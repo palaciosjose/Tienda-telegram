@@ -551,36 +551,11 @@ def inline(callback):
                     with shelve.open(files.sost_bd) as bd:
                         if str(callback.message.chat.id) in bd:
                             del bd[str(callback.message.chat.id)]
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
-                key.add(telebot.types.InlineKeyboardButton(
-                    text='📜 Mis compras', callback_data='Ver mis compras'))
-                if dop.check_message('start'):
-                    with shelve.open(files.bot_message_bd) as bd:
-                        start_message = bd['start']
-                    start_message = start_message.replace('username', callback.message.chat.username)
-                    start_message = start_message.replace('name', callback.message.from_user.first_name)
-                    media = dop.get_start_media()
-                    if media:
-                        bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                        if media['type'] == 'photo':
-                            bot.send_photo(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
-                        elif media['type'] == 'video':
-                            bot.send_video(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
-                        elif media['type'] == 'document':
-                            bot.send_document(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
-                        elif media['type'] == 'audio':
-                            bot.send_audio(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
-                        elif media['type'] == 'animation':
-                            bot.send_animation(callback.message.chat.id, media['file_id'], caption=start_message, reply_markup=key)
-                        else:
-                            bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
-                    else:
-                        if callback.message.content_type != 'text':
-                            bot.delete_message(callback.message.chat.id, callback.message.message_id)
-                            bot.send_message(callback.message.chat.id, start_message, reply_markup=key)
-                        else:
-                            dop.safe_edit_message(bot, callback.message, start_message, reply_markup=key)
+                send_main_menu(
+                    callback.message.chat.id,
+                    callback.message.chat.username,
+                    callback.message.from_user.first_name,
+                )
 
         elif callback.data == 'Comprar':
             try:
