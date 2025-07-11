@@ -127,6 +127,9 @@ Para ajustar la información que se muestra al entrar a una tienda abre el **men
 - *Cambiar descripción de tienda*
 - *Cambiar multimedia de tienda*
 - *Cambiar botones de tienda*
+- *Cambiar mensaje de inicio (/start)* *(solo super admin)*
+
+El último permite personalizar el texto y la multimedia que verán los usuarios al enviar `/start`.
 
 ## Panel de administración
 
