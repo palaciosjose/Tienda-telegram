@@ -14,6 +14,8 @@ token = os.getenv('TELEGRAM_BOT_TOKEN')
 
 # Configuración para webhook
 WEBHOOK_URL = os.getenv('WEBHOOK_URL')
+if not WEBHOOK_URL:
+    raise RuntimeError("WEBHOOK_URL must be set for webhook mode")
 WEBHOOK_PORT = int(os.getenv('WEBHOOK_PORT', '8443'))
 WEBHOOK_LISTEN = os.getenv('WEBHOOK_LISTEN', '0.0.0.0')
 WEBHOOK_SSL_CERT = os.getenv('WEBHOOK_SSL_CERT')

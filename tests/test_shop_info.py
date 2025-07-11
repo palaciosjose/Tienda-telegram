@@ -5,6 +5,7 @@ from pathlib import Path
 def setup_main(monkeypatch, tmp_path):
     monkeypatch.setenv("TELEGRAM_BOT_TOKEN", "x")
     monkeypatch.setenv("TELEGRAM_ADMIN_ID", "1")
+    monkeypatch.setenv("WEBHOOK_URL", "https://example.com/bot")
     sys.modules.setdefault(
         "dotenv", types.SimpleNamespace(load_dotenv=lambda *a, **k: None)
     )
@@ -50,7 +51,8 @@ def setup_main(monkeypatch, tmp_path):
     telebot_stub = types.SimpleNamespace(TeleBot=lambda *a, **k: Bot(),
                                          types=types.SimpleNamespace(
                                              InlineKeyboardMarkup=Markup,
-                                             InlineKeyboardButton=Button))
+                                             InlineKeyboardButton=Button,
+                                             Update=types.SimpleNamespace(de_json=lambda d: d)))
     sys.modules["telebot"] = telebot_stub
     bot = telebot_stub.TeleBot()
     sys.modules["bot_instance"] = types.SimpleNamespace(bot=bot)

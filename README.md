@@ -27,10 +27,10 @@ pip install -r requirements.txt
   variable `WEBHOOK_URL` con la dirección pública que recibirá las
   actualizaciones (por ejemplo `https://tu-dominio.com/bot`). También
   puedes ajustar `WEBHOOK_PORT`, `WEBHOOK_LISTEN` y, si usas HTTPS con
-  certificados propios, `WEBHOOK_SSL_CERT` y `WEBHOOK_SSL_PRIV`.  Si
-  `WEBHOOK_URL` queda vacío el bot se ejecutará en modo *polling*.
-  Ten en cuenta que el modo webhook requiere que `WEBHOOK_URL` tenga un
-  valor; de lo contrario `run_webhook()` finalizará con un error.
+  certificados propios, `WEBHOOK_SSL_CERT` y `WEBHOOK_SSL_PRIV`.
+  **El bot no iniciará a menos que proporciones `WEBHOOK_URL`.** La
+  configuración lanzará un `RuntimeError` y `run_webhook()` finalizará
+  con un error si esta variable queda vacía.
 
 ### Actualización
 
@@ -79,10 +79,8 @@ el webhook definido en `WEBHOOK_URL`. Al iniciar, el proceso guarda su ID en
 corresponde a un proceso activo, el bot se detendrá con una advertencia. El
 archivo se elimina automáticamente al cerrar el bot. Además, el servidor expone
 la ruta `/metrics` que puede usarse para comprobar el estado del bot.
-Si `WEBHOOK_URL` se deja vacío, el bot funcionará mediante *polling* en
-intervalos definidos por `POLL_INTERVAL`.
-Si intentas iniciar `run_webhook()` sin definir `WEBHOOK_URL`, el proceso
-terminará con un mensaje de error.
+El valor de `WEBHOOK_URL` es obligatorio: si se deja vacío, la carga de
+`config.py` lanzará un `RuntimeError` antes de iniciar el servidor.
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.  Para
 ver mensajes más detallados establece la variable de entorno `LOGLEVEL` a `DEBUG` al ejecutarlo:
