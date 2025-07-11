@@ -47,7 +47,7 @@ def test_report_text_forwarded(monkeypatch, tmp_path):
     with shelve.open(main.files.sost_bd) as bd:
         bd['5'] = 23
 
-    monkeypatch.setattr(dop, 'get_adminlist', lambda: [99])
+    monkeypatch.setattr(main.config, 'admin_id', 99)
 
     menu_called = {}
 
