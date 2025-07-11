@@ -23,10 +23,11 @@ pip install -r requirements.txt
    (o los tokens separados por comas) que empleará `advertising_cron.py`;
    el script fallará si no se configura esta variable.
 
-   Puedes modificar la frecuencia de consulta al servidor de Telegram
-   estableciendo las variables opcionales `POLL_INTERVAL`, `POLL_TIMEOUT`
-   y `LONG_POLLING_TIMEOUT`.  Si no las defines, el bot utiliza los valores
-   por defecto `2`, `10` y `10` segundos respectivamente.
+  Para ejecutar el bot mediante **webhook** debes definir en `.env`
+  la variable `WEBHOOK_URL` con la dirección pública que recibirá las
+  actualizaciones (por ejemplo `https://tu-dominio.com/bot`). También
+  puedes ajustar `WEBHOOK_PORT`, `WEBHOOK_LISTEN` y, si usas HTTPS con
+  certificados propios, `WEBHOOK_SSL_CERT` y `WEBHOOK_SSL_PRIV`.
 
 ### Actualización
 
@@ -69,10 +70,11 @@ Luego puedes iniciar el bot con:
 python main.py
 ```
 
-Al iniciar, el proceso guarda su ID en `data/bot.pid` para evitar ejecuciones
-duplicadas.  Si el archivo existe y corresponde a un proceso activo, el bot se
-detendrá con una advertencia.  El archivo se elimina automáticamente al cerrar
-el bot.
+Este comando levanta un servidor Flask que escucha en `WEBHOOK_PORT` y registra
+el webhook definido en `WEBHOOK_URL`. Al iniciar, el proceso guarda su ID en
+`data/bot.pid` para evitar ejecuciones duplicadas. Si el archivo existe y
+corresponde a un proceso activo, el bot se detendrá con una advertencia. El
+archivo se elimina automáticamente al cerrar el bot.
 
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.  Para
 ver mensajes más detallados establece la variable de entorno `LOGLEVEL` a `DEBUG` al ejecutarlo:
