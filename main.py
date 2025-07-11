@@ -647,9 +647,23 @@ if __name__ == '__main__':
 
     logging.info("✅ Bot iniciando polling optimizado...")
     # Polling optimizado configurable mediante variables de entorno
-    bot.polling(
-        none_stop=True,
-        interval=config.POLL_INTERVAL,
-        timeout=config.POLL_TIMEOUT,
-        long_polling_timeout=config.LONG_POLLING_TIMEOUT
-    )
+    try:
+        bot.polling(
+            none_stop=True,
+            interval=config.POLL_INTERVAL,
+            timeout=config.POLL_TIMEOUT,
+            long_polling_timeout=config.LONG_POLLING_TIMEOUT
+        )
+    except Exception as e:  # pylint: disable=broad-except
+        if (
+            getattr(e, "error_code", None) == 409
+            or "409" in str(e)
+            or "Conflict" in str(e)
+        ):
+            logging.error(
+                "⚠️ Se detectó un conflicto 409 al iniciar polling. "
+                "Es posible que otra instancia del bot esté activa. "
+                "Finaliza los otros procesos y borra data/bot.pid si es necesario."
+            )
+        else:
+            logging.exception("Error inesperado durante polling: %s", e)
