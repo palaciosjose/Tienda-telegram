@@ -99,13 +99,28 @@ def send_main_menu(chat_id, username, name):
     else:
         bot.send_message(chat_id, '🏠 Inicio', reply_markup=key)
 
-def show_shop_selection(chat_id):
+def show_shop_selection(chat_id, message=None):
     """Mostrar listado de tiendas disponibles"""
     shops = dop.list_shops()
     key = telebot.types.InlineKeyboardMarkup()
     for sid, _, name in shops:
-        key.add(telebot.types.InlineKeyboardButton(text=name, callback_data=f'SELECT_SHOP_{sid}'))
-    bot.send_message(chat_id, 'Seleccione una tienda:', reply_markup=key)
+        key.add(
+            telebot.types.InlineKeyboardButton(
+                text=name, callback_data=f"SELECT_SHOP_{sid}"
+            )
+        )
+    if message is not None:
+        ok = dop.safe_edit_message(
+            bot, message, "Seleccione una tienda:", reply_markup=key
+        )
+        if not ok:
+            try:
+                bot.delete_message(message.chat.id, message.message_id)
+            except Exception:
+                pass
+            bot.send_message(chat_id, "Seleccione una tienda:", reply_markup=key)
+    else:
+        bot.send_message(chat_id, "Seleccione una tienda:", reply_markup=key)
 
 
 def session_expired(chat_id, username, name):
@@ -541,7 +556,7 @@ def inline(callback):
                                   history, reply_markup=key, parse_mode='Markdown')
         elif callback.data == 'Cambiar tienda':
             bot.answer_callback_query(callback.id)
-            show_shop_selection(callback.message.chat.id)
+            show_shop_selection(callback.message.chat.id, callback.message)
 
 
         elif callback.data == 'Volver al inicio':
