@@ -406,9 +406,10 @@ def user_loger(chat_id=0):
             with open(files.users_list, 'w', encoding='utf-8') as f:
                 f.write(str(chat_id) + '\n')
         try:
-            # Registrar o actualizar la tienda del usuario
-            current = get_user_shop(chat_id)
-            set_user_shop(chat_id, current)
+            # Registrar o actualizar la tienda del usuario solo si ya existe
+            if user_has_shop(chat_id):
+                current = get_user_shop(chat_id)
+                set_user_shop(chat_id, current)
         except Exception as e:
             logging.error(f"Error updating user shop: {e}")
 
