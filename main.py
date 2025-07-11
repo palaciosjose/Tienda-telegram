@@ -659,8 +659,9 @@ def handle_media_files(message):
 def run_webhook():
     """Iniciar el bot usando webhook con Flask."""
     if not config.WEBHOOK_URL:
-        logging.error("WEBHOOK_URL must be set to run in webhook mode.")
-        sys.exit(1)
+        raise RuntimeError(
+            "WEBHOOK_URL must be set in .env to run in webhook mode."
+        )
 
     import flask
 
