@@ -97,7 +97,7 @@ Desde ese menú también podrás pulsar **"Mis compras"** para revisar un resume
 
 El bot admite gestionar varias tiendas. El usuario cuyo ID figura en `TELEGRAM_ADMIN_ID` es el *super admin* y posee un menú adicional **🛍️ Gestionar tiendas** dentro de **⚙️ Otros**. Solo este super admin puede añadir o eliminar otros administradores.
 
-Desde allí puede crear nuevas tiendas y asignar el ID de Telegram de su administrador. Cada cliente, al enviar `/start`, verá la lista de tiendas disponibles y deberá elegir una para acceder al catálogo. Su elección se guarda para futuras visitas.
+Desde allí puede crear nuevas tiendas y asignar el ID de Telegram de su administrador. Cada cliente, al enviar `/start`, verá la lista de tiendas disponibles y deberá elegir una para acceder al catálogo. Su elección se guarda para futuras visitas. Si un usuario ya tiene tienda asignada, `/start` lo lleva directamente al menú principal.
 
 Cada administrador puede renombrar su tienda desde **⚙️ Otros** usando la opción *Cambiar nombre de tienda*.
 
