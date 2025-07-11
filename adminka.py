@@ -748,6 +748,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Cambiar multimedia de tienda')
             user_markup.row('Cambiar botones de tienda')
             if chat_id == config.admin_id:
+                user_markup.row('Cambiar mensaje de inicio (/start)')
+            if chat_id == config.admin_id:
                 user_markup.row('🛍️ Gestionar tiendas')
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione qué desea hacer', reply_markup=user_markup)
@@ -799,6 +801,13 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Texto para el primer botón (o "ninguno"):')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 306
+
+        elif message_text == 'Cambiar mensaje de inicio (/start)' and chat_id == config.admin_id:
+            bot.send_message(chat_id,
+                             'Ingrese el nuevo mensaje de inicio. Puede usar `username` y `name`.',
+                             parse_mode='Markdown')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 500
 
         elif message_text == '🛍️ Gestionar tiendas' and chat_id == config.admin_id:
             shops = dop.list_shops()
@@ -1721,6 +1730,30 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
             os.remove(path)
 
+        elif sost_num == 500:
+            text_path = f'data/Temp/{chat_id}_start_text.txt'
+            with open(text_path, 'w', encoding='utf-8') as f:
+                f.write(message_text)
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(
+                telebot.types.InlineKeyboardButton(
+                    text='Omitir', callback_data='SKIP_START_MEDIA'
+                )
+            )
+            key.add(
+                telebot.types.InlineKeyboardButton(
+                    text='Cancelar y volver al menú principal de administración',
+                    callback_data='Volver al menú principal de administración'
+                )
+            )
+            bot.send_message(
+                chat_id,
+                'Envía una foto, video, documento, audio o GIF para el mensaje de inicio (opcional) o presiona "Omitir"',
+                reply_markup=key
+            )
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 501
+
         elif sost_num == 21:
             if chat_id != config.admin_id:
                 bot.send_message(chat_id, '❌ No tiene permiso para agregar administradores.')
@@ -2287,6 +2320,26 @@ def ad_inline(callback_data, chat_id, message_id):
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 2
 
+    elif callback_data == 'SKIP_START_MEDIA':
+        text_path = f'data/Temp/{chat_id}_start_text.txt'
+        try:
+            with open(text_path, 'r', encoding='utf-8') as f:
+                start_text = f.read()
+        except FileNotFoundError:
+            session_expired(chat_id)
+            return
+        saved = dop.save_message('start', start_text)
+        bot.edit_message_reply_markup(chat_id, message_id)
+        bot.send_message(chat_id, 'Mensaje de inicio actualizado.' if saved else '❌ Error guardando mensaje')
+        if saved:
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            in_adminka(chat_id, '⚙️ Otros', None, None)
+        try:
+            os.remove(text_path)
+        except Exception:
+            pass
+
 
     elif callback_data == 'CONFIRM_BROADCAST':
         try:
@@ -2438,7 +2491,7 @@ def handle_multimedia(message):
         with shelve.open(files.sost_bd) as bd:
             state = bd.get(str(chat_id))
 
-        if state not in (32, 200, 42, 162, 165, 305):
+        if state not in (32, 200, 42, 162, 165, 305, 501):
             return
 
         if state == 32:
@@ -2555,6 +2608,27 @@ def handle_multimedia(message):
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
                 in_adminka(chat_id, '⚙️ Otros', None, None)
+                return
+            elif state == 501:
+                text_path = f'data/Temp/{chat_id}_start_text.txt'
+                try:
+                    with open(text_path, 'r', encoding='utf-8') as f:
+                        start_text = f.read()
+                except FileNotFoundError:
+                    session_expired(chat_id)
+                    return
+
+                saved = dop.save_message('start', start_text, file_id, media_type)
+                msg = 'Mensaje de inicio actualizado.' if saved else '❌ Error guardando mensaje'
+                bot.send_message(chat_id, msg)
+                if saved:
+                    with shelve.open(files.sost_bd) as bd:
+                        del bd[str(chat_id)]
+                    in_adminka(chat_id, '⚙️ Otros', None, None)
+                try:
+                    os.remove(text_path)
+                except Exception:
+                    pass
                 return
             else:
                 with open('data/Temp/' + str(chat_id) + 'new_media.txt', 'w', encoding='utf-8') as f:
