@@ -59,7 +59,8 @@ def ensure_database_schema():
                 button1_text TEXT,
                 button1_url TEXT,
                 button2_text TEXT,
-                button2_url TEXT
+                button2_url TEXT,
+                campaign_limit INTEGER DEFAULT 3
             )
             """
         )
@@ -80,6 +81,8 @@ def ensure_database_schema():
             cursor.execute("ALTER TABLE shops ADD COLUMN button2_text TEXT")
         if 'button2_url' not in shop_cols:
             cursor.execute("ALTER TABLE shops ADD COLUMN button2_url TEXT")
+        if 'campaign_limit' not in shop_cols:
+            cursor.execute("ALTER TABLE shops ADD COLUMN campaign_limit INTEGER DEFAULT 3")
 
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, shop_id INTEGER)"
@@ -1016,10 +1019,18 @@ def get_shop_id(admin_id):
         row = cur.fetchone()
         if row:
             return row[0]
-        cur.execute(
-            "INSERT INTO shops (admin_id, name) VALUES (?, ?)",
-            (admin_id, f'Shop {admin_id}')
-        )
+        cur.execute("PRAGMA table_info(shops)")
+        cols = [c[1] for c in cur.fetchall()]
+        if 'campaign_limit' in cols:
+            cur.execute(
+                "INSERT INTO shops (admin_id, name, campaign_limit) VALUES (?, ?, 3)",
+                (admin_id, f'Shop {admin_id}')
+            )
+        else:
+            cur.execute(
+                "INSERT INTO shops (admin_id, name) VALUES (?, ?)",
+                (admin_id, f'Shop {admin_id}')
+            )
         con.commit()
         return cur.lastrowid
     except Exception as e:
@@ -1037,15 +1048,23 @@ def list_shops():
         logging.error(f"Error listando tiendas: {e}")
         return []
 
-def create_shop(name, admin_id=None):
+def create_shop(name, admin_id=None, campaign_limit=3):
     """Crear una nueva tienda y devolver su ID."""
     try:
         con = db.get_db_connection()
         cur = con.cursor()
-        cur.execute(
-            "INSERT INTO shops (admin_id, name) VALUES (?, ?)",
-            (admin_id, name)
-        )
+        cur.execute("PRAGMA table_info(shops)")
+        cols = [c[1] for c in cur.fetchall()]
+        if 'campaign_limit' in cols:
+            cur.execute(
+                "INSERT INTO shops (admin_id, name, campaign_limit) VALUES (?, ?, ?)",
+                (admin_id, name, campaign_limit),
+            )
+        else:
+            cur.execute(
+                "INSERT INTO shops (admin_id, name) VALUES (?, ?)",
+                (admin_id, name),
+            )
         con.commit()
         return cur.lastrowid
     except Exception as e:
@@ -1149,6 +1168,33 @@ def get_shop_info(shop_id):
     except Exception as e:
         logging.error(f"Error obteniendo información de tienda: {e}")
         return None
+
+def get_campaign_limit(shop_id=1):
+    """Obtener el límite de campañas para una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute("SELECT campaign_limit FROM shops WHERE id = ?", (shop_id,))
+        row = cur.fetchone()
+        return int(row[0]) if row and row[0] is not None else 3
+    except Exception as e:
+        logging.error(f"Error obteniendo campaign_limit: {e}")
+        return 3
+
+def set_campaign_limit(limit, shop_id=1):
+    """Actualizar el límite de campañas de una tienda."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            "UPDATE shops SET campaign_limit = ? WHERE id = ?",
+            (int(limit), shop_id),
+        )
+        con.commit()
+        return cur.rowcount > 0
+    except Exception as e:
+        logging.error(f"Error estableciendo campaign_limit: {e}")
+        return False
 
 # ------------------------------------------------------------------
 # Funciones para la tienda seleccionada por cada usuario

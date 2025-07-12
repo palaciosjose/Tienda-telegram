@@ -831,6 +831,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Cambiar descripción de tienda')
             user_markup.row('Cambiar multimedia de tienda')
             user_markup.row('Cambiar botones de tienda')
+            user_markup.row('Configurar límite de campañas')
             if chat_id == config.admin_id:
                 user_markup.row('Cambiar mensaje de inicio (/start)')
             if chat_id == config.admin_id:
@@ -885,6 +886,21 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Texto para el primer botón (o "ninguno"):')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 306
+
+        elif message_text == 'Configurar límite de campañas':
+            if chat_id == config.admin_id:
+                bot.send_message(chat_id, 'Ingrese el ID de la tienda a configurar:')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 310
+            else:
+                shop_id = dop.get_shop_id(chat_id)
+                limit = dop.get_campaign_limit(shop_id)
+                bot.send_message(
+                    chat_id,
+                    f'Límite actual: {limit}\nIngresa el nuevo límite de campañas:',
+                )
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 311
 
         elif message_text == 'Cambiar mensaje de inicio (/start)' and chat_id == config.admin_id:
             bot.send_message(chat_id,
@@ -1813,6 +1829,48 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
             os.remove(path)
+
+        elif sost_num == 310 and chat_id == config.admin_id:
+            try:
+                shop_id_target = int(message_text)
+            except ValueError:
+                bot.send_message(chat_id, '❌ ID inválido. Ingrese un número de tienda.')
+                return
+            limit = dop.get_campaign_limit(shop_id_target)
+            with open(f'data/Temp/{chat_id}_camp_limit_shop.txt', 'w', encoding='utf-8') as f:
+                f.write(str(shop_id_target))
+            bot.send_message(chat_id, f'Límite actual: {limit}\nIngresa el nuevo límite de campañas:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 311
+
+        elif sost_num == 311:
+            try:
+                new_limit = int(message_text)
+                if new_limit < 0:
+                    raise ValueError
+            except ValueError:
+                bot.send_message(chat_id, '❌ Por favor ingrese un número válido.')
+                return
+            if chat_id == config.admin_id:
+                try:
+                    with open(f'data/Temp/{chat_id}_camp_limit_shop.txt', 'r', encoding='utf-8') as f:
+                        shop_id_target = int(f.read().strip())
+                except Exception:
+                    shop_id_target = dop.get_shop_id(chat_id)
+            else:
+                shop_id_target = dop.get_shop_id(chat_id)
+            if dop.set_campaign_limit(new_limit, shop_id=shop_id_target):
+                bot.send_message(chat_id, '✅ Límite actualizado.')
+            else:
+                bot.send_message(chat_id, '❌ Error actualizando límite.')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            if chat_id == config.admin_id:
+                try:
+                    os.remove(f'data/Temp/{chat_id}_camp_limit_shop.txt')
+                except Exception:
+                    pass
+            in_adminka(chat_id, '⚙️ Otros', None, None)
 
         elif sost_num == 500:
             text_path = f'data/Temp/{chat_id}_start_text.txt'
