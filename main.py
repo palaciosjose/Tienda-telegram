@@ -74,6 +74,8 @@ def send_main_menu(chat_id, username, name):
     key.add(telebot.types.InlineKeyboardButton(text='🛍️ Catálogo', callback_data='Ir al catálogo de productos'))
     key.add(telebot.types.InlineKeyboardButton(
         text='📜 Mis compras', callback_data='Ver mis compras'))
+    key.add(telebot.types.InlineKeyboardButton(
+        text='🔍 Buscar productos', callback_data='Buscar productos'))
     key.add(telebot.types.InlineKeyboardButton(text='Cambiar tienda', callback_data='Cambiar tienda'))
     if dop.check_message('start'):
         with shelve.open(files.bot_message_bd) as bd:
@@ -309,6 +311,22 @@ def message_send(message):
                     if str(message.chat.id) in bd:
                         del bd[str(message.chat.id)]
                 send_main_menu(message.chat.id, message.chat.username, message.from_user.first_name)
+            elif sost_num == 24:
+                term = (message.text or '').strip()
+                results = dop.search_products(term)
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+                if results:
+                    text_lines = ['🔍 **Resultados:**']
+                    for sid, sname, pname, price in results:
+                        text_lines.append(f"🏬 {sname}\n📦 {pname} - ${price} USD\n")
+                    resp = '\n'.join(text_lines)
+                else:
+                    resp = '❌ No se encontraron productos.'
+                bot.send_message(message.chat.id, resp, reply_markup=key, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
+                    if str(message.chat.id) in bd:
+                        del bd[str(message.chat.id)]
 
     elif message.chat.id in in_admin:
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)
@@ -545,6 +563,19 @@ def inline(callback):
             dop.safe_edit_message(bot, callback.message, enhanced_additional, reply_markup=key, parse_mode='Markdown')
             bot.answer_callback_query(callback_query_id=callback.id, show_alert=False, text='ℹ️ Información adicional mostrada')
 
+
+        elif callback.data == 'Buscar productos':
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+            bot.answer_callback_query(callback.id)
+            dop.safe_edit_message(
+                bot,
+                callback.message,
+                '🔍 Escribe palabras clave para buscar productos:',
+                reply_markup=key,
+            )
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(callback.message.chat.id)] = 24
 
         elif callback.data == 'Ver mis compras':
             history = dop.get_user_purchases(callback.message.chat.id)

@@ -1633,6 +1633,38 @@ def search_user_purchases(search_term, shop_id=1):
         return f"❌ Error buscando compras: {e}"
 
 
+def search_products(keyword, limit=10):
+    """Search products by keyword.
+
+    The function looks for the keyword in both the product name and
+    description using a ``LIKE`` query. It returns a list of tuples with
+    ``(shop_id, shop_name, product_name, price)``.
+
+    Example
+    -------
+    >>> search_products("gift")
+    [(1, "Shop 1", "Gift Card", 5)]
+    """
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        like = f"%{keyword}%"
+        cur.execute(
+            """
+            SELECT g.shop_id, s.name, g.name, g.price
+            FROM goods AS g
+            JOIN shops AS s ON g.shop_id = s.id
+            WHERE g.name LIKE ? OR g.description LIKE ?
+            LIMIT ?
+            """,
+            (like, like, limit),
+        )
+        return cur.fetchall()
+    except Exception as e:
+        logging.error(f"Error searching products: {e}")
+        return []
+
+
 def get_user_purchases(user_id, shop_id=1):
     con = db.get_db_connection()
     cursor = con.cursor()
