@@ -5,9 +5,6 @@ from dotenv import load_dotenv
 # Cargar variables del archivo .env
 load_dotenv()
 
-# Cargar variables del archivo .env
-load_dotenv()
-
 # Aplicar timezone desde .env si está definida
 import os
 if os.getenv('TZ'):
