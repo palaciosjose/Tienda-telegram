@@ -123,17 +123,17 @@ def in_adminka(chat_id, message_text, username, name_user):
             if chat_id != config.admin_id:
                 bot.send_message(chat_id, '❌ Solo el super admin puede modificar las respuestas.')
                 return
-            if dop.check_message('after_buy'): 
+            if dop.check_message('after_buy'):
                 after_buy = 'Cambiar'
-            else: 
+            else:
                 after_buy = 'Añadir'
-            if dop.check_message('help'): 
+            if dop.check_message('help'):
                 help ='Cambiar'
-            else: 
+            else:
                 help = 'Añadir'
-            if dop.check_message('userfalse'): 
+            if dop.check_message('userfalse'):
                 userfalse = 'Cambiar'
-            else: 
+            else:
                 userfalse = 'Añadir'
             user_markup = telebot.types.ReplyKeyboardMarkup(True, True)
             user_markup.row(after_buy + ' mensaje después de pagar el producto')
@@ -142,24 +142,40 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('Volver al menú principal')
             bot.send_message(chat_id, 'Seleccione qué mensaje desea cambiar.\nDespués de seleccionar, recibirá una breve instrucción', reply_markup=user_markup)
 
-            if ' mensaje después de pagar el producto' in message_text or ' respuesta al comando help' in message_text or ' mensaje si no hay nombre de usuario' in message_text or 'mensaje de entrega manual' in message_text:
-                key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
-                if ' mensaje después de pagar el producto' in message_text:
-                    message = 'after_buy'
-                    bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que el bot enviará al usuario después de la compra! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-                elif ' respuesta al comando help' in message_text: 
-                    bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de ayuda! En principio, puede poner cualquier cosa allí. En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-                    message = 'help'
-                elif ' mensaje si no hay nombre de usuario' in message_text:
-                    bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que se enviará si el usuario no tiene `username`! En el texto puede usar `uname`. Se reemplazará automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
-                    message = 'userfalse'
-                elif 'mensaje de entrega manual' in message_text:
-                    bot.send_message(chat_id, 'Ingrese el mensaje que recibirá el comprador para productos de entrega manual. Puede usar `username` y `name`.', parse_mode='MarkDown', reply_markup=key)
-                    message = 'manual_delivery'
-                with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding ='utf-8') as f: 
-                    f.write(message)
-            with shelve.open(files.sost_bd) as bd : 
+        elif 'mensaje después de pagar el producto' in message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que el bot enviará al usuario después de la compra! En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
+            with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+                f.write('after_buy')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 1
+
+        elif 'respuesta al comando help' in message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, '¡Ingrese un nuevo mensaje de ayuda! En principio, puede poner cualquier cosa allí. En el texto puede usar las palabras `username` y `name`. Se reemplazarán automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
+            with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+                f.write('help')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 1
+
+        elif 'mensaje si no hay nombre de usuario' in message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, '¡Ingrese un nuevo mensaje que se enviará si el usuario no tiene `username`! En el texto puede usar `uname`. Se reemplazará automáticamente por el nombre de usuario', parse_mode='MarkDown', reply_markup=key)
+            with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+                f.write('userfalse')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 1
+
+        elif 'mensaje de entrega manual' in message_text:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver al menú principal de administración', callback_data='Volver al menú principal de administración'))
+            bot.send_message(chat_id, 'Ingrese el mensaje que recibirá el comprador para productos de entrega manual. Puede usar `username` y `name`.', parse_mode='MarkDown', reply_markup=key)
+            with open('data/Temp/' + str(chat_id) + '.txt', 'w', encoding='utf-8') as f:
+                f.write('manual_delivery')
+            with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 1
 
         elif '📦 Surtido' == message_text:
