@@ -93,6 +93,10 @@ Tras ello, los administradores deben escribir `/adm` para abrir el panel de admi
 
 Desde ese menú también podrás pulsar **"Mis compras"** para revisar un resumen de todos los productos que hayas adquirido.
 
+Asimismo están disponibles los comandos `/help` y `/report` (o `/reporte`).
+`/help` envía al usuario el texto de ayuda configurado, mientras que
+`/report` permite remitir incidencias o consultas directamente al administrador.
+
 ## Múltiples tiendas
 
 El bot admite gestionar varias tiendas. El usuario cuyo ID figura en `TELEGRAM_ADMIN_ID` es el *super admin* y posee un menú adicional **🛍️ Gestionar tiendas** dentro de **⚙️ Otros**. Solo este super admin puede añadir o eliminar otros administradores.
