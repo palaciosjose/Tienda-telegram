@@ -72,22 +72,23 @@ class CampaignScheduler:
             conn.close()
 
     def get_pending_sends(self):
-    now = datetime.now()
-    current_time = now.strftime('%H:%M')
-    
-    # Crear rango de ±2 minutos
-    time_range = []
-    for offset in [-2, -1, 0, 1, 2]:
-        time_check = (now + timedelta(minutes=offset)).strftime('%H:%M')
-        time_range.append(time_check)
+        now = datetime.now()
+        current_time = now.strftime('%H:%M')
+        
+        # Crear rango de ±2 minutos para matching más flexible
+        time_range = []
+        for offset in [-2, -1, 0, 1, 2]:
+            time_check = (now + timedelta(minutes=offset)).strftime('%H:%M')
+            time_range.append(time_check)
+        
         conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
             """SELECT cs.*, c.name, c.message_text, c.media_file_id, c.media_type,
-                   c.button1_text, c.button1_url, c.button2_text, c.button2_url
-               FROM campaign_schedules cs
-               JOIN campaigns c ON cs.campaign_id = c.id
-               WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?""",
+                       c.button1_text, c.button1_url, c.button2_text, c.button2_url
+                   FROM campaign_schedules cs
+                   JOIN campaigns c ON cs.campaign_id = c.id
+                   WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?""",
             (self.shop_id, self.shop_id),
         )
         rows = cursor.fetchall()
@@ -99,12 +100,14 @@ class CampaignScheduler:
                 schedule = json.loads(row[4] or '{}')
             except Exception:
                 continue
-            if current_time in schedule.get(today, []):
+            # Buscar en el rango de tiempo en lugar de hora exacta
+            if any(t in schedule.get(today, []) for t in time_range):
                 pending.append(row)
 
         if not shared:
             conn.close()
         return pending
+
     def update_next_send(self, schedule_id, platform):
         next_send = datetime.now() + timedelta(days=1)
         conn, shared = self._get_connection()
