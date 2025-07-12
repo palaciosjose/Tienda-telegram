@@ -80,7 +80,8 @@ def show_marketing_menu(chat_id):
     user_markup.row('🎯 Nueva campaña', '📋 Ver campañas')
     user_markup.row('🛒 Campaña de producto')
     user_markup.row('🗑️ Eliminar campaña')
-    user_markup.row('⏰ Programar envíos', '🎯 Gestionar grupos')
+    user_markup.row('⏰ Programar envíos', '📆 Programaciones')
+    user_markup.row('🎯 Gestionar grupos')
     user_markup.row('📊 Estadísticas hoy', '⚙️ Configuración')
     user_markup.row('▶️ Envío manual', 'Volver al menú principal')
 
@@ -675,6 +676,45 @@ def in_adminka(chat_id, message_text, username, name_user):
                         bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
                     except ValueError:
                         bot.send_message(chat_id, '❌ ID de campaña inválido')
+
+        elif '📆 Programaciones' == message_text:
+            conn = db.get_db_connection()
+            cur = conn.cursor()
+            cur.execute(
+                """SELECT cs.id, c.name, cs.is_active FROM campaign_schedules cs
+                   JOIN campaigns c ON cs.campaign_id = c.id
+                   WHERE cs.shop_id = ?""",
+                (shop_id,)
+            )
+            rows = cur.fetchall()
+            conn.close()
+            if not rows:
+                bot.send_message(chat_id, 'No hay programaciones registradas.')
+            else:
+                markup = telebot.types.InlineKeyboardMarkup()
+                lines = ['📆 *Programaciones:*']
+                for r in rows:
+                    status = 'Activa ✅' if r[2] else 'Inactiva ❌'
+                    lines.append(f"- {r[0]} {r[1]} ({status})")
+                    toggle = 'Cancelar' if r[2] else 'Reactivar'
+                    markup.add(
+                        telebot.types.InlineKeyboardButton(
+                            text=f'{toggle} {r[0]}',
+                            callback_data=f'TOGGLE_SCHEDULE_{r[0]}'
+                        )
+                    )
+                markup.add(
+                    telebot.types.InlineKeyboardButton(
+                        text='Cancelar y volver a Marketing',
+                        callback_data='Volver a Marketing'
+                    )
+                )
+                bot.send_message(
+                    chat_id,
+                    '\n'.join(lines),
+                    reply_markup=markup,
+                    parse_mode='Markdown'
+                )
 
         elif '🎯 Gestionar grupos' == message_text:
             msg = (
@@ -2473,6 +2513,31 @@ def ad_inline(callback_data, chat_id, message_id):
         ), reply_markup=key)
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 165
+
+    elif callback_data.startswith('TOGGLE_SCHEDULE_'):
+        schedule_id = int(callback_data.split('_')[-1])
+        conn = db.get_db_connection()
+        cur = conn.cursor()
+        cur.execute(
+            'SELECT is_active FROM campaign_schedules WHERE id = ? AND shop_id = ?',
+            (schedule_id, shop_id),
+        )
+        row = cur.fetchone()
+        if row is None:
+            conn.close()
+            bot.send_message(chat_id, '❌ Programación no encontrada')
+        else:
+            new_state = 0 if row[0] else 1
+            cur.execute(
+                'UPDATE campaign_schedules SET is_active = ? WHERE id = ? AND shop_id = ?',
+                (new_state, schedule_id, shop_id),
+            )
+            conn.commit()
+            conn.close()
+            bot.edit_message_reply_markup(chat_id, message_id)
+            msg = 'Programación cancelada' if new_state == 0 else 'Programación reactivada'
+            bot.send_message(chat_id, f'✅ {msg}')
+        show_marketing_menu(chat_id)
 
     elif callback_data == 'SKIP_NEW_MEDIA':
         key = telebot.types.InlineKeyboardMarkup()

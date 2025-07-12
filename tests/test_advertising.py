@@ -22,6 +22,7 @@ sys.modules.setdefault(
 )
 
 from advertising_system.ad_manager import AdvertisingManager
+from advertising_system.scheduler import CampaignScheduler
 
 
 CREATE_CAMPAIGNS_TABLE = """CREATE TABLE IF NOT EXISTS campaigns (
@@ -302,4 +303,34 @@ def test_delete_campaign_removes_record(tmp_path):
     conn.close()
 
     assert count == 0
+
+
+def test_deactivate_schedule_removes_from_pending(tmp_path, monkeypatch):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "Camp", "message_text": "Hi", "created_by": 1})
+    ok, _ = manager.schedule_campaign(camp_id, ["lunes"], ["10:00"])
+    assert ok
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM campaign_schedules")
+    schedule_id = cur.fetchone()[0]
+    conn.close()
+
+    import advertising_system.scheduler as mod
+    class DummyDatetime(mod.datetime):
+        @classmethod
+        def now(cls):
+            return cls(2023, 1, 2, 10, 0)
+
+    monkeypatch.setattr(mod, "datetime", DummyDatetime)
+
+    scheduler = CampaignScheduler(str(db_path))
+    assert len(scheduler.get_pending_sends()) == 1
+
+    manager.deactivate_schedule(schedule_id)
+    assert scheduler.get_pending_sends() == []
 
