@@ -30,6 +30,26 @@ def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
     assert calls == []
 
 
+def test_check_and_send_campaigns_none_platforms(tmp_path, monkeypatch):
+    sys.modules.pop('advertising_system.auto_sender', None)
+    auto_sender = importlib.import_module('advertising_system.auto_sender')
+    AutoSender = auto_sender.AutoSender
+
+    config = {
+        'db_path': str(tmp_path / 'db.db'),
+        'telegram_tokens': ['t']
+    }
+    sender = AutoSender(config)
+
+    monkeypatch.setattr(auto_sender.time, 'sleep', lambda x: None)
+    calls = []
+    monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
+
+    sender.scheduler.get_pending_sends = lambda: [(1, 2, None, None, None, None)]
+    assert sender._check_and_send_campaigns() is False
+    assert calls == []
+
+
 def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
     sys.modules.pop('advertising_system.auto_sender', None)
     auto_sender = importlib.import_module('advertising_system.auto_sender')
