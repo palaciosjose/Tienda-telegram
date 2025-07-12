@@ -1,4 +1,4 @@
-import types, os, re
+import types, os, re, shelve
 from tests.test_shop_info import setup_main
 
 
@@ -10,7 +10,18 @@ def test_product_campaign_creates_button(monkeypatch, tmp_path):
     dop, main, calls, _ = setup_main(monkeypatch, tmp_path)
     dop.ensure_database_schema()
     sid = dop.create_shop("S1", admin_id=1)
-    dop.create_product("Item", "d", "txt", 1, 2, "x", shop_id=sid)
+    dop.create_product(
+        "Item",
+        "d",
+        "txt",
+        1,
+        2,
+        "x",
+        additional_description="extra",
+        media_file_id="fid",
+        media_type="photo",
+        shop_id=sid,
+    )
 
     monkeypatch.setattr(dop, "get_adminlist", lambda: [1])
     monkeypatch.setattr(main.adminka.dop, "get_adminlist", lambda: [1])
@@ -29,7 +40,9 @@ def test_product_campaign_creates_button(monkeypatch, tmp_path):
     main.adminka.finalize_product_campaign(1, sid, "Item")
 
     assert created["name"] == "Producto Item"
-    assert created["message_text"] == "d"
+    assert created["message_text"] == "d\nextra"
+    assert created["media_file_id"] == "fid"
+    assert created["media_type"] == "photo"
     assert created["button1_text"] == "Ver producto"
     assert created["button1_url"].endswith(f"prod_{sid}_" + slug("Item"))
 
@@ -63,3 +76,50 @@ def test_start_param_shows_product(monkeypatch, tmp_path):
         elif c[0] in ("send_photo", "send_video", "send_document", "send_audio", "send_animation"):
             texts.append(c[2].get("caption", ""))
     assert any("Item2" in t for t in texts)
+
+
+def test_product_selection_triggers_campaign(monkeypatch, tmp_path):
+    dop, main, calls, _ = setup_main(monkeypatch, tmp_path)
+    dop.ensure_database_schema()
+    sid = dop.create_shop("S1", admin_id=1)
+    dop.create_product(
+        "Prod",
+        "desc",
+        "txt",
+        1,
+        2,
+        "x",
+        additional_description="more",
+        media_file_id="mfid",
+        media_type="photo",
+        shop_id=sid,
+    )
+
+    monkeypatch.setattr(dop, "get_adminlist", lambda: [1])
+    monkeypatch.setattr(main.adminka.dop, "get_adminlist", lambda: [1])
+    path = str(tmp_path / "sost.bd")
+    monkeypatch.setattr(main.adminka.files, "sost_bd", path)
+    monkeypatch.setattr(dop.files, "sost_bd", path)
+    monkeypatch.setattr(main.adminka.advertising, "get_today_stats", lambda: {"sent": 0, "success_rate": 100, "groups": 0})
+    keyboard_stub = lambda *a, **k: types.SimpleNamespace(row=lambda *b, **c: None)
+    monkeypatch.setattr(main.adminka.telebot.types, "ReplyKeyboardMarkup", keyboard_stub, raising=False)
+    monkeypatch.setattr(main.adminka, "show_marketing_menu", lambda *a, **k: None)
+
+    created = {}
+
+    def fake_create(data):
+        created.update(data)
+        return True, "ok"
+
+    monkeypatch.setattr(main.adminka, "create_campaign_from_admin", fake_create)
+
+    main.adminka.in_adminka(1, "🛒 Campaña de producto", "admin", "Admin")
+    with shelve.open(main.adminka.files.sost_bd) as bd:
+        assert bd["1"] == 190
+
+    main.adminka.text_analytics("Prod", 1)
+
+    assert created["message_text"] == "desc\nmore"
+    assert created["media_file_id"] == "mfid"
+    assert created["media_type"] == "photo"
+
