@@ -462,6 +462,20 @@ def get_goods(shop_id=1):
         logging.error(f"Error obteniendo productos: {e}")
         return []
 
+def search_products(keyword, shop_id=1):
+    """Buscar productos por nombre"""
+    try:
+        con = db.get_db_connection()
+        cursor = con.cursor()
+        cursor.execute(
+            "SELECT name FROM goods WHERE shop_id = ? AND name LIKE ? ORDER BY name",
+            (shop_id, f"%{keyword}%"),
+        )
+        return [row[0] for row in cursor.fetchall()]
+    except Exception as e:
+        logging.error(f"Error buscando productos: {e}")
+        return []
+
 def list_products_by_category(cat_id=None, shop_id=1):
     """Return product names filtered by category for a shop."""
     try:

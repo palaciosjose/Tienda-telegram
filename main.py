@@ -108,6 +108,20 @@ def show_shop_selection(chat_id):
     bot.send_message(chat_id, 'Seleccione una tienda:', reply_markup=key)
 
 
+def show_search_results(chat_id, term):
+    """Enviar resultados de búsqueda de productos"""
+    shop_id = dop.get_user_shop(chat_id)
+    goods = dop.search_products(term, shop_id)
+    key = telebot.types.InlineKeyboardMarkup()
+    for name in goods:
+        key.add(telebot.types.InlineKeyboardButton(text=f'📦 {name}', callback_data=name))
+    key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+    if goods:
+        bot.send_message(chat_id, '🔍 Resultados de búsqueda:', reply_markup=key)
+    else:
+        bot.send_message(chat_id, '❌ No se encontraron productos con ese término', reply_markup=key)
+
+
 def session_expired(chat_id, username, name):
     """Informar expiración de sesión y volver al menú principal"""
     bot.send_message(chat_id, '❌ La sesión expiró.')
@@ -213,6 +227,22 @@ def message_send(message):
             bot.send_message(message.chat.id, '❌ No tienes permisos de administrador')
 
     elif first_word and first_word in (
+        '/buscar',
+        '/search',
+        f'/buscar@{bot_username}',
+        f'/search@{bot_username}',
+    ):
+        parts = message.text.split(maxsplit=1)
+        if len(parts) == 1:
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+            bot.send_message(message.chat.id, '🔎 Escribe el término a buscar:', reply_markup=key)
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(message.chat.id)] = 24
+        else:
+            show_search_results(message.chat.id, parts[1])
+
+    elif first_word and first_word in (
         '/report',
         '/reporte',
         f'/report@{bot_username}',
@@ -285,16 +315,22 @@ def message_send(message):
                     return
                 username = f"@{message.chat.username}" if message.chat.username else ''
                 notification = f"Reporte de {username} ({message.chat.id}):\n{text}"
-                for admin_id in dop.get_adminlist():
-                    try:
-                        bot.send_message(admin_id, notification)
-                    except Exception as e:
-                        logging.error("Error enviando reporte a %s: %s", admin_id, e)
-                bot.send_message(message.chat.id, '✅ Reporte enviado a los administradores.')
+                try:
+                    bot.send_message(config.admin_id, notification)
+                except Exception as e:
+                    logging.error("Error enviando reporte al super admin %s: %s", config.admin_id, e)
+                bot.send_message(message.chat.id, '✅ Reporte enviado al administrador.')
                 with shelve.open(files.sost_bd) as bd:
                     if str(message.chat.id) in bd:
                         del bd[str(message.chat.id)]
                 send_main_menu(message.chat.id, message.chat.username, message.from_user.first_name)
+            elif sost_num == 24:
+                term = (message.text or '').strip()
+                if term:
+                    show_search_results(message.chat.id, term)
+                with shelve.open(files.sost_bd) as bd:
+                    if str(message.chat.id) in bd:
+                        del bd[str(message.chat.id)]
 
     elif message.chat.id in in_admin:
         adminka.in_adminka(message.chat.id, message.text, message.chat.username, message.from_user.first_name)

@@ -92,6 +92,7 @@ LOGLEVEL=DEBUG python main.py
 Tras ello, los administradores deben escribir `/adm` para abrir el panel de administración. El comando solo está disponible para los IDs indicados en `TELEGRAM_ADMIN_ID` o en `data/lists/admins_list.txt`.
 
 Desde ese menú también podrás pulsar **"Mis compras"** para revisar un resumen de todos los productos que hayas adquirido.
+También puedes buscar productos por nombre enviando `/buscar <palabra>` y seleccionar el resultado para comprar.
 
 ## Múltiples tiendas
 
@@ -192,6 +193,7 @@ con comandos para gestionar campañas:
 
 - `🎯 Nueva campaña` para registrar una campaña.
 - `📋 Ver campañas` para listar las existentes.
+- `🗑️ Eliminar campaña` para borrar una campaña indicando su ID.
 - `⏰ Programar envíos` para definir los horarios.
 - `🎯 Gestionar grupos` para administrar los grupos objetivo.
 - `📊 Estadísticas hoy` para consultar el resumen diario.

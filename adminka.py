@@ -78,6 +78,7 @@ def show_marketing_menu(chat_id):
     """Mostrar menú principal de marketing"""
     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
     user_markup.row('🎯 Nueva campaña', '📋 Ver campañas')
+    user_markup.row('🗑️ Eliminar campaña')
     user_markup.row('⏰ Programar envíos', '🎯 Gestionar grupos')
     user_markup.row('📊 Estadísticas hoy', '⚙️ Configuración')
     user_markup.row('▶️ Envío manual', 'Volver al menú principal')
@@ -573,6 +574,25 @@ def in_adminka(chat_id, message_text, username, name_user):
                     reply_markup=markup,
                     parse_mode='Markdown'
                 )
+
+        elif '🗑️ Eliminar campaña' == message_text:
+            campaigns = advertising.get_all_campaigns()
+            if not campaigns:
+                bot.send_message(chat_id, 'ℹ️ No hay campañas registradas.')
+            else:
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(
+                    telebot.types.InlineKeyboardButton(
+                        text='Cancelar y volver a Marketing',
+                        callback_data='Volver a Marketing'
+                    )
+                )
+                lines = ['🗑️ *Eliminar campaña*', '', 'Envía el ID de la campaña a eliminar:', '']
+                for camp in campaigns:
+                    lines.append(f"- {camp['id']} {camp['name']} ({camp['status']})")
+                bot.send_message(chat_id, '\n'.join(lines), reply_markup=key, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 168
 
         elif message_text.startswith('⏰ Programar envíos'):
             params = message_text.replace('⏰ Programar envíos', '').strip()
@@ -2175,6 +2195,19 @@ def text_analytics(message_text, chat_id):
                 os.remove(data_path)
             except Exception:
                 pass
+
+        elif sost_num == 168:  # Eliminar campaña
+            cid_text = message_text.strip()
+            if not cid_text.isdigit():
+                bot.send_message(chat_id, '❌ ID de campaña inválido')
+            else:
+                cid = int(cid_text)
+                ok = advertising.delete_campaign(cid)
+                msg = 'Campaña eliminada' if ok else 'Campaña no encontrada'
+                bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            show_marketing_menu(chat_id)
 
         elif sost_num == 170:  # Selección de grupo de Telegram
             tmp = f'data/Temp/{chat_id}_group_choices.json'
