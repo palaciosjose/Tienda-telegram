@@ -1,0 +1,3 @@
+nohup: ignoring input
+./keep_bot_alive.sh: line 9: 3341227 Killed                  python3 bot_working.py >> bot_working.log 2>&1
+./keep_bot_alive.sh: line 9: 4049894 Killed                  python3 bot_working.py >> bot_working.log 2>&1
