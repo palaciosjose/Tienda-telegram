@@ -5,6 +5,16 @@ from dotenv import load_dotenv
 # Cargar variables del archivo .env
 load_dotenv()
 
+# Cargar variables del archivo .env
+load_dotenv()
+
+# Aplicar timezone desde .env si está definida
+import os
+if os.getenv('TZ'):
+    os.environ['TZ'] = os.getenv('TZ')
+    import time
+    time.tzset()
+
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
