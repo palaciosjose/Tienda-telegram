@@ -19,16 +19,16 @@ def test_campaign_limit_enforced(monkeypatch, tmp_path):
     shop_id = dop.create_shop("Shop1", admin_id=2)
     dop.set_campaign_limit(shop_id, 1)
 
-    ok, _ = admin_int.create_campaign_from_admin(
+    ok, msg = admin_int.create_campaign_from_admin(
         {"name": "A", "message_text": "x", "created_by": 2, "shop_id": shop_id}
     )
     assert ok
 
-    ok2, _ = admin_int.create_campaign_from_admin(
+    ok2, msg2 = admin_int.create_campaign_from_admin(
         {"name": "B", "message_text": "y", "created_by": 2, "shop_id": shop_id}
     )
     assert not ok2
-
+    assert "Límite" in msg2
     ok3, _ = admin_int.create_campaign_from_admin(
         {"name": "C", "message_text": "z", "created_by": 1, "shop_id": shop_id}
     )
