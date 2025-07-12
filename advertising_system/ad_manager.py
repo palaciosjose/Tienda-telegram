@@ -147,6 +147,20 @@ class AdvertisingManager:
                 conn.close()
             return False, str(e)
 
+    def deactivate_schedule(self, schedule_id):
+        """Desactivar una programación de campaña."""
+        conn, shared = self._get_connection()
+        cur = conn.cursor()
+        cur.execute(
+            "UPDATE campaign_schedules SET is_active = 0 WHERE id = ? AND shop_id = ?",
+            (schedule_id, self.shop_id),
+        )
+        conn.commit()
+        updated = cur.rowcount
+        if not shared:
+            conn.close()
+        return updated > 0
+
     def add_target_group(self, platform, group_id, group_name=None):
         """Registrar un nuevo grupo objetivo."""
         platform = platform.lower()
