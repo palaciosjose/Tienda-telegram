@@ -82,6 +82,25 @@ la ruta `/metrics` que puede usarse para comprobar el estado del bot.
 El valor de `WEBHOOK_URL` es obligatorio: si se deja vacío, la carga de
 `config.py` lanzará un `RuntimeError` antes de iniciar el servidor.
 
+### Despliegue en hosting compartido
+
+Si tu proveedor no permite procesos persistentes, puedes hospedar el bot
+ejecutando `webhook_server.py` y apuntando el webhook hacia ese servidor
+(o usar el proxy `webhook.php`). Copia `.env.example` a `.env`, define
+`WEBHOOK_URL` con la URL pública de tu dominio y luego ejecuta:
+
+```bash
+python webhook_server.py
+```
+
+Para usar la alternativa en PHP, sube `webhook.php` a tu hosting y
+configura la ruta de destino en el script (`http://127.0.0.1:8444` por
+defecto). Asegúrate de mantener la carpeta `data/` en la misma ruta que
+el bot y crea una tarea `cron` para ejecutar regularmente
+`keep_bot_alive.sh`, lo que reiniciará el proceso si se detiene. Si tu
+dominio cuenta con certificado HTTPS, define `WEBHOOK_SSL_CERT` y
+`WEBHOOK_SSL_PRIV` en `.env` para usarlo en la conexión segura.
+
 El bot mostrará mensajes de depuración y podrás configurarlo enviando `/start` desde la cuenta de administrador.  Para
 ver mensajes más detallados establece la variable de entorno `LOGLEVEL` a `DEBUG` al ejecutarlo:
 
