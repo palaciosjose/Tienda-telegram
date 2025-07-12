@@ -20,7 +20,7 @@ def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
     calls = []
     monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
 
-    sender.scheduler.get_pending_sends = lambda: [(1, 2, None, None, None, None, 'telegram')]
+    sender.scheduler.get_pending_sends = lambda: [(1, 2, None, None, None, 'telegram')]
     assert sender._check_and_send_campaigns() is True
     assert calls == ['tg']
 
@@ -39,7 +39,7 @@ def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
             pass
 
         def get_pending_sends(self):
-            return [(1, 2, None, None, None, None, 'telegram')]
+            return [(1, 2, None, None, None, 'telegram')]
 
         def update_next_send(self, *a):
             pass
