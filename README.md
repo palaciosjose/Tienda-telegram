@@ -192,6 +192,7 @@ con comandos para gestionar campañas:
 
 - `🎯 Nueva campaña` para registrar una campaña.
 - `📋 Ver campañas` para listar las existentes.
+- `🗑️ Eliminar campaña` para borrar una campaña indicando su ID.
 - `⏰ Programar envíos` para definir los horarios.
 - `🎯 Gestionar grupos` para administrar los grupos objetivo.
 - `📊 Estadísticas hoy` para consultar el resumen diario.
