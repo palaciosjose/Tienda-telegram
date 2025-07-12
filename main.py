@@ -315,14 +315,20 @@ def message_send(message):
                 term = (message.text or '').strip()
                 results = dop.search_products(term)
                 key = telebot.types.InlineKeyboardMarkup()
-                key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
                 if results:
                     text_lines = ['🔍 **Resultados:**']
                     for sid, sname, pname, price in results:
                         text_lines.append(f"🏬 {sname}\n📦 {pname} - ${price} USD\n")
+                        key.add(
+                            telebot.types.InlineKeyboardButton(
+                                text=f"{sname} - {pname}",
+                                callback_data=f"SEARCH_{sid}_{pname}",
+                            )
+                        )
                     resp = '\n'.join(text_lines)
                 else:
                     resp = '❌ No se encontraron productos.'
+                key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
                 bot.send_message(message.chat.id, resp, reply_markup=key, parse_mode='Markdown')
                 with shelve.open(files.sost_bd) as bd:
                     if str(message.chat.id) in bd:
@@ -434,6 +440,16 @@ def inline(callback):
                 bot.answer_callback_query(callback.id, text='¡Gracias por calificar!', show_alert=True)
                 cb = types.SimpleNamespace(data=f'SELECT_SHOP_{shop_id}', message=callback.message, id=callback.id, from_user=callback.from_user)
                 inline(cb)
+
+        elif callback.data.startswith('SEARCH_'):
+            parts = callback.data.split('_', 2)
+            if len(parts) == 3:
+                shop_id = int(parts[1])
+                product = parts[2]
+                dop.set_user_shop(callback.message.chat.id, shop_id)
+                cb = types.SimpleNamespace(data=product, message=callback.message, id=callback.id, from_user=callback.from_user)
+                inline(cb)
+            return
 
         elif callback.data == 'Ir al catálogo de productos':
             # Optimización: usar conexión eficiente
