@@ -74,3 +74,16 @@ class CampaignDB:
         if not shared:
             conn.close()
         return updated > 0
+
+    def count_campaigns(self):
+        """Devolver el número de campañas registradas para la tienda."""
+        conn, shared = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM campaigns WHERE shop_id = ?",
+            (self.shop_id,),
+        )
+        count = cursor.fetchone()[0]
+        if not shared:
+            conn.close()
+        return count

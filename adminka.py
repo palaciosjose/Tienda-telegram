@@ -1859,7 +1859,7 @@ def text_analytics(message_text, chat_id):
                     shop_id_target = dop.get_shop_id(chat_id)
             else:
                 shop_id_target = dop.get_shop_id(chat_id)
-            if dop.set_campaign_limit(new_limit, shop_id=shop_id_target):
+            if dop.set_campaign_limit(shop_id_target, new_limit):
                 bot.send_message(chat_id, '✅ Límite actualizado.')
             else:
                 bot.send_message(chat_id, '❌ Error actualizando límite.')

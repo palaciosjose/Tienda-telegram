@@ -7,6 +7,8 @@ import os
 import json
 import db
 from datetime import datetime
+import dop
+import config
 
 # Instancia única usada por los helpers de este módulo
 _manager = AdvertisingManager(files.main_db, shop_id=1)
@@ -27,6 +29,14 @@ def create_campaign_from_admin(data):
     try:
         data = dict(data)
         data.setdefault('shop_id', _manager.shop_id)
+        shop_id = data['shop_id']
+        limit = dop.get_campaign_limit(shop_id)
+        created_by = data.get('created_by')
+        if created_by != config.admin_id and limit and limit > 0:
+            current = _manager.db.count_campaigns()
+            if current >= limit:
+                return False, 'Límite de campañas alcanzado'
+
         campaign_id = _manager.create_campaign(data)
         return True, f"Campaña creada con ID {campaign_id}"
     except Exception as exc:
