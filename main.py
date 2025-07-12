@@ -125,6 +125,35 @@ def show_shop_selection(chat_id, message=None):
         bot.send_message(chat_id, "Seleccione una tienda:", reply_markup=key)
 
 
+def show_product_details(chat_id, product_name, shop_id):
+    """Mostrar información de un producto como en el catálogo."""
+    os.makedirs('data/Temp', exist_ok=True)
+    with open(f'data/Temp/{chat_id}good_name.txt', 'w', encoding='utf-8') as f:
+        f.write(product_name)
+    key = telebot.types.InlineKeyboardMarkup()
+    if dop.has_additional_description(product_name, shop_id):
+        key.add(telebot.types.InlineKeyboardButton(text='ℹ️ Más información', callback_data=f'MAS_INFO_{product_name}'))
+    key.add(telebot.types.InlineKeyboardButton(text='💰 Comprar ahora', callback_data='Comprar'))
+    key.add(telebot.types.InlineKeyboardButton(text='🏠 Inicio', callback_data='Volver al inicio'))
+    media_info = dop.get_product_media(product_name, shop_id)
+    formatted_info = dop.format_product_with_media(product_name, shop_id)
+    if media_info:
+        if media_info['type'] == 'photo':
+            bot.send_photo(chat_id, media_info['file_id'], caption=formatted_info, reply_markup=key, parse_mode='Markdown')
+        elif media_info['type'] == 'video':
+            bot.send_video(chat_id, media_info['file_id'], caption=formatted_info, reply_markup=key, parse_mode='Markdown')
+        elif media_info['type'] == 'document':
+            bot.send_document(chat_id, media_info['file_id'], caption=formatted_info, reply_markup=key, parse_mode='Markdown')
+        elif media_info['type'] == 'audio':
+            bot.send_audio(chat_id, media_info['file_id'], caption=formatted_info, reply_markup=key, parse_mode='Markdown')
+        elif media_info['type'] == 'animation':
+            bot.send_animation(chat_id, media_info['file_id'], caption=formatted_info, reply_markup=key, parse_mode='Markdown')
+        else:
+            bot.send_message(chat_id, formatted_info, reply_markup=key, parse_mode='Markdown')
+    else:
+        bot.send_message(chat_id, formatted_info, reply_markup=key, parse_mode='Markdown')
+
+
 def session_expired(chat_id, username, name):
     """Informar expiración de sesión y volver al menú principal"""
     bot.send_message(chat_id, '❌ La sesión expiró.')
@@ -152,11 +181,29 @@ def message_send(message):
         stripped = message.text.strip()
         if stripped:
             first_word = stripped.split()[0].lower()
-    if '/start' == message.text:
+    if message.text and message.text.startswith('/start'):
+        param = message.text.split(maxsplit=1)
+        start_param = param[1] if len(param) > 1 else ''
+        if start_param.startswith('prod_'):
+            parts = start_param.split('_', 2)
+            product = None
+            if len(parts) == 3:
+                try:
+                    shop_id = int(parts[1])
+                except ValueError:
+                    shop_id = None
+                if shop_id is not None:
+                    slug = parts[2]
+                    product = dop.get_product_by_slug(slug, shop_id)
+                    dop.set_user_shop(message.chat.id, shop_id)
+            if product:
+                show_product_details(message.chat.id, product, shop_id)
+                dop.user_loger(chat_id=message.chat.id)
+                return
         if message.chat.username:
             # Limpiar estado si existe
-            if dop.get_sost(message.chat.id) is True: 
-                with shelve.open(files.sost_bd) as bd: 
+            if dop.get_sost(message.chat.id) is True:
+                with shelve.open(files.sost_bd) as bd:
                     if str(message.chat.id) in bd:
                         del bd[str(message.chat.id)]
             
