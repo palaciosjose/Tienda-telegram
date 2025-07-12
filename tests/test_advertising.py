@@ -284,3 +284,22 @@ def test_get_target_groups_only_active(tmp_path):
     groups = manager.get_target_groups()
     assert groups == [{"id": 1, "group_id": "111", "group_name": "GroupA"}]
 
+
+def test_delete_campaign_removes_record(tmp_path):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    camp_id = manager.create_campaign({"name": "DelMe", "message_text": "Hi", "created_by": 1})
+
+    ok = manager.delete_campaign(camp_id)
+    assert ok
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM campaigns WHERE id = ?", (camp_id,))
+    count = cur.fetchone()[0]
+    conn.close()
+
+    assert count == 0
+

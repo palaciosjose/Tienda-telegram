@@ -285,12 +285,11 @@ def message_send(message):
                     return
                 username = f"@{message.chat.username}" if message.chat.username else ''
                 notification = f"Reporte de {username} ({message.chat.id}):\n{text}"
-                for admin_id in dop.get_adminlist():
-                    try:
-                        bot.send_message(admin_id, notification)
-                    except Exception as e:
-                        logging.error("Error enviando reporte a %s: %s", admin_id, e)
-                bot.send_message(message.chat.id, '✅ Reporte enviado a los administradores.')
+                try:
+                    bot.send_message(config.admin_id, notification)
+                except Exception as e:
+                    logging.error("Error enviando reporte al super admin %s: %s", config.admin_id, e)
+                bot.send_message(message.chat.id, '✅ Reporte enviado al administrador.')
                 with shelve.open(files.sost_bd) as bd:
                     if str(message.chat.id) in bd:
                         del bd[str(message.chat.id)]
