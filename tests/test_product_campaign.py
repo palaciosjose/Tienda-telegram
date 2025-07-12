@@ -26,19 +26,10 @@ def test_product_campaign_creates_button(monkeypatch, tmp_path):
 
     monkeypatch.setattr(main.adminka, "create_campaign_from_admin", fake_create)
 
-    os.makedirs("data/Temp", exist_ok=True)
-    # Preparar archivos como los que crea el flujo
-    with open("data/Temp/1_campaign_product.txt", "w", encoding="utf-8") as f:
-        f.write("Item")
-    with open("data/Temp/1campaign_name.txt", "w", encoding="utf-8") as f:
-        f.write("Producto Item")
-    with open("data/Temp/1campaign_message.txt", "w", encoding="utf-8") as f:
-        f.write("Promo")
-
-    main.adminka.finalize_product_campaign(1, sid)
+    main.adminka.finalize_product_campaign(1, sid, "Item")
 
     assert created["name"] == "Producto Item"
-    assert created["message_text"] == "Promo"
+    assert created["message_text"] == "d"
     assert created["button1_text"] == "Ver producto"
     assert created["button1_url"].endswith(f"prod_{sid}_" + slug("Item"))
 
