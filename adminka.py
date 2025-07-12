@@ -78,6 +78,7 @@ def show_marketing_menu(chat_id):
     """Mostrar menú principal de marketing"""
     user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
     user_markup.row('🎯 Nueva campaña', '📋 Ver campañas')
+    user_markup.row('🛒 Campaña de producto')
     user_markup.row('🗑️ Eliminar campaña')
     user_markup.row('⏰ Programar envíos', '🎯 Gestionar grupos')
     user_markup.row('📊 Estadísticas hoy', '⚙️ Configuración')
@@ -94,6 +95,56 @@ def show_marketing_menu(chat_id):
     )
 
     bot.send_message(chat_id, stats_text, reply_markup=user_markup, parse_mode='Markdown')
+
+
+def finalize_product_campaign(chat_id, shop_id):
+    """Crear campaña de producto con enlace automático."""
+    try:
+        with open(f'data/Temp/{chat_id}campaign_name.txt', encoding='utf-8') as f:
+            name = f.read()
+        with open(f'data/Temp/{chat_id}_campaign_product.txt', encoding='utf-8') as f:
+            product = f.read()
+        with open(f'data/Temp/{chat_id}campaign_message.txt', encoding='utf-8') as f:
+            text = f.read()
+        media_file_id = None
+        media_type = None
+        media_path = f'data/Temp/{chat_id}_campaign_media.txt'
+        if os.path.exists(media_path):
+            with open(media_path, 'r', encoding='utf-8') as mf:
+                lines = mf.read().splitlines()
+                if len(lines) >= 2:
+                    media_file_id = lines[0]
+                    media_type = lines[1]
+    except FileNotFoundError:
+        session_expired(chat_id)
+        return
+
+    data = {
+        'name': name,
+        'message_text': text,
+        'media_file_id': media_file_id,
+        'media_type': media_type,
+        'button1_text': 'Ver producto',
+        'button1_url': dop.get_product_link(product, shop_id),
+        'created_by': chat_id,
+    }
+    ok, msg = create_campaign_from_admin(data)
+    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+    with shelve.open(files.sost_bd) as bd:
+        if str(chat_id) in bd:
+            del bd[str(chat_id)]
+    for p in [
+        f'data/Temp/{chat_id}campaign_name.txt',
+        f'data/Temp/{chat_id}campaign_message.txt',
+        f'data/Temp/{chat_id}_campaign_media.txt',
+        f'data/Temp/{chat_id}_campaign_product.txt',
+    ]:
+        try:
+            if os.path.exists(p):
+                os.remove(p)
+        except Exception:
+            pass
+    show_marketing_menu(chat_id)
 
 
 
@@ -568,6 +619,19 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, '📝 *Nombre de la campaña*\n\nEnvía el nombre para la nueva campaña:', reply_markup=key, parse_mode='Markdown')
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 160
+
+        elif '🛒 Campaña de producto' == message_text:
+            goods = dop.get_goods(shop_id)
+            if not goods:
+                bot.send_message(chat_id, 'No hay productos disponibles.')
+            else:
+                markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for g in goods:
+                    markup.row(g)
+                markup.row('Cancelar')
+                bot.send_message(chat_id, 'Seleccione el producto para la campaña:', reply_markup=markup)
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 190
 
         elif '📋 Ver campañas' == message_text:
             campaigns = advertising.get_all_campaigns()
@@ -2135,6 +2199,43 @@ def text_analytics(message_text, chat_id):
             except Exception:
                 pass
 
+        elif sost_num == 190:  # Selección de producto
+            if message_text == 'Cancelar':
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                show_marketing_menu(chat_id)
+            else:
+                goods = dop.get_goods(shop_id)
+                if message_text not in goods:
+                    bot.send_message(chat_id, 'Selección inválida. Intente nuevamente.')
+                    return
+                os.makedirs('data/Temp', exist_ok=True)
+                with open(f'data/Temp/{chat_id}_campaign_product.txt', 'w', encoding='utf-8') as f:
+                    f.write(message_text)
+                with open(f'data/Temp/{chat_id}campaign_name.txt', 'w', encoding='utf-8') as f:
+                    f.write(f'Producto {message_text}')
+                key = telebot.types.InlineKeyboardMarkup()
+                key.add(telebot.types.InlineKeyboardButton(text='Cancelar y volver a Marketing', callback_data='Volver a Marketing'))
+                bot.send_message(chat_id, '📝 **Mensaje de la campaña**\n\nEscribe el texto que se enviará (máximo 500 caracteres):', reply_markup=key, parse_mode='Markdown')
+                with shelve.open(files.sost_bd) as bd:
+                    bd[str(chat_id)] = 191
+
+        elif sost_num == 191:  # Texto campaña de producto
+            if len(message_text) > 500:
+                bot.send_message(chat_id, '❌ El mensaje es muy largo. Máximo 500 caracteres.')
+                return
+            with open(f'data/Temp/{chat_id}campaign_message.txt', 'w', encoding='utf-8') as f:
+                f.write(message_text)
+            bot.send_message(chat_id, 'Si deseas adjuntar una foto, video o documento envíalo ahora o escribe "no" para omitir:')
+            with shelve.open(files.sost_bd) as bd:
+                bd[str(chat_id)] = 192
+
+        elif sost_num == 192:  # Multimedia opcional producto
+            if message_text.lower() in ('no', 'sin archivo'):
+                finalize_product_campaign(chat_id, shop_id)
+            else:
+                bot.send_message(chat_id, '❌ Envía la foto, video o documento o escribe "no" para continuar sin archivo.')
+
         elif sost_num == 165:  # Guardar texto o multimedia editada
             path = f'data/Temp/{chat_id}_edit_campaign.txt'
             data_path = f'data/Temp/{chat_id}_edit_campaign_data.json'
@@ -2550,6 +2651,9 @@ def handle_multimedia(message):
         elif state == 162:
             temp_path = None
             media_path = f'data/Temp/{chat_id}_campaign_media.txt'
+        elif state == 192:
+            temp_path = None
+            media_path = f'data/Temp/{chat_id}_campaign_media.txt'
         elif state == 165:
             temp_path = None
         elif state == 305:
@@ -2630,6 +2734,12 @@ def handle_multimedia(message):
                 bot.send_message(chat_id, 'Si deseas agregar un botón escribe:\n<texto> <url>\nEscribe "no" para continuar sin botones:')
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 163
+                return
+            elif state == 192:
+                with open(media_path, 'w', encoding='utf-8') as f:
+                    f.write(file_id + '\n')
+                    f.write(media_type)
+                finalize_product_campaign(chat_id, shop_id)
                 return
             elif state == 165:
                 path = f'data/Temp/{chat_id}_edit_campaign.txt'

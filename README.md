@@ -195,6 +195,7 @@ Desde el panel de administración aparecerá una nueva opción **📢 Marketing*
 con comandos para gestionar campañas:
 
 - `🎯 Nueva campaña` para registrar una campaña.
+- `🛒 Campaña de producto` para crear una campaña basada en un producto existente.
 - `📋 Ver campañas` para listar las existentes.
 - `🗑️ Eliminar campaña` para borrar una campaña indicando su ID.
 - `⏰ Programar envíos` para definir los horarios.
@@ -204,6 +205,11 @@ con comandos para gestionar campañas:
 - `▶️ Envío manual <ID>` para disparar un envío inmediato indicando el
   identificador de la campaña. Tras introducir el ID el bot mostrará una lista
   de grupos objetivo para seleccionar.
+
+La *Campaña de producto* permite seleccionar uno de los artículos ya creados y
+enviar su información como anuncio. El bot añadirá automáticamente un botón que
+apunta al producto usando un enlace profundo, de modo que al abrirlo se muestren
+los detalles de ese artículo.
 
 Durante estos flujos puedes cancelar en cualquier momento enviando `Cancelar` o
 `/cancel`, o presionando el botón *Cancelar y volver a Marketing* para regresar

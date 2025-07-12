@@ -1,4 +1,4 @@
-import telebot, shelve, datetime, sqlite3, random, os
+import telebot, shelve, datetime, sqlite3, random, os, re
 import files, config
 import db
 from bot_instance import bot
@@ -8,6 +8,30 @@ logging.basicConfig(level=logging.INFO)
 
 # Flag to avoid repeated logging when initializing discounts
 _discount_initialized = False
+
+
+def _slugify(name):
+    """Convert product name to URL-friendly slug."""
+    slug = re.sub(r"[^a-zA-Z0-9]+", "-", name).lower().strip("-")
+    return slug
+
+
+def get_product_link(product_name, shop_id):
+    """Generate a deep-link URL for a product."""
+    try:
+        username = bot.get_me().username
+    except Exception:
+        username = ""
+    slug = _slugify(product_name)
+    return f"https://t.me/{username}?start=prod_{shop_id}_{slug}"
+
+
+def get_product_by_slug(slug, shop_id=1):
+    """Return product name matching the slug for the given shop."""
+    for name in get_goods(shop_id):
+        if _slugify(name) == slug:
+            return name
+    return None
 
 # ---------------------------------------------------------------------------
 # Utilidad para asegurar que la base de datos tenga las columnas necesarias
