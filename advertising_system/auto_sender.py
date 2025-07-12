@@ -74,6 +74,8 @@ class AutoSender:
         for send_data in pending_sends:
             schedule_id = send_data[0]
             campaign_id = send_data[1]
+            if not send_data[5]:
+                continue
             platforms = send_data[5].split(',')
             for platform in platforms:
                 if platform == 'telegram':
