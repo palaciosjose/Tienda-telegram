@@ -74,7 +74,7 @@ class AutoSender:
         for send_data in pending_sends:
             schedule_id = send_data[0]
             campaign_id = send_data[1]
-            platforms = send_data[6].split(',')
+            platforms = send_data[5].split(',')
             for platform in platforms:
                 if platform == 'telegram':
                     self._send_telegram_campaign(campaign_id, schedule_id, send_data)
@@ -114,14 +114,14 @@ class AutoSender:
                 time.sleep(60)
                 continue
             message_data = {
-                'message': campaign_data[8],
-                'media_file_id': campaign_data[9],
-                'media_type': campaign_data[10],
+                'message': campaign_data[11],
+                'media_file_id': campaign_data[12],
+                'media_type': campaign_data[13],
                 'buttons': {
-                    'button1_text': campaign_data[11],
-                    'button1_url': campaign_data[12],
-                    'button2_text': campaign_data[13],
-                    'button2_url': campaign_data[14]
+                    'button1_text': campaign_data[14],
+                    'button1_url': campaign_data[15],
+                    'button2_text': campaign_data[16],
+                    'button2_url': campaign_data[17]
                 }
             }
             success, result = self.telegram.send_message(
