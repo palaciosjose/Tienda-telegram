@@ -39,7 +39,7 @@ def create_database():
             button1_url TEXT,
             button2_text TEXT,
             button2_url TEXT,
-            campaign_limit INTEGER DEFAULT 3
+            campaign_limit INTEGER DEFAULT 0
         )
     ''')
     print("✓ Tabla 'shops' creada")

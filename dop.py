@@ -60,7 +60,7 @@ def ensure_database_schema():
                 button1_url TEXT,
                 button2_text TEXT,
                 button2_url TEXT,
-                campaign_limit INTEGER DEFAULT 3
+                campaign_limit INTEGER DEFAULT 0
             )
             """
         )
@@ -82,7 +82,7 @@ def ensure_database_schema():
         if 'button2_url' not in shop_cols:
             cursor.execute("ALTER TABLE shops ADD COLUMN button2_url TEXT")
         if 'campaign_limit' not in shop_cols:
-            cursor.execute("ALTER TABLE shops ADD COLUMN campaign_limit INTEGER DEFAULT 3")
+            cursor.execute("ALTER TABLE shops ADD COLUMN campaign_limit INTEGER DEFAULT 0")
 
         cursor.execute(
             "CREATE TABLE IF NOT EXISTS categories (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT UNIQUE NOT NULL, shop_id INTEGER)"
@@ -1023,7 +1023,7 @@ def get_shop_id(admin_id):
         cols = [c[1] for c in cur.fetchall()]
         if 'campaign_limit' in cols:
             cur.execute(
-                "INSERT INTO shops (admin_id, name, campaign_limit) VALUES (?, ?, 3)",
+                "INSERT INTO shops (admin_id, name, campaign_limit) VALUES (?, ?, 0)",
                 (admin_id, f'Shop {admin_id}')
             )
         else:
@@ -1048,7 +1048,7 @@ def list_shops():
         logging.error(f"Error listando tiendas: {e}")
         return []
 
-def create_shop(name, admin_id=None, campaign_limit=3):
+def create_shop(name, admin_id=None, campaign_limit=0):
     """Crear una nueva tienda y devolver su ID."""
     try:
         con = db.get_db_connection()
@@ -1169,19 +1169,19 @@ def get_shop_info(shop_id):
         logging.error(f"Error obteniendo información de tienda: {e}")
         return None
 
-def get_campaign_limit(shop_id=1):
+def get_campaign_limit(shop_id):
     """Obtener el límite de campañas para una tienda."""
     try:
         con = db.get_db_connection()
         cur = con.cursor()
         cur.execute("SELECT campaign_limit FROM shops WHERE id = ?", (shop_id,))
         row = cur.fetchone()
-        return int(row[0]) if row and row[0] is not None else 3
+        return int(row[0]) if row and row[0] is not None else 0
     except Exception as e:
         logging.error(f"Error obteniendo campaign_limit: {e}")
-        return 3
+        return 0
 
-def set_campaign_limit(limit, shop_id=1):
+def set_campaign_limit(shop_id, limit):
     """Actualizar el límite de campañas de una tienda."""
     try:
         con = db.get_db_connection()
