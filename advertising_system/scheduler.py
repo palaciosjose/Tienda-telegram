@@ -72,8 +72,14 @@ class CampaignScheduler:
             conn.close()
 
     def get_pending_sends(self):
-        now = datetime.now()
-        current_time = now.strftime('%H:%M')
+    now = datetime.now()
+    current_time = now.strftime('%H:%M')
+    
+    # Crear rango de ±2 minutos
+    time_range = []
+    for offset in [-2, -1, 0, 1, 2]:
+        time_check = (now + timedelta(minutes=offset)).strftime('%H:%M')
+        time_range.append(time_check)
         conn, shared = self._get_connection()
         cursor = conn.cursor()
         cursor.execute(
