@@ -43,7 +43,7 @@ def main():
     if is_running():
         print("AutoSender ya está ejecutándose")
         return
-    auto_sender = AutoSender(config)
+    auto_sender = AutoSender("data/db/main_data.db")
     auto_sender.start()
     print(f"AutoSender iniciado: {datetime.now()}")
 

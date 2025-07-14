@@ -6,10 +6,10 @@ import os
 from datetime import datetime
 
 # Cambiar al directorio del bot
-os.chdir('/root/telegram-bot')
+os.chdir('/home/telegram-bot')
 
 # Forzar logs al archivo directamente
-log_file = '/root/telegram-bot/advertising.log'
+log_file = '/home/telegram-bot/advertising.log'
 
 def log_message(msg):
     with open(log_file, 'a') as f:
@@ -25,9 +25,9 @@ while True:
         
         # Ejecutar advertising_cron.py
         result = subprocess.run([
-            '/root/telegram-bot/venv/bin/python3', 
+            '/usr/bin/python3', 
             'advertising_cron.py'
-        ], capture_output=True, text=True, cwd='/root/telegram-bot')
+        ], capture_output=True, text=True, cwd='/home/telegram-bot')
         
         if result.returncode == 0:
             log_message(f"✅ Advertising ejecutado correctamente")

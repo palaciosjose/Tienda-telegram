@@ -1,0 +1,10 @@
+INFO:config:✅ Configuración cargada correctamente
+INFO:root:🚀 Bot iniciado.
+INFO:root:✅ Bot iniciando en modo webhook...
+ * Serving Flask app 'main'
+ * Debug mode: off
+INFO:werkzeug:[31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on all addresses (0.0.0.0)
+ * Running on https://127.0.0.1:8443
+ * Running on https://5.189.170.98:8443
+INFO:werkzeug:[33mPress CTRL+C to quit[0m

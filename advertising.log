@@ -608,3 +608,584 @@
 ✅ Advertising ejecutado correctamente
    Output: AutoSender iniciado: 2025-07-13 01:27:28.990109
 😴 Esperando 60 segundos...
+🚀 Advertising Daemon iniciado: 2025-07-13 16:53:28.096450
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:53:28.099333
+❌ Error inesperado: [Errno 13] Permission denied: '/home/telegram-bot/venv/bin/python3'
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:54:28.169317
+❌ Error inesperado: [Errno 13] Permission denied: '/home/telegram-bot/venv/bin/python3'
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:55:28.215961
+❌ Error inesperado: [Errno 13] Permission denied: '/home/telegram-bot/venv/bin/python3'
+😴 Esperando 60 segundos...
+🚀 Advertising Daemon iniciado: 2025-07-13 16:55:35.895127
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:55:35.896085
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 16:55:36.489977
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:56:36.683680
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 16:56:37.139222
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:57:37.241677
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 16:57:37.680839
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:58:37.839853
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 16:58:38.340276
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 16:59:38.482411
+❌ Error en advertising: 
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:00:38.998065
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:00:39.564240
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:01:39.799695
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:01:40.313905
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:02:40.613063
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:02:41.025884
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:03:41.096932
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:03:41.925036
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:04:42.203090
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:04:42.707487
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:05:42.902414
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:05:43.386219
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:06:43.526922
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:06:43.975921
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:07:44.108036
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:07:44.633952
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:08:44.823747
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:08:45.465981
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:09:45.642231
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:09:46.125413
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:10:46.262609
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:10:46.835448
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:11:47.046993
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:11:47.465313
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:12:47.586963
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:12:48.017689
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:13:48.152426
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:13:48.630014
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:14:48.770062
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:14:49.348789
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:15:49.480285
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:15:49.890963
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:16:50.008456
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:16:50.693314
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:17:50.882517
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:17:51.409445
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:18:51.614074
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:18:52.119940
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:19:52.319403
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:19:52.795925
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:20:52.922944
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:20:53.505178
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:21:53.688315
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:21:54.268649
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:22:54.416639
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:22:54.881600
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:23:54.981692
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:23:55.520543
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:24:55.748408
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:24:56.188146
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:25:56.319586
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:25:56.710516
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:26:56.852354
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:26:57.290459
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:27:57.438204
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:27:58.042884
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:28:58.278048
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:28:59.181636
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:29:59.278222
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:29:59.932574
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:31:00.062286
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:31:00.726325
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:32:00.879705
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:32:01.385133
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:33:01.525103
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:33:02.017945
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:34:02.177005
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:34:02.598727
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:35:02.707994
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:35:03.160301
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:36:03.376738
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:36:03.873780
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:37:03.991722
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:37:04.428329
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:38:04.547805
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:38:05.012440
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:39:05.080274
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:39:05.720348
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:40:05.905894
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:40:06.824298
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:41:06.917360
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:41:09.040906
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:42:09.190570
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:42:09.880996
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:43:10.020606
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:43:10.518846
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:44:10.679667
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:44:11.213565
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:45:11.368633
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:45:11.956598
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:46:12.106572
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:46:12.681510
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:47:12.813762
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:47:13.286348
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:48:13.431680
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:48:13.903989
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:49:14.051680
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:49:14.479490
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:50:14.603215
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:50:15.447297
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:51:15.614647
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:51:16.121597
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:52:16.264911
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:52:16.664982
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:53:16.815582
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:53:17.246936
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:54:17.360938
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:54:17.959100
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:55:18.080542
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:55:18.538478
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:56:18.711278
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:56:19.131009
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:57:19.268611
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:57:19.721132
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:58:19.906486
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:58:20.414457
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 17:59:20.566568
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 17:59:20.959953
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:00:21.079850
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:00:21.684610
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:01:21.808871
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:01:22.337470
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:02:22.474843
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:02:22.973031
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:03:23.143823
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:03:23.566043
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:04:23.697101
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:04:24.150367
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:05:24.289524
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:05:24.810906
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:06:24.923676
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:06:25.290409
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:07:25.427004
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:07:25.887477
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:08:25.994904
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:08:26.402214
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:09:26.554137
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:09:26.985818
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:10:27.111094
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:10:27.781495
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:11:27.883328
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:11:28.527871
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:12:28.619703
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:12:29.038408
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:13:29.175679
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:13:29.626818
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:14:29.719667
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 15, in <module>
+    from .rate_limiter import RateLimiter
+ImportError: cannot import name 'RateLimiter' from 'advertising_system.rate_limiter' (/home/telegram-bot/advertising_system/rate_limiter.py)
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:15:30.359687
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 15, in <module>
+    from .rate_limiter import RateLimiter
+ImportError: cannot import name 'RateLimiter' from 'advertising_system.rate_limiter' (/home/telegram-bot/advertising_system/rate_limiter.py)
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:16:30.895584
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 15, in <module>
+    from .rate_limiter import RateLimiter
+ImportError: cannot import name 'RateLimiter' from 'advertising_system.rate_limiter' (/home/telegram-bot/advertising_system/rate_limiter.py)
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:17:31.611607
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 15, in <module>
+    from .rate_limiter import RateLimiter
+ImportError: cannot import name 'RateLimiter' from 'advertising_system.rate_limiter' (/home/telegram-bot/advertising_system/rate_limiter.py)
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:18:32.253887
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 51, in <module>
+    main()
+  File "advertising_cron.py", line 47, in main
+    auto_sender.start()
+AttributeError: 'AutoSender' object has no attribute 'start'
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:19:32.999435
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 51, in <module>
+    main()
+  File "advertising_cron.py", line 47, in main
+    auto_sender.start()
+AttributeError: 'AutoSender' object has no attribute 'start'
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:20:33.661054
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 51, in <module>
+    main()
+  File "advertising_cron.py", line 47, in main
+    auto_sender.start()
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 104, in start
+    return self.process_campaigns()
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 29, in process_campaigns
+    pending_sends = self.scheduler.get_pending_sends()
+  File "/home/telegram-bot/advertising_system/scheduler.py", line 103, in get_pending_sends
+    conn, shared = self._get_connection()
+  File "/home/telegram-bot/advertising_system/scheduler.py", line 38, in _get_connection
+    return sqlite3.connect(self.db_path), False
+TypeError: expected str, bytes or os.PathLike object, not dict
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:21:34.205008
+❌ Error en advertising: INFO:config:✅ Configuración cargada correctamente
+Traceback (most recent call last):
+  File "advertising_cron.py", line 51, in <module>
+    main()
+  File "advertising_cron.py", line 47, in main
+    auto_sender.start()
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 104, in start
+    return self.process_campaigns()
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 29, in process_campaigns
+    pending_sends = self.scheduler.get_pending_sends()
+  File "/home/telegram-bot/advertising_system/scheduler.py", line 103, in get_pending_sends
+    conn, shared = self._get_connection()
+  File "/home/telegram-bot/advertising_system/scheduler.py", line 38, in _get_connection
+    return sqlite3.connect(self.db_path), False
+TypeError: expected str, bytes or os.PathLike object, not dict
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:22:34.935698
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:22:35.365005
+AutoSender iniciado: 2025-07-13 18:22:35.366222
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:23:35.489389
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:23:35.941749
+AutoSender iniciado: 2025-07-13 18:23:35.943604
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:24:36.113969
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:24:36.559436
+AutoSender iniciado: 2025-07-13 18:24:36.561156
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:25:36.718067
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:25:37.235875
+AutoSender iniciado: 2025-07-13 18:25:37.237355
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:26:37.351386
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:26:37.896890
+AutoSender iniciado: 2025-07-13 18:26:37.899602
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:27:38.011480
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:27:38.390226
+AutoSender iniciado: 2025-07-13 18:27:38.391483
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:28:38.483917
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:28:38.943679
+AutoSender iniciado: 2025-07-13 18:28:38.945232
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:29:39.086700
+❌ Error en advertising: Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 86
+    , reply_markup=markup)
+    ^
+SyntaxError: invalid syntax
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:30:39.656084
+❌ Error en advertising: Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 86
+    , reply_markup=markup)
+    ^
+SyntaxError: invalid syntax
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:31:40.321048
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:31:40.881757
+AutoSender iniciado: 2025-07-13 18:31:40.883443
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:32:40.998696
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:32:41.491931
+AutoSender iniciado: 2025-07-13 18:32:41.494389
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:33:41.636123
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:33:42.081234
+AutoSender iniciado: 2025-07-13 18:33:42.082933
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:34:42.221120
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:34:42.771750
+AutoSender iniciado: 2025-07-13 18:34:42.773099
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:35:42.911695
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:35:43.340282
+AutoSender iniciado: 2025-07-13 18:35:43.341641
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:36:43.477408
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:36:43.958940
+AutoSender iniciado: 2025-07-13 18:36:43.963064
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:37:44.054131
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:37:44.446617
+AutoSender iniciado: 2025-07-13 18:37:44.447921
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:38:44.578350
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:38:45.032737
+AutoSender iniciado: 2025-07-13 18:38:45.034130
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:39:45.158454
+❌ Error en advertising: Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 42
+    """Envía campaña con lógica probada exitosa"""
+    ^
+IndentationError: expected an indented block
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:40:45.719102
+❌ Error en advertising: Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 42
+    """Envía campaña con lógica probada exitosa"""
+    ^
+IndentationError: expected an indented block
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:41:46.227981
+❌ Error en advertising: Traceback (most recent call last):
+  File "advertising_cron.py", line 7, in <module>
+    from advertising_system.auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/__init__.py", line 2, in <module>
+    from .auto_sender import AutoSender
+  File "/home/telegram-bot/advertising_system/auto_sender.py", line 42
+    """Envía campaña con lógica probada exitosa"""
+    ^
+IndentationError: expected an indented block
+
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:42:47.505846
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:42:48.040658
+AutoSender iniciado: 2025-07-13 18:42:48.042893
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:43:48.163685
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:43:48.572704
+AutoSender iniciado: 2025-07-13 18:43:48.574086
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:44:48.692327
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:44:49.256384
+AutoSender iniciado: 2025-07-13 18:44:49.257974
+😴 Esperando 60 segundos...
+⏰ Ejecutando advertising_cron.py: 2025-07-13 18:45:49.368716
+✅ Advertising ejecutado correctamente
+   Output: AutoSender iniciado: 2025-07-13 18:45:49.999385
+AutoSender iniciado: 2025-07-13 18:45:50.008157
+😴 Esperando 60 segundos...
