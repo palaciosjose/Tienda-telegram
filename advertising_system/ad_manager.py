@@ -102,7 +102,7 @@ class AdvertisingManager:
         if platforms is None:
             platforms = ['telegram']
 
-        valid_days = {'lunes','martes','miercoles','jueves','viernes','sabado','domingo'}
+        valid_days = {'monday','tuesday','wednesday','thursday','friday','saturday','sunday'}
         day_list = [d.strip().lower() for d in days]
         if any(d not in valid_days for d in day_list):
             return False, 'Día inválido'

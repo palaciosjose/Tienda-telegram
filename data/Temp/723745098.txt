@@ -1,1 +1,3 @@
-manual_delivery
+1
+6
+PAYID-NB2FX6I7TV85486C4282852B

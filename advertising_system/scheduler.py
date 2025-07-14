@@ -5,6 +5,25 @@ import files
 import db
 
 class CampaignScheduler:
+
+    # Mapeo de días español-inglés
+    SPANISH_DAYS = {
+        'lunes': 'monday',
+        'martes': 'tuesday', 
+        'miércoles': 'wednesday',
+        'miercoles': 'wednesday',
+        'jueves': 'thursday',
+        'viernes': 'friday',
+        'sábado': 'saturday',
+        'sabado': 'saturday',
+        'domingo': 'sunday'
+    }
+    
+    def normalize_day(self, day):
+        """Convertir día español a inglés si es necesario"""
+        day_lower = day.lower().strip()
+        return self.SPANISH_DAYS.get(day_lower, day_lower)
+
     def __init__(self, db_path, shop_id=1):
         self.db_path = db_path
         self.shop_id = shop_id
@@ -40,7 +59,7 @@ class CampaignScheduler:
                 schedule_data = {
                     'campaign_id': campaign_id,
                     'platform': platform,
-                    'schedule_json': json.dumps({d: [send_time] for d in ['lunes','martes','miercoles','jueves','viernes','sabado','domingo']}),
+                    'schedule_json': json.dumps({d: [send_time] for d in ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']}),
                     'group_range': f'{start_groups}-{end_groups}',
                     'estimated_duration': estimated_duration,
                     'shop_id': self.shop_id
