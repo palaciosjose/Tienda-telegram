@@ -62,6 +62,7 @@ CREATE_TARGET_GROUPS_TABLE = """CREATE TABLE IF NOT EXISTS target_groups (
     platform TEXT NOT NULL,
     group_id TEXT NOT NULL,
     group_name TEXT,
+    topic_id INTEGER,
     category TEXT,
     status TEXT DEFAULT 'active',
     last_sent TEXT,
@@ -283,7 +284,19 @@ def test_get_target_groups_only_active(tmp_path):
     conn.close()
 
     groups = manager.get_target_groups()
-    assert groups == [{"id": 1, "group_id": "111", "group_name": "GroupA"}]
+    assert groups == [{"id": 1, "group_id": "111", "group_name": "GroupA", "topic_id": None}]
+
+
+def test_add_target_group_with_topic(tmp_path):
+    db_path = tmp_path / "ads.db"
+    init_ads_db(db_path)
+    manager = AdvertisingManager(str(db_path))
+
+    ok, msg = manager.add_target_group("telegram", "333", "TopicGroup", topic_id=10)
+    assert ok
+
+    groups = manager.get_target_groups()
+    assert groups == [{"id": 1, "group_id": "333", "group_name": "TopicGroup", "topic_id": 10}]
 
 
 def test_delete_campaign_removes_record(tmp_path):

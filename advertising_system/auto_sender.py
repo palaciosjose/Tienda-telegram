@@ -5,15 +5,26 @@ from datetime import datetime
 import sys
 import os
 sys.path.insert(0, '/home/telegram-bot')
-import config
-from bot_instance import bot
+import types
+try:
+    import config
+except Exception:  # pragma: no cover - allow import without dotenv
+    config = types.SimpleNamespace()
 import telebot
 from .scheduler import CampaignScheduler
+from .rate_limiter import IntelligentRateLimiter
+from .statistics import StatisticsManager
+from .telegram_multi import TelegramMultiBot
 
 class AutoSender:
-    def __init__(self, db_path, shop_id=1):
+    def __init__(self, config):
+        db_path = config.get('db_path')
+        shop_id = config.get('shop_id', 1)
         self.scheduler = CampaignScheduler(db_path, shop_id)
+        self.rate_limiter = IntelligentRateLimiter(db_path, shop_id)
+        self.stats = StatisticsManager(db_path, shop_id)
         self.logger = logging.getLogger(__name__)
+        self.telegram_tokens = config.get('telegram_tokens', [])
 
     def _get_connection(self):
         import files
@@ -21,19 +32,27 @@ class AutoSender:
             return sqlite3.connect(files.main_db), True
         return sqlite3.connect(self.scheduler.db_path), False
 
-    def process_campaigns(self):
-        processed = False
+    def _check_and_send_campaigns(self):
         pending_sends = self.scheduler.get_pending_sends()
-        
+        processed = False
         for send_data in pending_sends:
-            if len(send_data) >= 3:
-                schedule_id = send_data[0]
-                campaign_id = send_data[1]
-                if send_data[2] == 'telegram':
+            if len(send_data) < 6:
+                continue
+            schedule_id, campaign_id = send_data[0], send_data[1]
+            platforms = send_data[5]
+            if not platforms:
+                continue
+            if isinstance(platforms, str):
+                platforms = platforms.split(',')
+            for platform in platforms:
+                if platform == 'telegram':
                     self._send_telegram_campaign(campaign_id, schedule_id, send_data)
                     processed = True
                     time.sleep(2)
         return processed
+
+    def process_campaigns(self):
+        return self._check_and_send_campaigns()
 
     def _send_telegram_campaign(self, campaign_id, schedule_id, campaign_data):
         conn, shared = self._get_connection()
@@ -61,16 +80,14 @@ class AutoSender:
             
             full_message = f"📢 {title}\n\n{message_text}" if message_text else f"📢 {title}"
             
-            # Importar TelegramMultiBot
-            from .telegram_multi import TelegramMultiBot
-            
             # Obtener tokens
-            tokens_env = os.getenv("TELEGRAM_TOKEN")
-            if not tokens_env:
-                print("❌ No hay tokens de Telegram configurados")
-                return
-            
-            tokens = [t.strip() for t in tokens_env.split(',') if t.strip()]
+            tokens = self.telegram_tokens
+            if not tokens:
+                tokens_env = os.getenv("TELEGRAM_TOKEN")
+                if not tokens_env:
+                    print("❌ No hay tokens de Telegram configurados")
+                    return
+                tokens = [t.strip() for t in tokens_env.split(',') if t.strip()]
             telegram_bot = TelegramMultiBot(tokens)
             
             # Preparar botones

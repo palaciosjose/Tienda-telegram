@@ -5,6 +5,7 @@ from datetime import datetime
 import logging
 import files
 import db
+from advertising_system.telegram_multi import TelegramMultiBot
 
 class AdvertisingManager:
     def __init__(self, db_path, shop_id=1):
@@ -206,16 +207,19 @@ class AdvertisingManager:
             self.logger.error(f"Error updating campaign: {e}")
             return False
 
-    def add_target_group(self, platform, group_id, group_name=None):
+    def add_target_group(self, platform, group_id, group_name=None, topic_id=None):
         """Agregar un grupo objetivo"""
         conn, shared = self._get_connection()
         cursor = conn.cursor()
-        
+
         try:
-            cursor.execute("""
-                INSERT INTO target_groups (platform, group_id, group_name, status, shop_id)
-                VALUES (?, ?, ?, 'active', ?)
-            """, (platform, group_id, group_name, self.shop_id))
+            cursor.execute(
+                """
+                INSERT INTO target_groups (platform, group_id, group_name, topic_id, status, shop_id)
+                VALUES (?, ?, ?, ?, 'active', ?)
+                """,
+                (platform, group_id, group_name, topic_id, self.shop_id),
+            )
             
             conn.commit()
             if not shared:
@@ -274,7 +278,6 @@ class AdvertisingManager:
     def send_campaign_to_group(self, campaign_id, group_id, topic_id=None):
         """Enviar una campaña a un grupo específico"""
         try:
-            from advertising_system.telegram_multi import TelegramMultiBot
             import os
             
             tokens_env = os.getenv("TELEGRAM_TOKEN")
@@ -302,9 +305,9 @@ class AdvertisingManager:
                 return False, "Campaña no encontrada"
             
             name, message, media_file_id, media_type, btn1_text, btn1_url, btn2_text, btn2_url = campaign
-            
+
             # Construir mensaje y botones
-            full_message = f"📢 {name}\n\n{message}" if message else f"📢 {name}"
+            full_message = message
             
             buttons = {}
             if btn1_text and btn1_url:
@@ -315,20 +318,32 @@ class AdvertisingManager:
                 buttons['button2_url'] = btn2_url
             
             # Enviar mensaje
-            success, result = telegram.send_message(
-                group_id, 
-                full_message,
+            send_kwargs = dict(
                 media_file_id=media_file_id,
                 media_type=media_type,
                 buttons=buttons if buttons else None,
-                topic_id=topic_id
+            )
+            if topic_id is not None:
+                send_kwargs["topic_id"] = topic_id
+            success, result = telegram.send_message(
+                group_id,
+                full_message,
+                **send_kwargs
             )
             
             # Log del envío
-            cursor.execute("""
-                INSERT INTO send_logs (campaign_id, group_id, status, sent_date, shop_id)
-                VALUES (?, ?, ?, ?, ?)
-            """, (campaign_id, group_id, 'sent' if success else 'failed', datetime.now().isoformat(), self.shop_id))
+            cursor.execute(
+                """INSERT INTO send_logs (campaign_id, group_id, platform, status, sent_date, error_message, shop_id)
+                   VALUES (?, ?, 'telegram', ?, ?, ?, ?)""",
+                (
+                    campaign_id,
+                    group_id,
+                    'sent' if success else 'failed',
+                    datetime.now().isoformat(),
+                    None if success else result,
+                    self.shop_id,
+                ),
+            )
             
             conn.commit()
             if not shared:
@@ -339,6 +354,26 @@ class AdvertisingManager:
         except Exception as e:
             self.logger.error(f"Error sending campaign: {e}")
             return False, str(e)
+
+    def send_campaign_now(self, campaign_id, platforms=None):
+        """Enviar una campaña inmediatamente a los grupos registrados."""
+        if platforms is None:
+            platforms = ["telegram"]
+
+        overall_success = True
+        last_msg = "Campaña enviada"
+
+        if "telegram" in platforms:
+            groups = self.get_target_groups()
+            for g in groups:
+                ok, msg = self.send_campaign_to_group(
+                    campaign_id, g["group_id"], g.get("topic_id")
+                )
+                if not ok:
+                    overall_success = False
+                    last_msg = msg
+
+        return overall_success, last_msg
 
     def get_today_stats(self):
         """Obtener estadísticas rápidas del día"""

@@ -38,6 +38,7 @@ SQL_TABLES = [
         platform TEXT NOT NULL,
         group_id TEXT NOT NULL,
         group_name TEXT,
+        topic_id INTEGER,
         category TEXT,
         status TEXT DEFAULT 'active',
         last_sent TEXT,
