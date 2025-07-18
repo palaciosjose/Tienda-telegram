@@ -185,6 +185,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             user_markup.row('📦 Surtido', '➕ Producto')
             user_markup.row('💰 Pagos')
             user_markup.row('📊 Stats', '📣 Difusión')
+            user_markup.row('Resumen de compradores')
             user_markup.row('📢 Marketing')
             user_markup.row('🏷️ Categorías')
             user_markup.row('💸 Descuentos')
@@ -540,6 +541,16 @@ def in_adminka(chat_id, message_text, username, name_user):
         elif '📊 Stats' == message_text:
             result = dop.get_daily_sales()
             bot.send_message(chat_id, result, parse_mode='Markdown')
+
+        elif 'Resumen de compradores' == message_text:
+            lines = dop.get_buyers_summary(shop_id)
+            if not lines:
+                bot.send_message(chat_id, 'No hay compras registradas.')
+            else:
+                step = 10
+                for i in range(0, len(lines), step):
+                    part = '\n'.join(lines[i:i + step])
+                    bot.send_message(chat_id, part)
 
         elif '📣 Difusión' == message_text:
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
