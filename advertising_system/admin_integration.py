@@ -33,7 +33,7 @@ def create_campaign_from_admin(data):
         limit = dop.get_campaign_limit(shop_id)
         created_by = data.get('created_by')
         if created_by != config.admin_id and limit and limit > 0:
-            current = _manager.db.count_campaigns()
+            current = len(_manager.get_all_campaigns())
             if current >= limit:
                 return False, 'Límite de campañas alcanzado'
 

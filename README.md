@@ -52,6 +52,14 @@ python migrate_add_shop_id_ads.py
 o `init_db.py` para crear la base desde cero. Esto añadirá el campo
 faltante y prevendrá errores en el módulo de marketing.
 
+Si la tabla `target_groups` no incluye la columna `topic_id`, ejecuta:
+
+```bash
+python migrate_add_topic_id.py
+```
+o `init_db.py` para crear la base desde cero. Esto añadirá la columna para
+soportar temas de Telegram.
+
 ## Uso
 
 Antes de iniciar el bot por primera vez se debe crear la estructura de la base de datos. Ejecuta:

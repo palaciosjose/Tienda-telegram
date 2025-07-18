@@ -106,10 +106,10 @@ def finalize_product_campaign(chat_id, shop_id, product):
         return
 
     text = info['description'] or ''
-    #     if info.get('additional_description'):
-    #         extra = info['additional_description']
-    #         if extra:
-    #             text += ('\n' if text else '') + extra
+    if info.get('additional_description'):
+        extra = info['additional_description']
+        if extra:
+            text += ('\n' if text else '') + extra
 
     media = dop.get_product_media(product, shop_id)
     media_file_id = media['file_id'] if media else None
