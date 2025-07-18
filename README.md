@@ -247,6 +247,21 @@ al menú de marketing.
 necesitas repartir la carga entre diferentes bots.  Si la variable no está
 definida el script terminará con un error.
 
+## Expiración de compras
+
+Si defines la opción **duración en días** para un producto, las compras de ese
+artículo almacenarán su fecha de vencimiento. Para avisar a los usuarios cuando
+una compra haya expirado ejecuta periódicamente `expiration_cron.py` (por
+ejemplo con `cron` o como servicio). El script buscará compras vencidas y
+enviará un mensaje al comprador sugiriendo renovar la adquisición.
+
+```bash
+python expiration_cron.py
+```
+
+Al igual que el módulo de marketing, este script utiliza el token configurado en
+`config.py` a través de `bot_instance.py` para enviar las notificaciones.
+
 ## Pruebas
 
 Para ejecutar las pruebas automatizadas instala las dependencias y luego ejecuta:
