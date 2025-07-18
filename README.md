@@ -126,6 +126,7 @@ Si necesitas reiniciarlo manualmente ejecuta:
 ```bash
 bash restart.sh
 ```
+No intentes ejecutarlo con `python3`; debes correrlo con `bash`.
 
 El script mata cualquier proceso activo de `main.py`, elimina `data/bot.pid` y
 vuelve a lanzarlo en segundo plano guardando la salida en `bot.log`. Tras el
