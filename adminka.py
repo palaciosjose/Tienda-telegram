@@ -16,6 +16,43 @@ import logging
 logging.basicConfig(level=logging.INFO)
 
 
+def set_state(chat_id, state, prev='main'):
+    """Store user state and previous menu"""
+    with shelve.open(files.sost_bd) as bd:
+        bd[str(chat_id)] = state
+        bd[f"{chat_id}_prev"] = prev
+
+
+def clear_state(chat_id):
+    """Remove stored state"""
+    with shelve.open(files.sost_bd) as bd:
+        if str(chat_id) in bd:
+            del bd[str(chat_id)]
+        key = f"{chat_id}_prev"
+        if key in bd:
+            del bd[key]
+
+
+def get_prev(chat_id):
+    with shelve.open(files.sost_bd) as bd:
+        return bd.get(f"{chat_id}_prev", 'main')
+
+
+def route_cancel(chat_id, prev):
+    if prev == 'marketing':
+        show_marketing_menu(chat_id)
+    elif prev == 'discount':
+        show_discount_menu(chat_id)
+    elif prev == 'product':
+        show_product_menu(chat_id)
+    elif prev == 'other':
+        in_adminka(chat_id, '⚙️ Otros', None, None)
+    else:
+        in_adminka(chat_id, 'Volver al menú principal', None, None)
+
+
+
+
 def session_expired(chat_id):
     """Informar al usuario que la sesión expiró y volver al menú principal"""
     bot.send_message(chat_id, '❌ La sesión anterior se perdió.')
@@ -522,9 +559,10 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Gestión de categorías', reply_markup=user_markup)
 
         elif 'Añadir categoría' == message_text:
-            bot.send_message(chat_id, 'Ingrese el nombre de la nueva categoría:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 61
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
+            bot.send_message(chat_id, 'Ingrese el nombre de la nueva categoría:', reply_markup=key)
+            set_state(chat_id, 61, 'main')
 
         elif 'Eliminar categoría' == message_text:
             cats = dop.list_categories(shop_id)
@@ -534,10 +572,9 @@ def in_adminka(chat_id, message_text, username, name_user):
                 user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 for _cid, cname in cats:
                     user_markup.row(cname)
-                user_markup.row('Volver al menú principal')
+                user_markup.row('Cancelar')
                 bot.send_message(chat_id, 'Seleccione la categoría a eliminar:', reply_markup=user_markup)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 60
+            set_state(chat_id, 60, 'main')
 
         elif '💸 Descuentos' == message_text:
             show_discount_menu(chat_id)
@@ -552,14 +589,16 @@ def in_adminka(chat_id, message_text, username, name_user):
             show_discount_menu(chat_id)
 
         elif message_text == 'Cambiar texto':
-            bot.send_message(chat_id, 'Envíe el nuevo texto de descuento:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 33
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='GLOBAL_CANCEL'))
+            bot.send_message(chat_id, 'Envíe el nuevo texto de descuento:', reply_markup=key)
+            set_state(chat_id, 33, 'discount')
 
         elif message_text == 'Cambiar porcentaje':
-            bot.send_message(chat_id, 'Envíe el nuevo porcentaje de descuento:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 34
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='GLOBAL_CANCEL'))
+            bot.send_message(chat_id, 'Envíe el nuevo porcentaje de descuento:', reply_markup=key)
+            set_state(chat_id, 34, 'discount')
 
         elif message_text in ('Ocultar precios tachados', 'Mostrar precios tachados'):
             show = message_text == 'Mostrar precios tachados'
@@ -571,9 +610,10 @@ def in_adminka(chat_id, message_text, username, name_user):
             show_discount_menu(chat_id)
 
         elif 'Nuevo descuento' == message_text:
-            bot.send_message(chat_id, 'Ingrese porcentaje de descuento:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 71
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='GLOBAL_CANCEL'))
+            bot.send_message(chat_id, 'Ingrese porcentaje de descuento:', reply_markup=key)
+            set_state(chat_id, 71, 'discount')
 
         elif 'Renombrar categoría' == message_text:
             cats = dop.list_categories(shop_id)
@@ -750,11 +790,14 @@ def in_adminka(chat_id, message_text, username, name_user):
                     bd[str(chat_id)] = 170
 
         elif message_text == '➖ Eliminar grupo':
-            bot.send_message(chat_id, 'Envía el ID del grupo a eliminar:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 172
+            markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            markup.row('Cancelar')
+            bot.send_message(chat_id, 'Envía el ID del grupo a eliminar:', reply_markup=markup)
+            set_state(chat_id, 172, 'marketing')
 
         elif message_text == '🧵 Agregar Topic':
+            markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            markup.row('Cancelar')
             bot.send_message(
                 chat_id,
                 '🧵 *Agregar Topic a un Grupo*\n\n'
@@ -764,19 +807,21 @@ def in_adminka(chat_id, message_text, username, name_user):
                 '1. Ve al topic en Telegram\n'
                 '2. Reenvía un mensaje a @userinfobot\n'
                 '3. Copia el `message_thread_id`',
-                parse_mode='Markdown'
+                parse_mode='Markdown',
+                reply_markup=markup
             )
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 173
+            set_state(chat_id, 173, 'marketing')
 
         elif message_text == 'Introducir ID manual':
+            markup = telebot.types.ReplyKeyboardMarkup(True, False)
+            markup.row('Cancelar')
             bot.send_message(
                 chat_id,
                 'Envía el ID del grupo y opcionalmente el nombre.\n'
-                'Formato: <ID> [Nombre]'
+                'Formato: <ID> [Nombre]',
+                reply_markup=markup
             )
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 171
+            set_state(chat_id, 171, 'marketing')
 
         elif message_text == '📋 Listar grupos':
             conn = db.get_db_connection()
@@ -839,9 +884,10 @@ def in_adminka(chat_id, message_text, username, name_user):
             in_adminka(chat_id, '⚙️ Configuración', username, name_user)
 
         elif message_text == 'Editar telegram':
-            bot.send_message(chat_id, 'Envíe la nueva configuración (texto o JSON) para Telegram:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 175
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
+            bot.send_message(chat_id, 'Envíe la nueva configuración (texto o JSON) para Telegram:', reply_markup=key)
+            set_state(chat_id, 175, 'marketing')
 
         elif message_text.startswith('▶️ Envío manual'):
             params = message_text.replace('▶️ Envío manual', '').strip()
@@ -864,15 +910,14 @@ def in_adminka(chat_id, message_text, username, name_user):
                     title = g['group_name'] or g['group_id']
                     markup.row(f"{title} ({g['group_id']})")
                 markup.row('Cancelar')
-
+                
                 os.makedirs('data/Temp', exist_ok=True)
                 tmp = f'data/Temp/{chat_id}_manual_send.json'
                 with open(tmp, 'w', encoding='utf-8') as f:
                     json.dump({'camp_id': camp_id, 'groups': groups}, f)
 
                 bot.send_message(chat_id, 'Seleccione el grupo destino:', reply_markup=markup)
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 176
+                set_state(chat_id, 176, 'marketing')
 
         elif 'Vista previa' == message_text:
             preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id)}"
@@ -938,46 +983,54 @@ def in_adminka(chat_id, message_text, username, name_user):
                         bd[str(chat_id)] = 22
 
         elif message_text == 'Cambiar nombre de tienda':
-            bot.send_message(chat_id, 'Ingrese el nuevo nombre de la tienda:')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 303
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
+            bot.send_message(chat_id, 'Ingrese el nuevo nombre de la tienda:', reply_markup=key)
+            set_state(chat_id, 303, 'other')
 
         elif message_text == 'Cambiar descripción de tienda':
-            bot.send_message(chat_id, 'Ingrese la nueva descripción (o "ELIMINAR" para borrar):')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 304
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
+            bot.send_message(chat_id, 'Ingrese la nueva descripción (o "ELIMINAR" para borrar):', reply_markup=key)
+            set_state(chat_id, 304, 'other')
 
         elif message_text == 'Cambiar multimedia de tienda':
-            bot.send_message(chat_id, 'Envía una foto o video para la tienda o escribe "ELIMINAR"')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 305
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
+            bot.send_message(chat_id, 'Envía una foto o video para la tienda o escribe "ELIMINAR"', reply_markup=key)
+            set_state(chat_id, 305, 'other')
 
         elif message_text == 'Cambiar botones de tienda':
-            bot.send_message(chat_id, 'Texto para el primer botón (o "ninguno"):')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 306
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
+            bot.send_message(chat_id, 'Texto para el primer botón (o "ninguno"):', reply_markup=key)
+            set_state(chat_id, 306, 'other')
 
         elif message_text == 'Configurar límite de campañas':
             if chat_id == config.admin_id:
-                bot.send_message(chat_id, 'Ingrese el ID de la tienda a configurar:')
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 310
+                key = telebot.types.ReplyKeyboardMarkup(True, False)
+                key.row('Cancelar')
+                bot.send_message(chat_id, 'Ingrese el ID de la tienda a configurar:', reply_markup=key)
+                set_state(chat_id, 310, 'other')
             else:
                 shop_id = dop.get_shop_id(chat_id)
                 limit = dop.get_campaign_limit(shop_id)
+                key = telebot.types.ReplyKeyboardMarkup(True, False)
+                key.row('Cancelar')
                 bot.send_message(
                     chat_id,
                     f'Límite actual: {limit}\nIngresa el nuevo límite de campañas:',
+                    reply_markup=key
                 )
-                with shelve.open(files.sost_bd) as bd:
-                    bd[str(chat_id)] = 311
+                set_state(chat_id, 311, 'other')
 
         elif message_text == 'Cambiar mensaje de inicio (/start)' and chat_id == config.admin_id:
+            key = telebot.types.ReplyKeyboardMarkup(True, False)
+            key.row('Cancelar')
             bot.send_message(chat_id,
                              'Ingrese el nuevo mensaje de inicio. Puede usar `username` y `name`.',
-                             parse_mode='Markdown')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 500
+                             parse_mode='Markdown', reply_markup=key)
+            set_state(chat_id, 500, 'other')
 
         elif message_text == '🛍️ Gestionar tiendas' and chat_id == config.admin_id:
             shops = dop.list_shops()
@@ -2181,9 +2234,10 @@ def text_analytics(message_text, chat_id):
                 return
             with open(f'data/Temp/{chat_id}_discount.txt', 'w', encoding='utf-8') as f:
                 f.write(str(percent))
-            bot.send_message(chat_id, 'Duración en horas (0 permanente):')
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 72
+            key = telebot.types.InlineKeyboardMarkup()
+            key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='GLOBAL_CANCEL'))
+            bot.send_message(chat_id, 'Duración en horas (0 permanente):', reply_markup=key)
+            set_state(chat_id, 72, 'discount')
 
         elif sost_num == 72:
             try:
@@ -2198,9 +2252,9 @@ def text_analytics(message_text, chat_id):
             for _cid, cname in cats:
                 user_markup.row(cname)
             user_markup.row('Sin categoría')
+            user_markup.row('Cancelar')
             bot.send_message(chat_id, 'Seleccione categoría (o "Sin categoría"):', reply_markup=user_markup)
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 73
+            set_state(chat_id, 73, 'discount')
 
         elif sost_num == 73:
             try:
@@ -2541,6 +2595,12 @@ def ad_inline(callback_data, chat_id, message_id):
                 del bd[str(chat_id)]
         bot.delete_message(chat_id, message_id)
         show_marketing_menu(chat_id)
+
+    elif callback_data == 'GLOBAL_CANCEL':
+        prev = get_prev(chat_id)
+        clear_state(chat_id)
+        bot.delete_message(chat_id, message_id)
+        route_cancel(chat_id, prev)
 
     elif callback_data.startswith('EDIT_CAMPAIGN_'):
         camp_id = int(callback_data.split('_')[-1])
@@ -2974,3 +3034,12 @@ def handle_multimedia(message):
             bot.send_message(chat_id, '❌ Tipo de archivo no soportado. Envía: foto, video, documento, audio o GIF')
     except Exception:
         logging.error('Unhandled exception in handle_multimedia', exc_info=True)
+
+
+def handle_cancel_command(message):
+    """Manejar el comando /cancel"""
+    chat_id = message.chat.id if hasattr(message, 'chat') else message
+    prev = get_prev(chat_id)
+    clear_state(chat_id)
+    bot.send_message(chat_id, 'Operación cancelada.')
+    route_cancel(chat_id, prev)
