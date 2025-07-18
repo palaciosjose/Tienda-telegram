@@ -60,6 +60,35 @@ python migrate_add_topic_id.py
 o `init_db.py` para crear la base desde cero. Esto añadirá la columna para
 soportar temas de Telegram.
 
+Si utilizas una versión antigua y tu tabla `shops` no incluye los campos de
+descripción o botones de inicio, ejecuta:
+
+```bash
+python migrate_add_shop_info.py
+```
+
+Para que la configuración de descuentos funcione por tienda debes añadir la
+columna `shop_id` a `discount_config` con:
+
+```bash
+python migrate_add_shop_id_discount.py
+```
+
+El sistema de marketing requiere una tabla `bot_groups`. Si no la tienes,
+ejecuta:
+
+```bash
+python migrate_create_bot_groups.py
+```
+
+Por último, si la tabla `goods` aún no utiliza `(name, shop_id)` como clave
+primaria ejecuta:
+
+```bash
+python migrate_goods_unique_pair.py
+```
+o `init_db.py` para crear la base desde cero.
+
 ## Uso
 
 Antes de iniciar el bot por primera vez se debe crear la estructura de la base de datos. Ejecuta:
@@ -89,6 +118,19 @@ archivo se elimina automáticamente al cerrar el bot. Además, el servidor expon
 la ruta `/metrics` que puede usarse para comprobar el estado del bot.
 El valor de `WEBHOOK_URL` es obligatorio: si se deja vacío, la carga de
 `config.py` lanzará un `RuntimeError` antes de iniciar el servidor.
+
+### Reinicio del bot
+
+Si necesitas reiniciarlo manualmente ejecuta:
+
+```bash
+bash restart.sh
+```
+
+El script mata cualquier proceso activo de `main.py`, elimina `data/bot.pid` y
+vuelve a lanzarlo en segundo plano guardando la salida en `bot.log`. Tras el
+reinicio puedes revisar dicho archivo o visitar `/metrics` para verificar que el
+bot responda correctamente.
 
 ### Despliegue en hosting compartido
 
@@ -166,7 +208,12 @@ El último permite personalizar el texto y la multimedia que verán los usuarios
 
 Al entrar verás botones para gestionar las distintas funciones del bot. Entre
 ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **💰 Pagos**,
-**📊 Stats**, **📣 Difusión**, **📢 Marketing**, **💸 Descuentos** y **⚙️ Otros**.
+**📊 Stats**, **Resumen de compradores**, **📣 Difusión**, **📢 Marketing**,
+**💸 Descuentos** y **⚙️ Otros**.
+
+La opción **Resumen de compradores** genera un listado ordenado por el total
+gastado. Para cada comprador se muestra su ID, nombre de usuario, la suma de sus
+pagos en dólares y los productos adquiridos.
 
 En **💬 Respuestas** puedes definir distintos textos que el bot enviará. Se añadió la opción
 **Agregar/Cambiar mensaje de entrega manual**, utilizado cuando un producto requiere
