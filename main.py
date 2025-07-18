@@ -181,6 +181,9 @@ def message_send(message):
         stripped = message.text.strip()
         if stripped:
             first_word = stripped.split()[0].lower()
+    if message.text == '/cancel':
+        adminka.handle_cancel_command(message)
+        return
     if message.text and message.text.startswith('/start'):
         param = message.text.split(maxsplit=1)
         start_param = param[1] if len(param) > 1 else ''
