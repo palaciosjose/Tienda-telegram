@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import os
 import sys
-from datetime import datetime
 import sqlite3
 import json
+from datetime import datetime
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -67,41 +67,71 @@ def get_pending_campaigns():
         return []
 
 def send_campaign(campaign_data):
-    """Enviar campaña usando AutoSender"""
+    """Enviar campaña usando bot directo"""
     try:
-        from advertising_system.auto_sender import AutoSender
+        import config
+        from bot_instance import bot
         
-        config = {
-            'db_path': 'data/db/main_data.db',
-            'telegram_tokens': [os.getenv('TELEGRAM_TOKEN')],
-            'shop_id': 1
-        }
+        campaign_id = campaign_data[1]
+        campaign_name = campaign_data[10]
+        message = campaign_data[11]  # message_text
+        media_file_id = campaign_data[12]  # media_file_id
+        media_type = campaign_data[13]     # media_type
+        button1_text = campaign_data[14]   # button1_text
+        button1_url = campaign_data[15]    # button1_url
+        button2_text = campaign_data[16]   # button2_text
+        button2_url = campaign_data[17]    # button2_url
         
-        auto_sender = AutoSender(config)
-        groups = auto_sender._get_telegram_groups()
+        # Obtener grupos activos
+        conn = sqlite3.connect('data/db/main_data.db')
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT group_id, group_name FROM target_groups WHERE platform = 'telegram' AND status = 'active' AND shop_id = 1"
+        )
+        groups = cursor.fetchall()
+        conn.close()
         
-        message = campaign_data[12]  # message_text
-        campaign_name = campaign_data[11]  # name
+        if not groups:
+            print("❌ No hay grupos activos configurados")
+            return False
+            
+        print(f"📤 Enviando a {len(groups)} grupos")
+        
+        # Construir markup si hay botones
+        markup = None
+        if button1_text and button1_url:
+            import telebot
+            markup = telebot.types.InlineKeyboardMarkup()
+            markup.add(telebot.types.InlineKeyboardButton(button1_text, url=button1_url))
+            if button2_text and button2_url:
+                markup.add(telebot.types.InlineKeyboardButton(button2_text, url=button2_url))
+        
+        # Mensaje completo
+        full_message = f"📢 {campaign_name}\n\n{message}" if message else f"📢 {campaign_name}"
         
         sent_count = 0
-        for group in groups:
-            success, result = auto_sender.telegram.send_message(
-                group['group_id'],
-                f"📢 {campaign_name}\n\n{message}",
-                media_file_id=campaign_data[13],  # media_file_id
-                media_type=campaign_data[14],     # media_type
-                buttons={
-                    'button1_text': campaign_data[15],  # button1_text
-                    'button1_url': campaign_data[16],   # button1_url
-                    'button2_text': campaign_data[17],  # button2_text
-                    'button2_url': campaign_data[18]    # button2_url
-                }
-            )
-            if success:
+        for group_id, group_name in groups:
+            try:
+                if media_file_id and media_type:
+                    if media_type == 'photo':
+                        bot.send_photo(group_id, media_file_id, caption=full_message, reply_markup=markup, parse_mode='Markdown')
+                    elif media_type == 'video':
+                        bot.send_video(group_id, media_file_id, caption=full_message, reply_markup=markup, parse_mode='Markdown')
+                    elif media_type == 'document':
+                        bot.send_document(group_id, media_file_id, caption=full_message, reply_markup=markup, parse_mode='Markdown')
+                    else:
+                        bot.send_message(group_id, full_message, reply_markup=markup, parse_mode='Markdown')
+                else:
+                    bot.send_message(group_id, full_message, reply_markup=markup, parse_mode='Markdown')
+                    
+                print(f"✅ Enviado a {group_name} ({group_id})")
                 sent_count += 1
                 
-        print(f"📤 Campaña enviada a {sent_count} grupos")
-        return True
+            except Exception as e:
+                print(f"❌ Error enviando a {group_id}: {e}")
+                
+        print(f"📊 Campaña enviada a {sent_count}/{len(groups)} grupos")
+        return sent_count > 0
         
     except Exception as e:
         print(f"❌ Error enviando: {e}")

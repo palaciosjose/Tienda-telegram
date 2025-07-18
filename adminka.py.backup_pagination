@@ -132,6 +132,7 @@ def finalize_product_campaign(chat_id, shop_id, product):
     show_marketing_menu(chat_id)
 
 
+
 def in_adminka(chat_id, message_text, username, name_user):
     if chat_id in dop.get_adminlist():
         logging.debug("Admin %s selected option: %s", chat_id, message_text)
@@ -467,6 +468,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     reply_markup=menu_markup,
                 )
 
+
         elif '➕ Producto' == message_text:
             overview_lines = dop.get_stock_overview()
             if overview_lines:
@@ -680,8 +682,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             cur = conn.cursor()
             cur.execute(
                 """SELECT cs.id, c.name, cs.is_active FROM campaign_schedules cs
-                JOIN campaigns c ON cs.campaign_id = c.id
-                WHERE cs.shop_id = ?""",
+                   JOIN campaigns c ON cs.campaign_id = c.id
+                   WHERE cs.shop_id = ?""",
                 (shop_id,)
             )
             rows = cur.fetchall()
@@ -695,16 +697,10 @@ def in_adminka(chat_id, message_text, username, name_user):
                     status = 'Activa ✅' if r[2] else 'Inactiva ❌'
                     lines.append(f"- {r[0]} {r[1]} ({status})")
                     toggle = 'Cancelar' if r[2] else 'Reactivar'
-            
-                    # NUEVA MODIFICACIÓN: Agregar dos botones por fila
                     markup.add(
                         telebot.types.InlineKeyboardButton(
                             text=f'{toggle} {r[0]}',
                             callback_data=f'TOGGLE_SCHEDULE_{r[0]}'
-                        ),
-                        telebot.types.InlineKeyboardButton(
-                            text=f'🗑️ Eliminar {r[0]}',
-                            callback_data=f'DELETE_SCHEDULE_{r[0]}'
                         )
                     )
                 markup.add(
@@ -727,7 +723,7 @@ def in_adminka(chat_id, message_text, username, name_user):
             )
             user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
             user_markup.row('➕ Agregar grupo', '➖ Eliminar grupo')
-            user_markup.row('🧵 Agregar Topic', 'Introducir ID manual')
+            user_markup.row('Introducir ID manual')
             user_markup.row('📋 Listar grupos')
             user_markup.row('📢 Marketing')
             bot.send_message(chat_id, msg, reply_markup=user_markup, parse_mode='Markdown')
@@ -754,21 +750,6 @@ def in_adminka(chat_id, message_text, username, name_user):
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 172
 
-        elif message_text == '🧵 Agregar Topic':
-            bot.send_message(
-                chat_id,
-                '🧵 *Agregar Topic a un Grupo*\n\n'
-                'Formato: `<ID_GRUPO> <ID_TOPIC> [Nombre]`\n\n'
-                '*Ejemplo:* `-1001234567890 123 Ventas`\n\n'
-                '*¿Cómo obtener el ID del Topic?*\n'
-                '1. Ve al topic en Telegram\n'
-                '2. Reenvía un mensaje a @userinfobot\n'
-                '3. Copia el `message_thread_id`',
-                parse_mode='Markdown'
-            )
-            with shelve.open(files.sost_bd) as bd:
-                bd[str(chat_id)] = 173
-
         elif message_text == 'Introducir ID manual':
             bot.send_message(
                 chat_id,
@@ -782,31 +763,19 @@ def in_adminka(chat_id, message_text, username, name_user):
             conn = db.get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                "SELECT platform, group_id, group_name, topic_id FROM target_groups WHERE shop_id = ? ORDER BY group_id, topic_id",
+                "SELECT platform, group_id, group_name FROM target_groups WHERE shop_id = ?",
                 (shop_id,),
             )
             rows = cur.fetchall()
             if rows:
-                txt = '🎯 *Grupos y Topics registrados:*\n\n'
-                current_group = None
+                txt = '🎯 *Grupos registrados:*\n'
                 for r in rows:
-                    platform, group_id, group_name, topic_id = r
-                    name = group_name or ''
-        
-                    if topic_id is None:
-                        # Grupo principal
-                        txt += f"📱 {platform} `{group_id}` {name}\n"
-                        current_group = group_id
-                    else:
-                        # Topic dentro del grupo
-                        if current_group != group_id:
-                            txt += f"📱 {platform} `{group_id}`\n"
-                        txt += f"  └🧵 Topic `{topic_id}` - {name}\n"
-                        current_group = group_id
-                txt += f"\n*Total: {len(rows)} destinos*"
+                    name = r[2] or ''
+                    txt += f"- {r[0]} {r[1]} {name}\n"
             else:
                 txt = 'No hay grupos registrados.'
             bot.send_message(chat_id, txt, parse_mode='Markdown')
+
 
         elif '📊 Estadísticas hoy' == message_text:
             stats = advertising.get_today_stats()
@@ -873,6 +842,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 bot.send_message(chat_id, 'Seleccione el grupo destino:', reply_markup=markup)
                 with shelve.open(files.sost_bd) as bd:
                     bd[str(chat_id)] = 176
+
 
         elif 'Vista previa' == message_text:
             preview = f"🛍️ **CATÁLOGO PREVIEW**\n{'-'*30}\n\n{dop.get_productcatalog(shop_id)}"
@@ -991,7 +961,6 @@ def in_adminka(chat_id, message_text, username, name_user):
             bot.send_message(chat_id, 'Elige una opción:', reply_markup=user_markup)
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 300
-
 
 def text_analytics(message_text, chat_id):
     shop_id = dop.get_shop_id(chat_id)
@@ -1148,6 +1117,7 @@ def text_analytics(message_text, chat_id):
             )
             with shelve.open(files.sost_bd) as bd:
                 bd[str(chat_id)] = 16
+
 
         elif sost_num == 16:
             try:
@@ -2158,6 +2128,15 @@ def text_analytics(message_text, chat_id):
             else:
                 bot.send_message(chat_id, 'Envía un archivo multimedia o escribe "no" para continuar sin archivo.')
 
+
+
+
+
+
+
+
+
+
         elif sost_num == 34:  # Recibir nuevo porcentaje de descuento
             try:
                 percent = int(message_text)
@@ -2222,6 +2201,7 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
             show_discount_menu(chat_id)
+
 
         elif sost_num == 160:  # Nombre de campaña
             with open('data/Temp/' + str(chat_id) + 'campaign_name.txt', 'w', encoding='utf-8') as f:
@@ -2451,33 +2431,6 @@ def text_analytics(message_text, chat_id):
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
 
-        elif sost_num == 173:  # Agregar topic a grupo existente
-            text = message_text.strip()
-            parts = text.split(maxsplit=2)
-            if len(parts) < 2 or not parts[0].lstrip('-').isdigit() or not parts[1].isdigit():
-                bot.send_message(chat_id, '❌ Formato inválido. Use: <ID_GRUPO> <ID_TOPIC> [Nombre]')
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-            else:
-                group_id = parts[0]
-                topic_id = int(parts[1])
-                topic_name = parts[2] if len(parts) > 2 else f"Topic {topic_id}"
-                
-                conn = db.get_db_connection()
-                cur = conn.cursor()
-                cur.execute(
-                    """INSERT INTO target_groups 
-                       (platform, group_id, group_name, topic_id, status, added_date, shop_id)
-                       VALUES (?, ?, ?, ?, 'active', ?, ?)""",
-                    ('telegram', group_id, topic_name, topic_id, 
-                     datetime.datetime.now().isoformat(), shop_id)
-                )
-                conn.commit()
-                bot.send_message(chat_id, f'✅ Topic {topic_id} agregado al grupo {group_id}')
-                
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-
         elif sost_num == 175:  # Editar config telegram
             advertising.update_platform_config('telegram', config_data=message_text)
             bot.send_message(chat_id, '✅ Configuración de Telegram actualizada')
@@ -2509,7 +2462,7 @@ def text_analytics(message_text, chat_id):
                 if not selected:
                     bot.send_message(chat_id, 'Selección inválida. Intente nuevamente.')
                     return
-                ok, msg = advertising.send_campaign_to_group(camp_id, selected['group_id'], selected.get('topic_id'))
+                ok, msg = advertising.send_campaign_to_group(camp_id, selected['group_id'])
                 bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
@@ -2560,35 +2513,6 @@ def ad_inline(callback_data, chat_id, message_id):
         ), reply_markup=key)
         with shelve.open(files.sost_bd) as bd:
             bd[str(chat_id)] = 165
-
-    elif callback_data.startswith('DELETE_SCHEDULE_'):
-        schedule_id = int(callback_data.split('_')[-1])
-        conn = db.get_db_connection()
-        cur = conn.cursor()
-        
-        # Verificar que la programación existe
-        cur.execute(
-            'SELECT c.name FROM campaign_schedules cs JOIN campaigns c ON cs.campaign_id = c.id WHERE cs.id = ? AND cs.shop_id = ?',
-            (schedule_id, shop_id),
-        )
-        row = cur.fetchone()
-        
-        if row is None:
-            conn.close()
-            bot.send_message(chat_id, '❌ Programación no encontrada')
-        else:
-            campaign_name = row[0]
-            # Eliminar la programación permanentemente
-            cur.execute(
-                'DELETE FROM campaign_schedules WHERE id = ? AND shop_id = ?',
-                (schedule_id, shop_id),
-            )
-            conn.commit()
-            conn.close()
-            bot.edit_message_reply_markup(chat_id, message_id)
-            bot.send_message(chat_id, f'🗑️ Programación {schedule_id} de "{campaign_name}" eliminada permanentemente.')
-        
-        show_marketing_menu(chat_id)
 
     elif callback_data.startswith('TOGGLE_SCHEDULE_'):
         schedule_id = int(callback_data.split('_')[-1])
@@ -2647,6 +2571,7 @@ def ad_inline(callback_data, chat_id, message_id):
             os.remove(text_path)
         except Exception:
             pass
+
 
     elif callback_data == 'CONFIRM_BROADCAST':
         try:
@@ -2789,7 +2714,6 @@ def ad_inline(callback_data, chat_id, message_id):
         user_markup.row('Volver al menú principal')
         bot.delete_message(chat_id, message_id)
         bot.send_message(chat_id, '¡Producto añadido con éxito!', reply_markup=user_markup)
-
 
 def handle_multimedia(message):
     """Manejar archivos multimedia enviados por admin"""
