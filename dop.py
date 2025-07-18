@@ -192,6 +192,9 @@ def ensure_database_schema():
                 name_good TEXT,
                 amount INTEGER,
                 price INTEGER,
+                payment_method TEXT,
+                timestamp TEXT,
+                expires_at TEXT,
                 shop_id INTEGER DEFAULT 1
             )
             """
@@ -199,6 +202,15 @@ def ensure_database_schema():
 
         cursor.execute("PRAGMA table_info(purchases)")
         purch_cols = [c[1] for c in cursor.fetchall()]
+        if 'payment_method' not in purch_cols:
+            cursor.execute("ALTER TABLE purchases ADD COLUMN payment_method TEXT")
+            updated = True
+        if 'timestamp' not in purch_cols:
+            cursor.execute("ALTER TABLE purchases ADD COLUMN timestamp TEXT")
+            updated = True
+        if 'expires_at' not in purch_cols:
+            cursor.execute("ALTER TABLE purchases ADD COLUMN expires_at TEXT")
+            updated = True
         if 'shop_id' not in purch_cols:
             try:
                 cursor.execute("ALTER TABLE purchases ADD COLUMN shop_id INTEGER DEFAULT 1")
@@ -1548,22 +1560,28 @@ def new_buyer(his_id, username, payed, shop_id=1):
         logging.error(f"Error actualizando comprador: {e}")
         pass
 def new_buy_improved(his_id, username, name_good, amount, price, payment_method="Unknown", payment_id=None, shop_id=1):
-    """Versión mejorada de new_buy que incluye método de pago y timestamp"""
+    """Versión mejorada de new_buy que incluye método de pago, timestamp y expiración"""
     try:
         con = db.get_db_connection()
         cursor = con.cursor()
-        
+
         # Usar timestamp actual
-        from datetime import datetime
+        from datetime import datetime, timedelta
         current_time = datetime.now().isoformat()
-        
+
+        # Calcular expiración si el producto tiene duración
+        duration = get_duration_days(name_good, shop_id)
+        expires_at = None
+        if duration:
+            expires_at = (datetime.now() + timedelta(days=duration)).isoformat()
+
         cursor.execute(
             """
             INSERT INTO purchases
-            (id, username, name_good, amount, price, payment_method, timestamp, shop_id)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            (id, username, name_good, amount, price, payment_method, timestamp, expires_at, shop_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
             """,
-            (his_id, username, name_good, amount, price, payment_method, current_time, shop_id)
+            (his_id, username, name_good, amount, price, payment_method, current_time, expires_at, shop_id)
         )
         
         # También insertar en tabla de validación si existe
