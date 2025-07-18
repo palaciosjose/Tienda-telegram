@@ -253,7 +253,7 @@ class AdvertisingManager:
         cursor = conn.cursor()
         
         cursor.execute("""
-            SELECT id, group_id, group_name, topic_id 
+            SELECT id, group_id, group_name 
             FROM target_groups 
             WHERE status = 'active' AND shop_id = ?
         """, (self.shop_id,))
@@ -263,18 +263,17 @@ class AdvertisingManager:
             groups.append({
                 'id': row[0],
                 'group_id': row[1],
-                'group_name': row[2],
-                'topic_id': row[3]
+                'group_name': row[2]
             })
         
         if not shared:
             conn.close()
         return groups
 
-    def send_campaign_to_group(self, campaign_id, group_id, topic_id=None):
+    def send_campaign_to_group(self, campaign_id, group_id):
         """Enviar una campaña a un grupo específico"""
         try:
-            from advertising_system.telegram_multi import TelegramMultiBot
+            from advertising_system.telegram_bot import TelegramMultiBot
             import os
             
             tokens_env = os.getenv("TELEGRAM_TOKEN")
@@ -320,8 +319,7 @@ class AdvertisingManager:
                 full_message,
                 media_file_id=media_file_id,
                 media_type=media_type,
-                buttons=buttons if buttons else None,
-                topic_id=topic_id
+                buttons=buttons if buttons else None
             )
             
             # Log del envío

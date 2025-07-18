@@ -36,46 +36,25 @@ class TelegramMultiBot:
                 if buttons.get('button2_text'):
                     markup.add(telebot.types.InlineKeyboardButton(buttons['button2_text'], url=buttons['button2_url']))
             
-            # Parámetros base para el envío
-            send_params = {
-                'chat_id': group_id,
-                'reply_markup': markup
-            }
-            
-            # Agregar topic_id si está especificado
-            if topic_id is not None:
-                send_params['message_thread_id'] = topic_id
-                
-            if media_file_id:
+if media_file_id:
                 if media_type == 'photo':
-                    bot.send_photo(caption=message, photo=media_file_id, **send_params)
+                    bot.send_photo(group_id, media_file_id, caption=message, reply_markup=markup)
                 elif media_type == 'video':
-                    bot.send_video(caption=message, video=media_file_id, **send_params)
+                    bot.send_video(group_id, media_file_id, caption=message, reply_markup=markup)
                 elif media_type == 'document':
-                    bot.send_document(caption=message, document=media_file_id, **send_params)
+                    bot.send_document(group_id, media_file_id, caption=message, reply_markup=markup)
                 else:
-                    send_params['text'] = message
-                    send_params['parse_mode'] = 'Markdown'
-                    bot.send_message(**send_params)
+                    bot.send_message(group_id, message, reply_markup=markup)
             else:
-                send_params['text'] = message
-                send_params['parse_mode'] = 'Markdown'
-                bot.send_message(**send_params)
-                
+                bot.send_message(group_id, message, reply_markup=markup, parse_mode='Markdown')
             self.last_sends[bot_index] = time.time()
-            topic_info = f" (Topic: {topic_id})" if topic_id else " (Grupo principal)"
-            return True, f"Enviado exitosamente{topic_info}"
-            
+            return True, "Enviado exitosamente"
         except Exception as e:
             error_msg = str(e)
             if "bot was blocked" in error_msg.lower():
                 return False, "Bot bloqueado en el grupo"
             elif "chat not found" in error_msg.lower():
                 return False, "Grupo no encontrado"
-            elif "topic closed" in error_msg.lower():
-                return False, "Topic cerrado o no disponible"
-            elif "message_thread_id" in error_msg.lower():
-                return False, "Topic ID inválido o grupo sin temas habilitados"
             elif "too many requests" in error_msg.lower():
                 time.sleep(random.uniform(5, 10))
                 return False, "Rate limit excedido"
