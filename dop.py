@@ -1760,6 +1760,36 @@ def get_user_purchases(user_id, shop_id=1):
     return response
 
 
+def get_buyers_summary(shop_id=1):
+    """Return purchase summary grouped by buyer."""
+    try:
+        con = db.get_db_connection()
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT id, MAX(username), SUM(price),
+                   GROUP_CONCAT(DISTINCT name_good)
+            FROM purchases
+            WHERE shop_id = ?
+            GROUP BY id
+            ORDER BY SUM(price) DESC
+            """,
+            (shop_id,)
+        )
+        rows = cur.fetchall()
+        lines = []
+        for idx, (uid, uname, total, products) in enumerate(rows, 1):
+            uname = uname or ''
+            prod_list = products or ''
+            lines.append(
+                f"{idx}. {uid} (@{uname}) - ${total} USD - {prod_list}"
+            )
+        return lines
+    except Exception as e:
+        logging.error(f"Error obteniendo resumen de compradores: {e}")
+        return []
+
+
 def get_discount_config(shop_id=1):
     """Obtiene la configuración de descuentos para una tienda"""
     setup_discount_system()
