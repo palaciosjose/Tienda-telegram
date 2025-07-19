@@ -235,6 +235,9 @@ aparecen tres opciones:
 
 Después de cada acción se vuelve al menú de productos.
 
+Si el stock es muy extenso y el mensaje supera los 4096 caracteres que permite
+Telegram, el bot lo envía en varias partes automáticamente.
+
 Al crear una nueva posición se preguntará ahora **¿Entrega manual?**. Si respondes
 *Sí*, el bot omitirá el formato del producto y utilizará el mensaje configurado
 anteriormente para avisar al comprador.
