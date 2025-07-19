@@ -1614,7 +1614,7 @@ def text_analytics(message_text, chat_id):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         lines = [ln.rstrip('\n') for ln in f.readlines()]
                     text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
+                    dop.send_long_text(bot, chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 181
                 elif action == 'eliminar unidades':
@@ -1627,7 +1627,7 @@ def text_analytics(message_text, chat_id):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         lines = [ln.rstrip('\n') for ln in f.readlines()]
                     text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
+                    dop.send_long_text(bot, chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 182
                 else:

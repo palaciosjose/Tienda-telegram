@@ -352,6 +352,12 @@ def safe_edit_message(bot, message, text, reply_markup=None, parse_mode=None):
             return False
 
 
+def send_long_text(bot, chat_id, text, parse_mode=None):
+    """Send a message split in chunks of 4096 characters."""
+    for i in range(0, len(text), 4096):
+        bot.send_message(chat_id, text[i:i + 4096], parse_mode=parse_mode)
+
+
 def it_first(chat_id):
     try:
         with open(files.working_log, encoding='utf-8') as f:
