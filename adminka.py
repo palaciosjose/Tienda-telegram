@@ -1060,6 +1060,9 @@ def in_adminka(chat_id, message_text, username, name_user):
 def text_analytics(message_text, chat_id):
     shop_id = dop.get_shop_id(chat_id)
     normalized = message_text.strip().lower()
+    if normalized == 'cancelar':
+        handle_cancel_command(chat_id)
+        return
     if normalized in ('volver al men\u00fa principal', 'volver al menu principal', '/adm'):
         with shelve.open(files.sost_bd) as bd:
             if str(chat_id) in bd:
