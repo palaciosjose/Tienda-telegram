@@ -302,16 +302,25 @@ definida el script terminará con un error.
 
 Si defines la opción **duración en días** para un producto, las compras de ese
 artículo almacenarán su fecha de vencimiento. Para avisar a los usuarios cuando
-una compra haya expirado ejecuta periódicamente `expiration_cron.py` (por
-ejemplo con `cron` o como servicio). El script buscará compras vencidas y
-enviará un mensaje al comprador sugiriendo renovar la adquisición.
+una compra haya expirado ejecuta periódicamente `expiration_cron.py`. El script
+buscará compras vencidas y enviará un mensaje al comprador sugiriendo renovar la
+adquisición. Puedes programarlo con `cron` agregando una línea como la
+siguiente:
+
+```cron
+0 9 * * * cd /ruta/a/Tienda-telegram && TELEGRAM_TOKEN="<tu_token>" python expiration_cron.py
+```
+
+Reemplaza la ruta y el token según corresponda. También puedes ejecutarlo de
+forma puntual con:
 
 ```bash
 python expiration_cron.py
 ```
 
-Al igual que el módulo de marketing, este script utiliza el token configurado en
-`config.py` a través de `bot_instance.py` para enviar las notificaciones.
+`expiration_cron.py` utiliza el token indicado en la variable de entorno
+`TELEGRAM_TOKEN`. Si no se define, tomará el valor configurado en `config.py` a
+través de `bot_instance.py`.
 
 ## Pruebas
 

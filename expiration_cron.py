@@ -1,10 +1,24 @@
 #!/usr/bin/env python3
 """Notify users when their purchases expire."""
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+import telebot
 import db
-from bot_instance import bot
+
+load_dotenv()
+
+def get_bot():
+    token = os.getenv("TELEGRAM_TOKEN")
+    if token:
+        token = token.split(",")[0].strip()
+        if token:
+            return telebot.TeleBot(token)
+    from bot_instance import bot
+    return bot
 
 def main():
+    bot = get_bot()
     conn = db.get_db_connection()
     cur = conn.cursor()
     now = datetime.now().isoformat()
