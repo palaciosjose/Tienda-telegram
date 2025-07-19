@@ -101,7 +101,8 @@ class AutoSender:
             for group in groups:
                 group_id = group[0]
                 topic_id = group[1]
-                print(f"🔍 DEBUG: group_id={group_id}, topic_id={topic_id}")  # LÍNEA DEBUG
+                # Debug information about the target group/topic
+                self.logger.debug("group_id=%s, topic_id=%s", group_id, topic_id)
                 try:
                     success, result = telegram_bot.send_message(
                         group_id,
