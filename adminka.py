@@ -48,7 +48,7 @@ def route_cancel(chat_id, prev):
     elif prev == 'other':
         in_adminka(chat_id, '⚙️ Otros', None, None)
     else:
-        show_admin_menu_safe(chat_id)
+        in_adminka(chat_id, 'Volver al menú principal', None, None)
 
 
 
@@ -59,7 +59,7 @@ def session_expired(chat_id):
     with shelve.open(files.sost_bd) as bd:
         if str(chat_id) in bd:
             del bd[str(chat_id)]
-    show_admin_menu_safe(chat_id)
+    in_adminka(chat_id, 'Volver al menú principal', None, None)
 
 
 def show_discount_menu(chat_id):
@@ -1573,7 +1573,6 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 179
 
         elif sost_num == 179:
-            print(f"DEBUG: Llegó al estado 179, mensaje: '{message_text}'")
             try:
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
@@ -1601,13 +1600,11 @@ def text_analytics(message_text, chat_id):
                     show_product_menu(chat_id)
             else:
                 file_path = f'data/goods/{shop_id}_{product}.txt'
-                print(f"DEBUG: file_path={file_path}, exists={os.path.exists(file_path)}")
                 if action == 'añadir unidades':
                     bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 180
                 elif action == 'editar unidades':
-                    print(f"DEBUG: Editando unidades de texto")
                     if not os.path.exists(file_path):
                         bot.send_message(chat_id, 'El producto aún no tiene unidades.')
                         show_product_menu(chat_id)
@@ -1630,7 +1627,7 @@ def text_analytics(message_text, chat_id):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         lines = [ln.rstrip('\n') for ln in f.readlines()]
                     text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
+                    dop.send_long_text(bot, chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 182
                 else:
@@ -3060,22 +3057,3 @@ def handle_cancel_command(message):
     clear_state(chat_id)
     bot.send_message(chat_id, 'Operación cancelada.')
     route_cancel(chat_id, prev)
-
-def show_admin_menu_safe(chat_id):
-    """Mostrar menú de administración sin bucle infinito"""
-    # Limpiar cualquier estado previo
-    if dop.get_sost(chat_id):
-        with shelve.open(files.sost_bd) as bd:
-            if str(chat_id) in bd:
-                del bd[str(chat_id)]
-    
-    # Crear menú principal
-    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
-    user_markup.row('📦 Surtido', '➕ Producto')
-    user_markup.row('💰 Pagos', '💸 Descuentos')
-    user_markup.row('📢 Marketing', '📣 Difusión')
-    user_markup.row('📊 Estadísticas', 'Boletín informativo')
-    user_markup.row('Otras configuraciones')
-    user_markup.row('💬 Respuestas')
-    
-    bot.send_message(chat_id, '¡Panel de administración!\nPara salir: /start', reply_markup=user_markup)
