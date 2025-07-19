@@ -212,6 +212,9 @@ ellos se incluyen **💬 Respuestas**, **📦 Surtido**, **➕ Producto**, **�
 **📊 Stats**, **Resumen de compradores**, **📣 Difusión**, **📢 Marketing**,
 **💸 Descuentos** y **⚙️ Otros**.
 
+Si en mitad de un proceso quieres detenerte, escribe `/cancel` o pulsa el botón
+*Cancelar* que aparece en muchos diálogos para volver al menú previo.
+
 La opción **Resumen de compradores** genera un listado ordenado por el total
 gastado. Para cada comprador se muestra su ID, nombre de usuario, la suma de sus
 pagos en dólares y los productos adquiridos.
