@@ -107,8 +107,9 @@ class CampaignScheduler:
                        c.button1_text, c.button1_url, c.button2_text, c.button2_url
                    FROM campaign_schedules cs
                    JOIN campaigns c ON cs.campaign_id = c.id
-                   WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?""",
-            (self.shop_id, self.shop_id),
+                   WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?
+                         AND (cs.next_send_telegram IS NULL OR cs.next_send_telegram <= ?)""",
+            (self.shop_id, self.shop_id, now.isoformat()),
         )
         rows = cursor.fetchall()
         pending = []
@@ -138,3 +139,76 @@ class CampaignScheduler:
         conn.commit()
         if not shared:
             conn.close()
+
+    def update_schedule(self, schedule_id, days=None, times=None, platforms=None):
+        """Modificar una programación existente."""
+        conn, shared = self._get_connection()
+        cursor = conn.cursor()
+
+        fields = []
+        params = []
+
+        if days is not None or times is not None:
+            schedule = {}
+            if days is None:
+                days = []
+            norm_days = [self.normalize_day(d) for d in days]
+            for d in norm_days:
+                schedule[d] = times or []
+            fields.append("schedule_json = ?")
+            params.append(json.dumps(schedule))
+
+        if platforms is not None:
+            fields.append("target_platforms = ?")
+            params.append(','.join(platforms))
+
+        if not fields:
+            if not shared:
+                conn.close()
+            return False
+
+        params.extend([schedule_id, self.shop_id])
+        cursor.execute(
+            f"UPDATE campaign_schedules SET {', '.join(fields)} WHERE id = ? AND shop_id = ?",
+            params,
+        )
+        conn.commit()
+        success = cursor.rowcount > 0
+        if not shared:
+            conn.close()
+        return success
+
+    def _reindex_schedules(self, cursor):
+        cursor.execute(
+            "SELECT id FROM campaign_schedules WHERE shop_id = ? ORDER BY id",
+            (self.shop_id,),
+        )
+        ids = [r[0] for r in cursor.fetchall()]
+        for idx, old_id in enumerate(ids, start=1):
+            if old_id != idx:
+                cursor.execute(
+                    "UPDATE campaign_schedules SET id = ? WHERE id = ?",
+                    (-idx, old_id),
+                )
+        for idx, old_id in enumerate(ids, start=1):
+            if old_id != idx:
+                cursor.execute(
+                    "UPDATE campaign_schedules SET id = ? WHERE id = ?",
+                    (idx, -idx),
+                )
+
+    def delete_schedule(self, schedule_id):
+        """Eliminar una programación y reindexar"""
+        conn, shared = self._get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM campaign_schedules WHERE id = ? AND shop_id = ?",
+            (schedule_id, self.shop_id),
+        )
+        deleted = cursor.rowcount > 0
+        if deleted:
+            self._reindex_schedules(cursor)
+        conn.commit()
+        if not shared:
+            conn.close()
+        return deleted
