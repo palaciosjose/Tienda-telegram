@@ -81,6 +81,13 @@ ejecuta:
 python migrate_create_bot_groups.py
 ```
 
+Si la tabla `campaign_schedules` no incluye la columna `group_ids`, ejecuta:
+
+```bash
+python migrate_add_group_ids.py
+```
+o `init_db.py` para crear la base desde cero.
+
 Por último, si la tabla `goods` aún no utiliza `(name, shop_id)` como clave
 primaria ejecuta:
 
