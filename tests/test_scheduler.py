@@ -26,7 +26,8 @@ CREATE_SCHEDULES = """CREATE TABLE campaign_schedules (
     is_active INTEGER DEFAULT 1,
     next_send_telegram TEXT,
     created_date TEXT,
-    shop_id INTEGER DEFAULT 1
+    shop_id INTEGER DEFAULT 1,
+    group_ids TEXT
 )"""
 
 CREATE_SHOPS = """CREATE TABLE shops (id INTEGER PRIMARY KEY AUTOINCREMENT, admin_id INTEGER, name TEXT)"""

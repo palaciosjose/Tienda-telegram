@@ -83,6 +83,7 @@ CREATE_SCHEDULES_TABLE = """CREATE TABLE IF NOT EXISTS campaign_schedules (
     next_send_telegram TEXT,
     created_date TEXT,
     shop_id INTEGER DEFAULT 1,
+    group_ids TEXT,
     FOREIGN KEY (campaign_id) REFERENCES campaigns (id)
 )"""
 
