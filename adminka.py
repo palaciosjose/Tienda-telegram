@@ -722,10 +722,31 @@ def in_adminka(chat_id, message_text, username, name_user):
                         camp_id = int(parts[0])
                         days = parts[1].split(',')
                         times = parts[2:4]
-                        ok, msg = advertising.schedule_campaign(camp_id, days, times)
-                        bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
                     except ValueError:
                         bot.send_message(chat_id, '❌ ID de campaña inválido')
+                        return
+
+                    groups = advertising.get_target_groups()
+                    if not groups:
+                        ok, msg = advertising.schedule_campaign(camp_id, days, times)
+                        bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                    else:
+                        markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                        for g in groups:
+                            title = g['group_name'] or g['group_id']
+                            label = f"{title} ({g['id']})"
+                            if g.get('topic_id') is not None:
+                                label += f" (topic {g['topic_id']})"
+                            markup.row(label)
+                        markup.row('Todos', 'Cancelar')
+
+                        os.makedirs('data/Temp', exist_ok=True)
+                        tmp = f'data/Temp/{chat_id}_schedule.json'
+                        with open(tmp, 'w', encoding='utf-8') as f:
+                            json.dump({'type': 'create', 'camp_id': camp_id, 'days': days, 'times': times, 'groups': groups}, f)
+
+                        bot.send_message(chat_id, 'Seleccione los grupos destino (enviar IDs separados por coma o "Todos"):', reply_markup=markup)
+                        set_state(chat_id, 187, 'marketing')
 
         elif '📆 Programaciones' == message_text:
             conn = db.get_db_connection()
@@ -1793,16 +1814,36 @@ def text_analytics(message_text, chat_id):
                 return
             days = parts[0].split(',')
             times = parts[1:]
-            scheduler = CampaignScheduler(files.main_db, shop_id)
-            ok = scheduler.update_schedule(schedule_id, days, times)
-            bot.send_message(chat_id, '✅ Programación actualizada' if ok else '❌ Error actualizando programación')
-            with shelve.open(files.sost_bd) as bd:
-                del bd[str(chat_id)]
-            try:
-                os.remove(path)
-            except Exception:
-                pass
-            show_marketing_menu(chat_id)
+
+            groups = advertising.get_target_groups()
+            if not groups:
+                scheduler = CampaignScheduler(files.main_db, shop_id)
+                ok = scheduler.update_schedule(schedule_id, days, times)
+                bot.send_message(chat_id, '✅ Programación actualizada' if ok else '❌ Error actualizando programación')
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                try:
+                    os.remove(path)
+                except Exception:
+                    pass
+                show_marketing_menu(chat_id)
+            else:
+                markup = telebot.types.ReplyKeyboardMarkup(True, False)
+                for g in groups:
+                    title = g['group_name'] or g['group_id']
+                    label = f"{title} ({g['id']})"
+                    if g.get('topic_id') is not None:
+                        label += f" (topic {g['topic_id']})"
+                    markup.row(label)
+                markup.row('Todos', 'Cancelar')
+
+                os.makedirs('data/Temp', exist_ok=True)
+                tmp = f'data/Temp/{chat_id}_schedule.json'
+                with open(tmp, 'w', encoding='utf-8') as f:
+                    json.dump({'type': 'edit', 'schedule_id': schedule_id, 'days': days, 'times': times, 'groups': groups}, f)
+
+                bot.send_message(chat_id, 'Seleccione los grupos destino (enviar IDs separados por coma o "Todos"):', reply_markup=markup)
+                set_state(chat_id, 187, 'marketing')
 
         elif sost_num == 18:
             # PayPal Client ID
@@ -2621,6 +2662,44 @@ def text_analytics(message_text, chat_id):
                     return
                 ok, msg = advertising.send_campaign_to_group(camp_id, selected['group_id'], selected.get('topic_id'))
                 bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+                show_marketing_menu(chat_id)
+
+        elif sost_num == 187:
+            tmp = f'data/Temp/{chat_id}_schedule.json'
+            if message_text.lower() == 'cancelar':
+                with shelve.open(files.sost_bd) as bd:
+                    del bd[str(chat_id)]
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+                show_marketing_menu(chat_id)
+            else:
+                try:
+                    with open(tmp, 'r', encoding='utf-8') as f:
+                        data = json.load(f)
+                except FileNotFoundError:
+                    session_expired(chat_id)
+                    return
+
+                ids = None
+                if message_text.lower() not in ('todos', '0'):
+                    ids = [int(i) for i in re.findall(r"\d+", message_text)]
+
+                if data['type'] == 'create':
+                    ok, msg = advertising.schedule_campaign(
+                        data['camp_id'], data['days'], data['times'], group_ids=ids
+                    )
+                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
+                else:
+                    scheduler = CampaignScheduler(files.main_db, shop_id)
+                    ok = scheduler.update_schedule(
+                        data['schedule_id'], data['days'], data['times'], group_ids=ids
+                    )
+                    bot.send_message(chat_id, '✅ Programación actualizada' if ok else '❌ Error actualizando programación')
+
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
                 if os.path.exists(tmp):
