@@ -60,20 +60,36 @@ class AutoSender:
         
         try:
             group_ids = None
-            if campaign_data and len(campaign_data) > 10:
-                group_ids = campaign_data[10]
+            try:
+                cursor.execute(
+                    'SELECT group_ids FROM campaign_schedules WHERE id = ?',
+                    (schedule_id,)
+                )
+                row = cursor.fetchone()
+                if row:
+                    group_ids = row[0]
+            except sqlite3.OperationalError:
+                # Tabla sin columna group_ids
+                group_ids = None
 
+            ids = []
             if group_ids:
-                ids = [int(g) for g in str(group_ids).split(',') if g]
-                if ids:
-                    placeholders = ','.join('?' for _ in ids)
-                    cursor.execute(
-                        f'SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ? AND id IN ({placeholders})',
-                        [self.scheduler.shop_id, *ids]
+                try:
+                    ids = [int(g) for g in str(group_ids).split(',') if g]
+                except ValueError:
+                    self.logger.warning(
+                        "Valor inválido para group_ids '%s' en schedule %s",
+                        group_ids,
+                        schedule_id,
                     )
-                    groups = cursor.fetchall()
-                else:
-                    groups = []
+                    ids = []
+            if ids:
+                placeholders = ','.join('?' for _ in ids)
+                cursor.execute(
+                    f'SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ? AND id IN ({placeholders})',
+                    [self.scheduler.shop_id, *ids],
+                )
+                groups = cursor.fetchall()
             else:
                 cursor.execute('SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ?',
                               (self.scheduler.shop_id,))
