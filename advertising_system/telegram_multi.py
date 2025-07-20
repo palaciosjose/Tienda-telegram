@@ -4,6 +4,8 @@ import random
 from threading import Lock
 
 class TelegramMultiBot:
+    MAX_CAPTION_LENGTH = 1024
+
     def __init__(self, tokens):
         self.bots = [telebot.TeleBot(token) for token in tokens]
         self.current_bot = 0
@@ -47,6 +49,8 @@ class TelegramMultiBot:
                 send_params['message_thread_id'] = topic_id
                 
             if media_file_id:
+                if message and len(message) > self.MAX_CAPTION_LENGTH:
+                    message = message[: self.MAX_CAPTION_LENGTH - 1] + "…"
                 if media_type == 'photo':
                     bot.send_photo(caption=message, photo=media_file_id, **send_params)
                 elif media_type == 'video':
@@ -79,5 +83,7 @@ class TelegramMultiBot:
             elif "too many requests" in error_msg.lower():
                 time.sleep(random.uniform(5, 10))
                 return False, "Rate limit excedido"
+            elif "caption is too long" in error_msg.lower():
+                return False, "Caption demasiado largo"
             else:
                 return False, f"Error: {error_msg}"
