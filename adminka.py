@@ -11,6 +11,7 @@ from advertising_system.admin_integration import (
     get_admin_telegram_groups,
 )
 from bot_instance import bot
+from advertising_system.scheduler import CampaignScheduler
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -747,7 +748,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     lines.append(f"- {r[0]} {r[1]} ({status})")
                     toggle = 'Cancelar' if r[2] else 'Reactivar'
             
-                    # NUEVA MODIFICACIÓN: Agregar dos botones por fila
+                    # Nueva modificación: agregar botones de acción por programación
                     markup.add(
                         telebot.types.InlineKeyboardButton(
                             text=f'{toggle} {r[0]}',
@@ -756,6 +757,10 @@ def in_adminka(chat_id, message_text, username, name_user):
                         telebot.types.InlineKeyboardButton(
                             text=f'🗑️ Eliminar {r[0]}',
                             callback_data=f'DELETE_SCHEDULE_{r[0]}'
+                        ),
+                        telebot.types.InlineKeyboardButton(
+                            text=f'✏️ Editar {r[0]}',
+                            callback_data=f'EDIT_SCHEDULE_{r[0]}'
                         )
                     )
                 markup.add(
@@ -1774,9 +1779,34 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
             show_product_menu(chat_id)
 
+        elif sost_num == 186:
+            path = f'data/Temp/{chat_id}_edit_schedule.txt'
+            try:
+                with open(path, 'r', encoding='utf-8') as f:
+                    schedule_id = int(f.read())
+            except FileNotFoundError:
+                session_expired(chat_id)
+                return
+            parts = message_text.split()
+            if len(parts) < 2:
+                bot.send_message(chat_id, 'Formato inválido. Usa "lunes,martes 10:00 12:00"')
+                return
+            days = parts[0].split(',')
+            times = parts[1:]
+            scheduler = CampaignScheduler(files.main_db, shop_id)
+            ok = scheduler.update_schedule(schedule_id, days, times)
+            bot.send_message(chat_id, '✅ Programación actualizada' if ok else '❌ Error actualizando programación')
+            with shelve.open(files.sost_bd) as bd:
+                del bd[str(chat_id)]
+            try:
+                os.remove(path)
+            except Exception:
+                pass
+            show_marketing_menu(chat_id)
+
         elif sost_num == 18:
             # PayPal Client ID
-            with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', 'w', encoding='utf-8') as f: 
+            with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', 'w', encoding='utf-8') as f:
                 f.write(message_text)
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
@@ -2700,6 +2730,27 @@ def ad_inline(callback_data, chat_id, message_id):
             msg = 'Programación cancelada' if new_state == 0 else 'Programación reactivada'
             bot.send_message(chat_id, f'✅ {msg}')
         show_marketing_menu(chat_id)
+
+    elif callback_data.startswith('EDIT_SCHEDULE_'):
+        schedule_id = int(callback_data.split('_')[-1])
+        path = f'data/Temp/{chat_id}_edit_schedule.txt'
+        with open(path, 'w', encoding='utf-8') as f:
+            f.write(str(schedule_id))
+        key = telebot.types.InlineKeyboardMarkup()
+        key.add(
+            telebot.types.InlineKeyboardButton(
+                text='Cancelar y volver a Marketing',
+                callback_data='Volver a Marketing',
+            )
+        )
+        bot.edit_message_reply_markup(chat_id, message_id)
+        bot.send_message(
+            chat_id,
+            'Envía los nuevos días y horas en formato "lunes,martes 10:00 12:00"',
+            reply_markup=key,
+        )
+        with shelve.open(files.sost_bd) as bd:
+            bd[str(chat_id)] = 186
 
     elif callback_data == 'SKIP_NEW_MEDIA':
         key = telebot.types.InlineKeyboardMarkup()
