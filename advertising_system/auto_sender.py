@@ -59,9 +59,25 @@ class AutoSender:
         cursor = conn.cursor()
         
         try:
-            cursor.execute('SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ?', 
-                          (self.scheduler.shop_id,))
-            groups = cursor.fetchall()
+            group_ids = None
+            if campaign_data and len(campaign_data) > 10:
+                group_ids = campaign_data[10]
+
+            if group_ids:
+                ids = [int(g) for g in str(group_ids).split(',') if g]
+                if ids:
+                    placeholders = ','.join('?' for _ in ids)
+                    cursor.execute(
+                        f'SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ? AND id IN ({placeholders})',
+                        [self.scheduler.shop_id, *ids]
+                    )
+                    groups = cursor.fetchall()
+                else:
+                    groups = []
+            else:
+                cursor.execute('SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ?',
+                              (self.scheduler.shop_id,))
+                groups = cursor.fetchall()
             
             if not groups:
                 return
