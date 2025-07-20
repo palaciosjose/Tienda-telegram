@@ -1,4 +1,4 @@
-import telebot, sqlite3, shelve, os, json
+import telebot, sqlite3, shelve, os, json, re
 import config, dop, files
 import db
 import datetime
@@ -919,7 +919,10 @@ def in_adminka(chat_id, message_text, username, name_user):
                 markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 for g in groups:
                     title = g['group_name'] or g['group_id']
-                    markup.row(f"{title} ({g['group_id']})")
+                    label = f"{title} ({g['group_id']})"
+                    if g.get('topic_id') is not None:
+                        label += f" (topic {g['topic_id']})"
+                    markup.row(label)
                 markup.row('Cancelar')
                 
                 os.makedirs('data/Temp', exist_ok=True)
@@ -2569,11 +2572,20 @@ def text_analytics(message_text, chat_id):
                     return
                 camp_id = data['camp_id']
                 groups = data['groups']
-                key = f"{message_text}"
-                selected = next(
-                    (g for g in groups if f"{g['group_name'] or g['group_id']} ({g['group_id']})" == key),
-                    None
-                )
+
+                # Extraer ID de grupo y opcionalmente el topic de la etiqueta
+                match = re.search(r"\(([-\d]+)\)(?: \(topic (\d+)\))?$", message_text)
+                selected = None
+                if match:
+                    sel_group_id = match.group(1)
+                    sel_topic_id = int(match.group(2)) if match.group(2) else None
+                    selected = next(
+                        (
+                            g for g in groups
+                            if str(g['group_id']) == sel_group_id and (g.get('topic_id') or None) == sel_topic_id
+                        ),
+                        None
+                    )
                 if not selected:
                     bot.send_message(chat_id, 'Selección inválida. Intente nuevamente.')
                     return
