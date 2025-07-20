@@ -96,7 +96,7 @@ class AdvertisingManager:
             self.logger.error(f"Error deleting campaign: {e}")
             return False
 
-    def schedule_campaign(self, campaign_id, days, times, platforms=None):
+    def schedule_campaign(self, campaign_id, days, times, platforms=None, group_ids=None):
         """Programar una campaña para enviarse en días y horas específicas."""
         if platforms is None:
             platforms = ['telegram']
@@ -150,8 +150,8 @@ class AdvertisingManager:
             cur.execute(
                 """INSERT INTO campaign_schedules
                    (campaign_id, schedule_name, frequency, schedule_json,
-                    target_platforms, created_date, shop_id)
-                   VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    target_platforms, created_date, shop_id, group_ids)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     campaign_id,
                     'manual',
@@ -160,6 +160,7 @@ class AdvertisingManager:
                     ','.join(platforms),
                     datetime.now().isoformat(),
                     self.shop_id,
+                    ','.join(map(str, group_ids)) if group_ids else None,
                 ),
             )
             conn.commit()

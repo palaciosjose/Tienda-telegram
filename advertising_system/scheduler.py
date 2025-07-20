@@ -74,8 +74,8 @@ class CampaignScheduler:
         cursor = conn.cursor()
         cursor.execute(
             """INSERT INTO campaign_schedules
-               (campaign_id, schedule_name, frequency, schedule_json, target_platforms, created_date, shop_id)
-               VALUES (?, ?, ?, ?, ?, ?, ?)""",
+               (campaign_id, schedule_name, frequency, schedule_json, target_platforms, created_date, shop_id, group_ids)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 data['campaign_id'],
                 'auto',
@@ -84,6 +84,7 @@ class CampaignScheduler:
                 data['platform'],
                 datetime.now().isoformat(),
                 data.get('shop_id', self.shop_id),
+                ','.join(map(str, data.get('group_ids', []))) if data.get('group_ids') else None,
             )
         )
         conn.commit()
@@ -140,7 +141,7 @@ class CampaignScheduler:
         if not shared:
             conn.close()
 
-    def update_schedule(self, schedule_id, days=None, times=None, platforms=None):
+    def update_schedule(self, schedule_id, days=None, times=None, platforms=None, group_ids=None):
         """Modificar una programación existente."""
         conn, shared = self._get_connection()
         cursor = conn.cursor()
@@ -161,6 +162,10 @@ class CampaignScheduler:
         if platforms is not None:
             fields.append("target_platforms = ?")
             params.append(','.join(platforms))
+
+        if group_ids is not None:
+            fields.append("group_ids = ?")
+            params.append(','.join(map(str, group_ids)) if group_ids else None)
 
         if not fields:
             if not shared:
