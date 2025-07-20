@@ -285,7 +285,8 @@ con comandos para gestionar campañas:
 - `⚙️ Configuración` para ajustes adicionales.
 - `▶️ Envío manual <ID>` para disparar un envío inmediato indicando el
   identificador de la campaña. Tras introducir el ID el bot mostrará una lista
-  de grupos objetivo para seleccionar.
+  de grupos objetivo para seleccionar. Si un destino corresponde a un topic
+  específico aparecerá como `Nombre (ID) (topic <topic_id>)`.
 
 La *Campaña de producto* permite seleccionar uno de los artículos ya creados y
 enviar su información como anuncio. El bot añadirá automáticamente un botón que
