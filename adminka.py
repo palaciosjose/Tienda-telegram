@@ -752,36 +752,72 @@ def in_adminka(chat_id, message_text, username, name_user):
             conn = db.get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                """SELECT cs.id, c.name, cs.is_active FROM campaign_schedules cs
-                JOIN campaigns c ON cs.campaign_id = c.id
-                WHERE cs.shop_id = ?""",
-                (shop_id,)
+                """SELECT id, group_id, group_name, topic_id
+                   FROM target_groups WHERE shop_id = ?""",
+                (shop_id,),
+            )
+            group_rows = cur.fetchall()
+            group_map = {
+                r[0]: {
+                    'group_id': r[1],
+                    'group_name': r[2],
+                    'topic_id': r[3],
+                }
+                for r in group_rows
+            }
+
+            cur.execute(
+                """SELECT cs.id, c.name, cs.is_active, cs.group_ids
+                   FROM campaign_schedules cs
+                   JOIN campaigns c ON cs.campaign_id = c.id
+                   WHERE cs.shop_id = ?""",
+                (shop_id,),
             )
             rows = cur.fetchall()
-            conn.close()
             if not rows:
                 bot.send_message(chat_id, 'No hay programaciones registradas.')
             else:
                 markup = telebot.types.InlineKeyboardMarkup()
                 lines = ['📆 *Programaciones:*']
                 for r in rows:
-                    status = 'Activa ✅' if r[2] else 'Inactiva ❌'
-                    lines.append(f"- {r[0]} {r[1]} ({status})")
-                    toggle = 'Cancelar' if r[2] else 'Reactivar'
-            
+                    schedule_id, camp_name, is_active, ids_text = r
+                    status = 'Activa ✅' if is_active else 'Inactiva ❌'
+
+                    group_labels = []
+                    if ids_text:
+                        try:
+                            ids = [int(i) for i in str(ids_text).split(',') if i]
+                        except ValueError:
+                            ids = []
+                        for gid in ids:
+                            info = group_map.get(gid)
+                            if not info:
+                                continue
+                            name = info['group_name'] or info['group_id']
+                            label = name
+                            if info['topic_id'] is not None:
+                                label += f" (topic {info['topic_id']})"
+                            group_labels.append(label)
+                    groups_text = ''
+                    if group_labels:
+                        groups_text = ' - ' + ', '.join(group_labels)
+
+                    lines.append(f"- {schedule_id} {camp_name} ({status}){groups_text}")
+                    toggle = 'Cancelar' if is_active else 'Reactivar'
+
                     # Nueva modificación: agregar botones de acción por programación
                     markup.add(
                         telebot.types.InlineKeyboardButton(
-                            text=f'{toggle} {r[0]}',
-                            callback_data=f'TOGGLE_SCHEDULE_{r[0]}'
+                            text=f'{toggle} {schedule_id}',
+                            callback_data=f'TOGGLE_SCHEDULE_{schedule_id}'
                         ),
                         telebot.types.InlineKeyboardButton(
-                            text=f'🗑️ Eliminar {r[0]}',
-                            callback_data=f'DELETE_SCHEDULE_{r[0]}'
+                            text=f'🗑️ Eliminar {schedule_id}',
+                            callback_data=f'DELETE_SCHEDULE_{schedule_id}'
                         ),
                         telebot.types.InlineKeyboardButton(
-                            text=f'✏️ Editar {r[0]}',
-                            callback_data=f'EDIT_SCHEDULE_{r[0]}'
+                            text=f'✏️ Editar {schedule_id}',
+                            callback_data=f'EDIT_SCHEDULE_{schedule_id}'
                         )
                     )
                 markup.add(
@@ -796,6 +832,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                     reply_markup=markup,
                     parse_mode='Markdown'
                 )
+            conn.close()
 
         elif '🎯 Gestionar grupos' == message_text:
             msg = (
