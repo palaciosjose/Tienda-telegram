@@ -295,6 +295,16 @@ con comandos para gestionar campañas:
   de grupos objetivo para seleccionar. Si un destino corresponde a un topic
   específico aparecerá como `Nombre (ID) (topic <topic_id>)`.
 
+Para consultar desde la terminal qué grupos tiene asignados cada horario puedes
+ejecutar:
+
+```bash
+python list_schedules.py
+```
+
+El script imprimirá los pares `group_id/topic_id` correspondientes a cada
+programación registrada.
+
 La *Campaña de producto* permite seleccionar uno de los artículos ya creados y
 enviar su información como anuncio. El bot añadirá automáticamente un botón que
 apunta al producto usando un enlace profundo, de modo que al abrirlo se muestren
