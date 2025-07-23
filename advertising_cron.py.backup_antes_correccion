@@ -11,68 +11,68 @@ from datetime import datetime, timedelta
 def should_send_now():
     conn = sqlite3.connect('data/db/main_data.db')
     cursor = conn.cursor()
+
     now = datetime.now()
     current_time = now.strftime('%H:%M')
     current_day = now.strftime('%A').lower()
+
     time_range = []
     for offset in [-1, 0, 1]:
         time_check = (now + timedelta(minutes=offset)).strftime('%H:%M')
         time_range.append(time_check)
+
     cursor.execute('SELECT * FROM campaign_schedules WHERE is_active = 1')
     schedules = cursor.fetchall()
+
     for schedule in schedules:
         schedule_json = json.loads(schedule[4])
         campaign_id = schedule[1]
         schedule_id = schedule[0]
-        last_sent = schedule[7] or ""
-        group_ids = schedule[10] or ""  # group_ids está en columna 10
+        last_sent = schedule[7]
+
         if current_day in schedule_json:
             times = schedule_json[current_day]
             for t in times:
                 if t in time_range:
                     today_str = now.strftime('%Y-%m-%d')
-                    time_key = f"{today_str} {t}"
-                    if time_key in last_sent:
-                        print(f"⏳ Ya enviado: {time_key}")
+                    if last_sent and today_str in last_sent:
                         continue
-                    send_campaign(campaign_id, group_ids)
-                    if last_sent:
-                        next_send_time = f"{last_sent},{time_key}"
-                    else:
-                        next_send_time = time_key
-                    cursor.execute('UPDATE campaign_schedules SET next_send_telegram = ? WHERE id = ?', (next_send_time, schedule_id))
+
+                    send_campaign(campaign_id)
+
+                    next_send_time = f"{today_str} {t}"
+                    cursor.execute('UPDATE campaign_schedules SET next_send_telegram = ? WHERE id = ?',
+                                 (next_send_time, schedule_id))
                     conn.commit()
-                    print(f"✅ Marcado como enviado: {time_key}")
+                    print(f"✅ Marcado como enviado: {next_send_time}")
+
                     conn.close()
                     return True
+
     conn.close()
     return False
 
-def send_campaign(campaign_id, group_ids=""):
+def send_campaign(campaign_id):
     conn = sqlite3.connect('data/db/main_data.db')
     cursor = conn.cursor()
-    
-    # OBTENER GRUPOS CON TOPICS
-    if group_ids:
-        # Filtrar por IDs específicos
-        ids = [id.strip() for id in group_ids.split(',') if id.strip()]
-        placeholders = ','.join(['?' for _ in ids])
-        cursor.execute(f'SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND id IN ({placeholders})', ids)
-    else:
-        # Todos los grupos activos
-        cursor.execute('SELECT group_id, topic_id FROM target_groups WHERE status = "active"')
-    
+
+    cursor.execute('SELECT group_id FROM target_groups WHERE status = "active"')
     groups = cursor.fetchall()
+
     cursor.execute('SELECT * FROM campaigns WHERE id = ?', (campaign_id,))
     campaign = cursor.fetchone()
-    
+
     if campaign and groups:
         campaign_name = campaign[1].replace('Producto ', '')
+        
+        # BÚSQUEDA EXACTA PRIMERO
         cursor.execute('SELECT name, description, price, media_file_id, media_type FROM goods WHERE shop_id = 1 AND name = ?', (campaign_name,))
         product = cursor.fetchone()
+        
         if not product:
             cursor.execute('SELECT name, description, price, media_file_id, media_type FROM goods WHERE shop_id = 1 AND name LIKE ?', (f'%{campaign_name}%',))
             product = cursor.fetchone()
+
         if product:
             title = f"🛒 {product[0]}"
             message_parts = [title]
@@ -91,34 +91,32 @@ def send_campaign(campaign_id, group_ids=""):
             media_file_id = campaign[3]
             media_type = campaign[4]
             print(f"✅ USANDO DATOS DE CAMPAÑA: {title}")
-        
+
         button_text = campaign[6]
         button_url = campaign[7]
+
         markup = None
         if button_text and button_url:
             markup = telebot.types.InlineKeyboardMarkup()
             button = telebot.types.InlineKeyboardButton(button_text, url=button_url)
             markup.add(button)
-        
+
         for group in groups:
             try:
-                group_id = group[0]
-                topic_id = group[1] if len(group) > 1 else None
-                
                 if media_file_id and media_type == 'photo':
-                    bot.send_photo(group_id, media_file_id, caption=full_message, reply_markup=markup, message_thread_id=topic_id)
+                    bot.send_photo(group[0], media_file_id, caption=full_message, reply_markup=markup)
                 elif media_file_id and media_type == 'video':
-                    bot.send_video(group_id, media_file_id, caption=full_message, reply_markup=markup, message_thread_id=topic_id)
+                    bot.send_video(group[0], media_file_id, caption=full_message, reply_markup=markup)
                 else:
-                    bot.send_message(group_id, full_message, reply_markup=markup, message_thread_id=topic_id)
-                
-                topic_info = f" Topic {topic_id}" if topic_id else " (grupo principal)"
+                    bot.send_message(group[0], full_message, reply_markup=markup)
+
                 if product:
-                    print(f'🎉 CAMPAÑA DE PRODUCTO {campaign_id} ENVIADA A {group_id}{topic_info}')
+                    print(f'🎉 CAMPAÑA DE PRODUCTO {campaign_id} ENVIADA A {group[0]}')
                 else:
-                    print(f'🎉 CAMPAÑA NORMAL {campaign_id} ENVIADA A {group_id}{topic_info}')
+                    print(f'🎉 CAMPAÑA NORMAL {campaign_id} ENVIADA A {group[0]}')
             except Exception as e:
                 print(f'❌ Error: {e}')
+
     conn.close()
 
 def main():

@@ -10,7 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $ch = curl_init();
     // ¡ESTA ES LA LÍNEA A CAMBIAR!
-    curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:8444/webhook.php'); // <-- Cambia '/webhook' a '/webhook.php'
+    curl_setopt($ch, CURLOPT_URL, 'http://127.0.0.1:844/webhook.php'); // <-- Cambia '/webhook' a '/webhook.php'
     curl_setopt($ch, CURLOPT_POST, 1);
     curl_setopt($ch, CURLOPT_POSTFIELDS, $input);
     curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);

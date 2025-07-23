@@ -365,4 +365,3 @@ Luego intenta enviar un mensaje de prueba al ID principal mostrando el resultado
 ## Licencia
 
 Este proyecto se distribuye bajo la licencia [MIT](LICENSE).
-

@@ -1,4 +1,4 @@
-import telebot, sqlite3, shelve, os, json, re
+import telebot, sqlite3, shelve, os, json
 import config, dop, files
 import db
 import datetime
@@ -11,7 +11,6 @@ from advertising_system.admin_integration import (
     get_admin_telegram_groups,
 )
 from bot_instance import bot
-from advertising_system.scheduler import CampaignScheduler
 import logging
 
 logging.basicConfig(level=logging.INFO)
@@ -49,7 +48,7 @@ def route_cancel(chat_id, prev):
     elif prev == 'other':
         in_adminka(chat_id, '⚙️ Otros', None, None)
     else:
-        in_adminka(chat_id, 'Volver al menú principal', None, None)
+        show_admin_menu_safe(chat_id)
 
 
 
@@ -60,7 +59,7 @@ def session_expired(chat_id):
     with shelve.open(files.sost_bd) as bd:
         if str(chat_id) in bd:
             del bd[str(chat_id)]
-    in_adminka(chat_id, 'Volver al menú principal', None, None)
+    show_admin_menu_safe(chat_id)
 
 
 def show_discount_menu(chat_id):
@@ -722,102 +721,41 @@ def in_adminka(chat_id, message_text, username, name_user):
                         camp_id = int(parts[0])
                         days = parts[1].split(',')
                         times = parts[2:4]
-                    except ValueError:
-                        bot.send_message(chat_id, '❌ ID de campaña inválido')
-                        return
-
-                    groups = advertising.get_target_groups()
-                    if not groups:
                         ok, msg = advertising.schedule_campaign(camp_id, days, times)
                         bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
-                    else:
-                        markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                        for g in groups:
-                            title = g['group_name'] or g['group_id']
-                            label = f"{title} ({g['id']})"
-                            if g.get('topic_id') is not None:
-                                label += f" (topic {g['topic_id']})"
-                            markup.row(label)
-                        markup.row('Todos', 'Cancelar')
-
-                        os.makedirs('data/Temp', exist_ok=True)
-                        tmp = f'data/Temp/{chat_id}_schedule.json'
-                        with open(tmp, 'w', encoding='utf-8') as f:
-                            json.dump({'type': 'create', 'camp_id': camp_id, 'days': days, 'times': times, 'groups': groups}, f)
-
-                        bot.send_message(chat_id, 'Seleccione los grupos destino (enviar IDs separados por coma o "Todos"):', reply_markup=markup)
-                        set_state(chat_id, 187, 'marketing')
+                    except ValueError:
+                        bot.send_message(chat_id, '❌ ID de campaña inválido')
 
         elif '📆 Programaciones' == message_text:
             conn = db.get_db_connection()
             cur = conn.cursor()
             cur.execute(
-                """SELECT id, group_id, group_name, topic_id
-                   FROM target_groups WHERE shop_id = ?""",
-                (shop_id,),
-            )
-            group_rows = cur.fetchall()
-            group_map = {
-                r[0]: {
-                    'group_id': r[1],
-                    'group_name': r[2],
-                    'topic_id': r[3],
-                }
-                for r in group_rows
-            }
-
-            cur.execute(
-                """SELECT cs.id, c.name, cs.is_active, cs.group_ids
-                   FROM campaign_schedules cs
-                   JOIN campaigns c ON cs.campaign_id = c.id
-                   WHERE cs.shop_id = ?""",
-                (shop_id,),
+                """SELECT cs.id, c.name, cs.is_active FROM campaign_schedules cs
+                JOIN campaigns c ON cs.campaign_id = c.id
+                WHERE cs.shop_id = ?""",
+                (shop_id,)
             )
             rows = cur.fetchall()
+            conn.close()
             if not rows:
                 bot.send_message(chat_id, 'No hay programaciones registradas.')
             else:
                 markup = telebot.types.InlineKeyboardMarkup()
                 lines = ['📆 *Programaciones:*']
                 for r in rows:
-                    schedule_id, camp_name, is_active, ids_text = r
-                    status = 'Activa ✅' if is_active else 'Inactiva ❌'
-
-                    group_labels = []
-                    if ids_text:
-                        try:
-                            ids = [int(i) for i in str(ids_text).split(',') if i]
-                        except ValueError:
-                            ids = []
-                        for gid in ids:
-                            info = group_map.get(gid)
-                            if not info:
-                                continue
-                            name = info['group_name'] or info['group_id']
-                            label = name
-                            if info['topic_id'] is not None:
-                                label += f" (topic {info['topic_id']})"
-                            group_labels.append(label)
-                    groups_text = ''
-                    if group_labels:
-                        groups_text = ' - ' + ', '.join(group_labels)
-
-                    lines.append(f"- {schedule_id} {camp_name} ({status}){groups_text}")
-                    toggle = 'Cancelar' if is_active else 'Reactivar'
-
-                    # Nueva modificación: agregar botones de acción por programación
+                    status = 'Activa ✅' if r[2] else 'Inactiva ❌'
+                    lines.append(f"- {r[0]} {r[1]} ({status})")
+                    toggle = 'Cancelar' if r[2] else 'Reactivar'
+            
+                    # NUEVA MODIFICACIÓN: Agregar dos botones por fila
                     markup.add(
                         telebot.types.InlineKeyboardButton(
-                            text=f'{toggle} {schedule_id}',
-                            callback_data=f'TOGGLE_SCHEDULE_{schedule_id}'
+                            text=f'{toggle} {r[0]}',
+                            callback_data=f'TOGGLE_SCHEDULE_{r[0]}'
                         ),
                         telebot.types.InlineKeyboardButton(
-                            text=f'🗑️ Eliminar {schedule_id}',
-                            callback_data=f'DELETE_SCHEDULE_{schedule_id}'
-                        ),
-                        telebot.types.InlineKeyboardButton(
-                            text=f'✏️ Editar {schedule_id}',
-                            callback_data=f'EDIT_SCHEDULE_{schedule_id}'
+                            text=f'🗑️ Eliminar {r[0]}',
+                            callback_data=f'DELETE_SCHEDULE_{r[0]}'
                         )
                     )
                 markup.add(
@@ -832,7 +770,6 @@ def in_adminka(chat_id, message_text, username, name_user):
                     reply_markup=markup,
                     parse_mode='Markdown'
                 )
-            conn.close()
 
         elif '🎯 Gestionar grupos' == message_text:
             msg = (
@@ -982,10 +919,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 markup = telebot.types.ReplyKeyboardMarkup(True, False)
                 for g in groups:
                     title = g['group_name'] or g['group_id']
-                    label = f"{title} ({g['group_id']})"
-                    if g.get('topic_id') is not None:
-                        label += f" (topic {g['topic_id']})"
-                    markup.row(label)
+                    markup.row(f"{title} ({g['group_id']})")
                 markup.row('Cancelar')
                 
                 os.makedirs('data/Temp', exist_ok=True)
@@ -1639,6 +1573,7 @@ def text_analytics(message_text, chat_id):
                 bd[str(chat_id)] = 179
 
         elif sost_num == 179:
+            print(f"DEBUG: Llegó al estado 179, mensaje: '{message_text}'")
             try:
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
@@ -1666,11 +1601,13 @@ def text_analytics(message_text, chat_id):
                     show_product_menu(chat_id)
             else:
                 file_path = f'data/goods/{shop_id}_{product}.txt'
+                print(f"DEBUG: file_path={file_path}, exists={os.path.exists(file_path)}")
                 if action == 'añadir unidades':
                     bot.send_message(chat_id, 'Envíe las unidades a añadir, una por línea:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 180
                 elif action == 'editar unidades':
+                    print(f"DEBUG: Editando unidades de texto")
                     if not os.path.exists(file_path):
                         bot.send_message(chat_id, 'El producto aún no tiene unidades.')
                         show_product_menu(chat_id)
@@ -1680,7 +1617,8 @@ def text_analytics(message_text, chat_id):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         lines = [ln.rstrip('\n') for ln in f.readlines()]
                     text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                    dop.send_long_text(bot, chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
+                   
+ bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nEnvía "número nuevo_valor" para reemplazar la línea:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 181
                 elif action == 'eliminar unidades':
@@ -1693,7 +1631,7 @@ def text_analytics(message_text, chat_id):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         lines = [ln.rstrip('\n') for ln in f.readlines()]
                     text = '\n'.join(f'{i+1}. {line}' for i, line in enumerate(lines)) or 'Sin unidades'
-                    dop.send_long_text(bot, chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
+                    bot.send_message(chat_id, f'Unidades actuales:\n{text}\n\nIndique los números de línea a eliminar separados por espacios:')
                     with shelve.open(files.sost_bd) as bd:
                         bd[str(chat_id)] = 182
                 else:
@@ -1837,54 +1775,9 @@ def text_analytics(message_text, chat_id):
                 del bd[str(chat_id)]
             show_product_menu(chat_id)
 
-        elif sost_num == 186:
-            path = f'data/Temp/{chat_id}_edit_schedule.txt'
-            try:
-                with open(path, 'r', encoding='utf-8') as f:
-                    schedule_id = int(f.read())
-            except FileNotFoundError:
-                session_expired(chat_id)
-                return
-            parts = message_text.split()
-            if len(parts) < 2:
-                bot.send_message(chat_id, 'Formato inválido. Usa "lunes,martes 10:00 12:00"')
-                return
-            days = parts[0].split(',')
-            times = parts[1:]
-
-            groups = advertising.get_target_groups()
-            if not groups:
-                scheduler = CampaignScheduler(files.main_db, shop_id)
-                ok = scheduler.update_schedule(schedule_id, days, times)
-                bot.send_message(chat_id, '✅ Programación actualizada' if ok else '❌ Error actualizando programación')
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-                try:
-                    os.remove(path)
-                except Exception:
-                    pass
-                show_marketing_menu(chat_id)
-            else:
-                markup = telebot.types.ReplyKeyboardMarkup(True, False)
-                for g in groups:
-                    title = g['group_name'] or g['group_id']
-                    label = f"{title} ({g['id']})"
-                    if g.get('topic_id') is not None:
-                        label += f" (topic {g['topic_id']})"
-                    markup.row(label)
-                markup.row('Todos', 'Cancelar')
-
-                os.makedirs('data/Temp', exist_ok=True)
-                tmp = f'data/Temp/{chat_id}_schedule.json'
-                with open(tmp, 'w', encoding='utf-8') as f:
-                    json.dump({'type': 'edit', 'schedule_id': schedule_id, 'days': days, 'times': times, 'groups': groups}, f)
-
-                bot.send_message(chat_id, 'Seleccione los grupos destino (enviar IDs separados por coma o "Todos"):', reply_markup=markup)
-                set_state(chat_id, 187, 'marketing')
-
         elif sost_num == 18:
             # PayPal Client ID
-            with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', 'w', encoding='utf-8') as f:
+            with open('data/Temp/' + str(chat_id) + 'paypal_client.txt', 'w', encoding='utf-8') as f: 
                 f.write(message_text)
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
@@ -2680,63 +2573,16 @@ def text_analytics(message_text, chat_id):
                     return
                 camp_id = data['camp_id']
                 groups = data['groups']
-
-                # Extraer ID de grupo y opcionalmente el topic de la etiqueta
-                match = re.search(r"\(([-\d]+)\)(?: \(topic (\d+)\))?$", message_text)
-                selected = None
-                if match:
-                    sel_group_id = match.group(1)
-                    sel_topic_id = int(match.group(2)) if match.group(2) else None
-                    selected = next(
-                        (
-                            g for g in groups
-                            if str(g['group_id']) == sel_group_id and (g.get('topic_id') or None) == sel_topic_id
-                        ),
-                        None
-                    )
+                key = f"{message_text}"
+                selected = next(
+                    (g for g in groups if f"{g['group_name'] or g['group_id']} ({g['group_id']})" == key),
+                    None
+                )
                 if not selected:
                     bot.send_message(chat_id, 'Selección inválida. Intente nuevamente.')
                     return
                 ok, msg = advertising.send_campaign_to_group(camp_id, selected['group_id'], selected.get('topic_id'))
                 bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-                if os.path.exists(tmp):
-                    os.remove(tmp)
-                show_marketing_menu(chat_id)
-
-        elif sost_num == 187:
-            tmp = f'data/Temp/{chat_id}_schedule.json'
-            if message_text.lower() == 'cancelar':
-                with shelve.open(files.sost_bd) as bd:
-                    del bd[str(chat_id)]
-                if os.path.exists(tmp):
-                    os.remove(tmp)
-                show_marketing_menu(chat_id)
-            else:
-                try:
-                    with open(tmp, 'r', encoding='utf-8') as f:
-                        data = json.load(f)
-                except FileNotFoundError:
-                    session_expired(chat_id)
-                    return
-
-                ids = None
-                if message_text.lower() not in ('todos', '0'):
-                    ids = [int(i) for i in re.findall(r"\d+", message_text)]
-
-                if data['type'] == 'create':
-                    ok, msg = advertising.schedule_campaign(
-                        data['camp_id'], data['days'], data['times'], group_ids=ids
-                    )
-                    bot.send_message(chat_id, ('✅ ' if ok else '❌ ') + msg)
-                else:
-                    scheduler = CampaignScheduler(files.main_db, shop_id)
-                    ok = scheduler.update_schedule(
-                        data['schedule_id'], data['days'], data['times'], group_ids=ids
-                    )
-                    bot.send_message(chat_id, '✅ Programación actualizada' if ok else '❌ Error actualizando programación')
-
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
                 if os.path.exists(tmp):
@@ -2846,27 +2692,6 @@ def ad_inline(callback_data, chat_id, message_id):
             msg = 'Programación cancelada' if new_state == 0 else 'Programación reactivada'
             bot.send_message(chat_id, f'✅ {msg}')
         show_marketing_menu(chat_id)
-
-    elif callback_data.startswith('EDIT_SCHEDULE_'):
-        schedule_id = int(callback_data.split('_')[-1])
-        path = f'data/Temp/{chat_id}_edit_schedule.txt'
-        with open(path, 'w', encoding='utf-8') as f:
-            f.write(str(schedule_id))
-        key = telebot.types.InlineKeyboardMarkup()
-        key.add(
-            telebot.types.InlineKeyboardButton(
-                text='Cancelar y volver a Marketing',
-                callback_data='Volver a Marketing',
-            )
-        )
-        bot.edit_message_reply_markup(chat_id, message_id)
-        bot.send_message(
-            chat_id,
-            'Envía los nuevos días y horas en formato "lunes,martes 10:00 12:00"',
-            reply_markup=key,
-        )
-        with shelve.open(files.sost_bd) as bd:
-            bd[str(chat_id)] = 186
 
     elif callback_data == 'SKIP_NEW_MEDIA':
         key = telebot.types.InlineKeyboardMarkup()
@@ -3236,3 +3061,22 @@ def handle_cancel_command(message):
     clear_state(chat_id)
     bot.send_message(chat_id, 'Operación cancelada.')
     route_cancel(chat_id, prev)
+
+def show_admin_menu_safe(chat_id):
+    """Mostrar menú de administración sin bucle infinito"""
+    # Limpiar cualquier estado previo
+    if dop.get_sost(chat_id):
+        with shelve.open(files.sost_bd) as bd:
+            if str(chat_id) in bd:
+                del bd[str(chat_id)]
+    
+    # Crear menú principal
+    user_markup = telebot.types.ReplyKeyboardMarkup(True, False)
+    user_markup.row('📦 Surtido', '➕ Producto')
+    user_markup.row('💰 Pagos', '💸 Descuentos')
+    user_markup.row('📢 Marketing', '📣 Difusión')
+    user_markup.row('📊 Estadísticas', 'Boletín informativo')
+    user_markup.row('Otras configuraciones')
+    user_markup.row('💬 Respuestas')
+    
+    bot.send_message(chat_id, '¡Panel de administración!\nPara salir: /start', reply_markup=user_markup)
