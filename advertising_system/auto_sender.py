@@ -1,116 +1,142 @@
+#!/usr/bin/env python3
+import os
 import time
 import sqlite3
 import logging
-from datetime import datetime
-import sys
-import os
-sys.path.insert(0, '/home/telegram-bot')
-import types
-try:
-    import config
-except Exception:  # pragma: no cover - allow import without dotenv
-    config = types.SimpleNamespace()
-import telebot
+from datetime import datetime, timedelta
+from typing import List, Dict, Optional, Tuple
+
 from .scheduler import CampaignScheduler
 from .rate_limiter import IntelligentRateLimiter
 from .statistics import StatisticsManager
 from .telegram_multi import TelegramMultiBot
 
+
 class AutoSender:
-    def __init__(self, config):
-        db_path = config.get('db_path')
-        shop_id = config.get('shop_id', 1)
-        self.scheduler = CampaignScheduler(db_path, shop_id)
-        self.rate_limiter = IntelligentRateLimiter(db_path, shop_id)
-        self.stats = StatisticsManager(db_path, shop_id)
-        self.logger = logging.getLogger(__name__)
+    def __init__(self, config: dict, shop_id: int = 1):
+        self.config = config
+        self.db_path = config['db_path']
         self.telegram_tokens = config.get('telegram_tokens', [])
-
-    def _get_connection(self):
-        import files
-        if self.scheduler.db_path == files.main_db:
-            return sqlite3.connect(files.main_db), True
-        return sqlite3.connect(self.scheduler.db_path), False
-
-    def _check_and_send_campaigns(self):
-        pending_sends = self.scheduler.get_pending_sends()
-        processed = False
-        for send_data in pending_sends:
-            if len(send_data) < 6:
-                continue
-            schedule_id, campaign_id = send_data[0], send_data[1]
-            platforms = send_data[5]
-            if not platforms:
-                continue
-            if isinstance(platforms, str):
-                platforms = platforms.split(',')
-            for platform in platforms:
-                if platform == 'telegram':
-                    self._send_telegram_campaign(campaign_id, schedule_id, send_data)
-                    processed = True
-                    time.sleep(2)
-        return processed
-
-    def process_campaigns(self):
-        return self._check_and_send_campaigns()
-
-    def _send_telegram_campaign(self, campaign_id, schedule_id, campaign_data):
-        conn, shared = self._get_connection()
-        cursor = conn.cursor()
+        self.shop_id = shop_id if shop_id else config.get('shop_id', 1)
         
-        try:
-            group_ids = None
-            try:
-                cursor.execute(
-                    'SELECT group_ids FROM campaign_schedules WHERE id = ?',
-                    (schedule_id,)
-                )
-                row = cursor.fetchone()
-                if row:
-                    group_ids = row[0]
-            except sqlite3.OperationalError:
-                # Tabla sin columna group_ids
-                group_ids = None
+        self.scheduler = CampaignScheduler(self.db_path, shop_id=self.shop_id)
+        self.rate_limiter = IntelligentRateLimiter(self.db_path, shop_id=self.shop_id)
+        self.stats = StatisticsManager(self.db_path, shop_id=self.shop_id)
+        self.logger = logging.getLogger(__name__)
+        
+        self.telegram = None
+        self._init_telegram()
 
-            ids = []
-            if group_ids:
+    def _init_telegram(self):
+        tokens = self.telegram_tokens
+        if not tokens:
+            tokens_env = os.getenv("TELEGRAM_TOKEN")
+            if tokens_env:
+                tokens = [t.strip() for t in tokens_env.split(',') if t.strip()]
+        
+        if tokens:
+            self.telegram = TelegramMultiBot(tokens)
+        else:
+            self.logger.warning("No hay tokens de Telegram configurados")
+
+    def process_campaigns(self) -> bool:
+        try:
+            processed = self._check_and_send_campaigns()
+            return processed
+        except Exception as e:
+            self.logger.error(f"Error procesando campañas: {e}")
+            return False
+
+    def _check_and_send_campaigns(self) -> bool:
+        try:
+            pending_sends = self.scheduler.get_pending_sends()
+            
+            if not pending_sends:
+                return False
+            
+            processed = False
+            for send_data in pending_sends:
                 try:
-                    ids = [int(g) for g in str(group_ids).split(',') if g]
-                except ValueError:
-                    self.logger.warning(
-                        "Valor inválido para group_ids '%s' en schedule %s",
-                        group_ids,
-                        schedule_id,
-                    )
-                    ids = []
-            if ids:
-                placeholders = ','.join('?' for _ in ids)
-                cursor.execute(
-                    f'SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ? AND id IN ({placeholders})',
-                    [self.scheduler.shop_id, *ids],
-                )
-                groups = cursor.fetchall()
-            else:
-                cursor.execute('SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ?',
-                              (self.scheduler.shop_id,))
-                groups = cursor.fetchall()
+                    schedule_id = send_data[0]
+                    campaign_id = send_data[1]
+                    platforms_str = send_data[5] if len(send_data) > 5 else None
+                    
+                    if not platforms_str:
+                        continue
+                    
+                    platforms = platforms_str.split(',')
+                    
+                    for platform in platforms:
+                        platform = platform.strip()
+                        if platform == 'telegram':
+                            success = self._send_telegram_campaign_corrected(campaign_id, schedule_id, send_data)
+                            if success:
+                                processed = True
+                            time.sleep(2)
+                    
+                except Exception as e:
+                    self.logger.error(f"Error procesando envío {send_data}: {e}")
+                    continue
+                    
+            return processed
+            
+        except Exception as e:
+            self.logger.error(f"Error en _check_and_send_campaigns: {e}")
+            return False
+
+    def _send_telegram_campaign_corrected(self, campaign_id: int, schedule_id: int, send_data: List) -> bool:
+        try:
+            conn = sqlite3.connect(self.db_path)
+            cursor = conn.cursor()
+            
+            # Obtener grupos
+            cursor.execute('SELECT group_id FROM target_groups WHERE status = "active" AND shop_id = ?', (self.shop_id,))
+            groups = cursor.fetchall()
             
             if not groups:
-                return
+                print("❌ No hay grupos configurados")
+                conn.close()
+                return False
             
+            # Obtener campaña
             cursor.execute('SELECT * FROM campaigns WHERE id = ?', (campaign_id,))
             campaign = cursor.fetchone()
             
             if not campaign:
-                return
+                print(f"❌ Campaña {campaign_id} no encontrada")
+                conn.close()
+                return False
             
-            title = campaign[1]
-            message_text = campaign[2]
-            media_file_id = campaign[3] if campaign[3] else None
-            button_text = campaign[6] if campaign[6] else None
-            button_url = campaign[7] if campaign[7] else None
+            campaign_name = campaign[1].replace('Producto ', '')  # QUITAR PREFIJO
             
-            full_message = f"📢 {title}\n\n{message_text}" if message_text else f"📢 {title}"
+            # BÚSQUEDA DE PRODUCTO
+            cursor.execute('SELECT name, description, price, media_file_id, media_type FROM goods WHERE shop_id = ? AND name = ?', (self.shop_id, campaign_name))
+            product = cursor.fetchone()
+            
+            if not product:
+                cursor.execute('SELECT name, description, price, media_file_id, media_type FROM goods WHERE shop_id = ? AND name LIKE ?', (self.shop_id, f'%{campaign_name}%'))
+                product = cursor.fetchone()
+            
+            if product:
+                # USAR DATOS DE PRODUCTO
+                title = f"🛒 {product[0]}"
+                message_parts = [title]
+                if product[1]:
+                    message_parts.append(f"📝 {product[1]}")
+                if product[2]:
+                    message_parts.append(f"💰 Precio: ${product[2]}")
+                full_message = '\n'.join(message_parts)
+                media_file_id = product[3]
+                media_type = product[4]
+                print(f"✅ USANDO DATOS DE PRODUCTO: {product[0]}")
+            else:
+                # USAR DATOS DE CAMPAÑA
+                title = campaign[1]
+                message_text = campaign[2]
+                full_message = f"📢 {title}\n\n{message_text}" if message_text else f"📢 {title}"
+                media_file_id = campaign[3]
+                media_type = campaign[4]
+                print(f"✅ USANDO DATOS DE CAMPAÑA: {title}")
             
             # Obtener tokens
             tokens = self.telegram_tokens
@@ -118,48 +144,58 @@ class AutoSender:
                 tokens_env = os.getenv("TELEGRAM_TOKEN")
                 if not tokens_env:
                     print("❌ No hay tokens de Telegram configurados")
-                    return
+                    conn.close()
+                    return False
                 tokens = [t.strip() for t in tokens_env.split(',') if t.strip()]
             telegram_bot = TelegramMultiBot(tokens)
             
             # Preparar botones
             buttons = None
-            if button_text and button_url:
+            if len(campaign) > 6 and campaign[6] and len(campaign) > 7 and campaign[7]:
                 buttons = {
-                    'button1_text': button_text,
-                    'button1_url': button_url
+                    'button1_text': campaign[6],
+                    'button1_url': campaign[7]
                 }
             
+            # ENVIAR A GRUPOS
+            sent_count = 0
             for group in groups:
-                group_id = group[0]
-                topic_id = group[1]
-                # Debug information about the target group/topic
-                self.logger.debug("group_id=%s, topic_id=%s", group_id, topic_id)
                 try:
+                    group_id = group[0]
+                    
                     success, result = telegram_bot.send_message(
                         group_id,
                         full_message,
                         media_file_id=media_file_id,
-                        media_type='photo' if media_file_id else None,
-                        buttons=buttons,
-                        topic_id=topic_id
+                        media_type=media_type,
+                        buttons=buttons
                     )
                     
                     if success:
-                        topic_info = f" (Topic: {topic_id})" if topic_id else " (Grupo principal)"
-                        print(f'🎉 Campaña automática {campaign_id} enviada a grupo {group_id}{topic_info}')
+                        sent_count += 1
+                        if product:
+                            print(f'🎉 CAMPAÑA DE PRODUCTO {campaign_id} ENVIADA A {group_id}')
+                        else:
+                            print(f'🎉 CAMPAÑA NORMAL {campaign_id} ENVIADA A {group_id}')
                     else:
                         print(f'❌ Error enviando campaña {campaign_id} a {group_id}: {result}')
                         
                 except Exception as e:
-                    print(f'❌ Error enviando campaña {campaign_id} a {group_id}: {e}')
+                    print(f'❌ Error enviando a grupo {group_id}: {e}')
+                    continue
             
-            self.scheduler.update_next_send(schedule_id, 'telegram')
-            
-        finally:
-            if not shared:
+            if sent_count > 0:
+                self.scheduler.update_next_send(schedule_id, 'telegram')
                 conn.close()
+                return True
+            
+            conn.close()
+            return False
+            
+        except Exception as e:
+            print(f"❌ Error en _send_telegram_campaign_corrected: {e}")
+            return False
 
-    def start(self):
+    def start(self) -> bool:
         print(f"AutoSender iniciado: {datetime.now()}")
         return self.process_campaigns()

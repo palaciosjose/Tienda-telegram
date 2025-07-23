@@ -108,9 +108,8 @@ class CampaignScheduler:
                        c.button1_text, c.button1_url, c.button2_text, c.button2_url
                    FROM campaign_schedules cs
                    JOIN campaigns c ON cs.campaign_id = c.id
-                   WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?
-                         AND (cs.next_send_telegram IS NULL OR cs.next_send_telegram <= ?)""",
-            (self.shop_id, self.shop_id, now.isoformat()),
+                   WHERE cs.is_active = 1 AND c.status = 'active' AND cs.shop_id = ? AND c.shop_id = ?""",
+            (self.shop_id, self.shop_id),
         )
         rows = cursor.fetchall()
         pending = []
@@ -130,10 +129,40 @@ class CampaignScheduler:
         return pending
 
     def update_next_send(self, schedule_id, platform):
-        next_send = datetime.now() + timedelta(days=1)
+        from datetime import datetime, timedelta
+        import json
+        
         conn, shared = self._get_connection()
         cursor = conn.cursor()
-        if platform == 'telegram':
+        
+        # Obtener programación actual
+        cursor.execute("SELECT schedule_json FROM campaign_schedules WHERE id = ?", (schedule_id,))
+        result = cursor.fetchone()
+        if not result:
+            if not shared:
+                conn.close()
+            return
+            
+        schedule = json.loads(result[0])
+        now = datetime.now()
+        day_map = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo']
+        today = day_map[now.weekday()]
+        
+        # Buscar próxima hora de envío
+        next_send = None
+        if today in schedule:
+            current_time = now.strftime('%H:%M')
+            future_times = [t for t in schedule[today] if t > current_time]
+            if future_times:
+                # Hay más envíos hoy
+                next_time = min(future_times)
+                next_send = now.replace(hour=int(next_time[:2]), minute=int(next_time[3:]), second=0, microsecond=0)
+            else:
+                # No hay más envíos hoy, próximo será mañana
+                next_send = now + timedelta(days=1)
+                next_send = next_send.replace(hour=0, minute=0, second=0, microsecond=0)
+        
+        if platform == 'telegram' and next_send:
             cursor.execute(
                 "UPDATE campaign_schedules SET next_send_telegram = ? WHERE id = ?",
                 (next_send.isoformat(), schedule_id))
