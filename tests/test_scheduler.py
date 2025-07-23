@@ -131,4 +131,3 @@ def test_update_and_reindex(monkeypatch, tmp_path):
     assert rows[0][0] == 1
     data = json.loads(rows[0][1])
     assert data == {'tuesday': ['12:00']}
-
