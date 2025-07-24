@@ -1,5 +1,17 @@
 import sqlite3
 import json
+import sys
+import types
+
+telebot_stub = types.SimpleNamespace(
+    TeleBot=lambda *a, **k: None,
+    types=types.SimpleNamespace(
+        InlineKeyboardMarkup=lambda *a, **k: None,
+        InlineKeyboardButton=lambda *a, **k: None,
+    ),
+)
+sys.modules.setdefault('telebot', telebot_stub)
+
 from advertising_system.scheduler import CampaignScheduler
 
 CREATE_CAMPAIGNS = """CREATE TABLE campaigns (

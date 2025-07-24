@@ -120,6 +120,13 @@ class CampaignScheduler:
                 schedule = json.loads(row[4] or '{}')
             except Exception:
                 continue
+            next_send = row[7] if len(row) > 7 else None
+            if next_send:
+                try:
+                    if datetime.fromisoformat(next_send) > now:
+                        continue
+                except Exception:
+                    pass
             # Buscar en el rango de tiempo en lugar de hora exacta
             if any(t in schedule.get(today, []) for t in time_range):
                 pending.append(row)
