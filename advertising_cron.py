@@ -20,6 +20,15 @@ def should_send_now(shop_id=1):
     now = datetime.now()
     current_time = now.strftime('%H:%M')
     current_day = now.strftime('%A').lower()
+    english_to_spanish = {
+        'monday': 'lunes',
+        'tuesday': 'martes',
+        'wednesday': 'miercoles',
+        'thursday': 'jueves',
+        'friday': 'viernes',
+        'saturday': 'sabado',
+        'sunday': 'domingo',
+    }
     time_range = []
     for offset in [-1, 0, 1]:
         time_check = (now + timedelta(minutes=offset)).strftime('%H:%M')
@@ -35,8 +44,15 @@ def should_send_now(shop_id=1):
         schedule_id = schedule[0]
         last_sent = schedule[7] or ""
         group_ids = schedule[10] or ""  # group_ids está en columna 10
+        times = None
         if current_day in schedule_json:
             times = schedule_json[current_day]
+        else:
+            span_day = english_to_spanish.get(current_day)
+            if span_day and span_day in schedule_json:
+                times = schedule_json[span_day]
+
+        if times:
             for t in times:
                 if t in time_range:
                     today_str = now.strftime('%Y-%m-%d')

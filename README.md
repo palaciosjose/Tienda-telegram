@@ -307,8 +307,10 @@ con comandos para gestionar campañas:
    **🛒 Campaña de producto**.
 2. Con la campaña creada ejecuta **⏰ Programar envíos &lt;ID&gt; &lt;días&gt;
    &lt;HH:MM&gt; &lt;HH:MM&gt;** indicando el identificador, los días separados
-   por comas y una o más horas. Cuando existan grupos registrados el bot
-   permitirá elegir los destinos antes de confirmar.
+   por comas y una o más horas. Los días pueden escribirse en español
+   (*lunes*, *martes*, ...) o en inglés (*monday*, *tuesday*, ...). Cuando
+   existan grupos registrados el bot permitirá elegir los destinos antes de
+   confirmar.
 3. Para que los envíos permanezcan activos ejecuta `advertising_cron.py` de
    forma periódica (por ejemplo mediante `cron`) o deja corriendo
    `advertising_daemon.py`, que invoca dicho script cada minuto.
