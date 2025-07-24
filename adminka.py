@@ -792,13 +792,13 @@ def in_adminka(chat_id, message_text, username, name_user):
                     freq_text = f' [{frequency}]' if frequency else ''
 
                     day_map = {
-                        'monday': 'lunes',
-                        'tuesday': 'martes',
-                        'wednesday': 'miercoles',
-                        'thursday': 'jueves',
-                        'friday': 'viernes',
-                        'saturday': 'sabado',
-                        'sunday': 'domingo',
+                        'monday': 'lun',
+                        'tuesday': 'mar',
+                        'wednesday': 'mie',
+                        'thursday': 'jue',
+                        'friday': 'vie',
+                        'saturday': 'sab',
+                        'sunday': 'dom',
                     }
 
                     schedule_parts = []
@@ -807,15 +807,31 @@ def in_adminka(chat_id, message_text, username, name_user):
                             data = json.loads(sched_json)
                         except Exception:
                             data = {}
-                        for day, hours in data.items():
-                            if hours:
-                                d = day_map.get(day.lower(), day)
-                                schedule_parts.append(f"{d} {', '.join(hours)}")
+                        day_order = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+                        times_map = {}
+                        for d in day_order:
+                            hours = data.get(d)
+                            if not hours:
+                                continue
+                            key = tuple(hours)
+                            abbr = day_map.get(d, d[:3])
+                            times_map.setdefault(key, []).append(abbr)
+                        for hours, days_abbr in times_map.items():
+                            days_str = ','.join(days_abbr)
+                            hours_str = ', '.join(hours)
+                            schedule_parts.append(f"{days_str} {hours_str}")
                     schedule_text = ''
                     if schedule_parts:
                         schedule_text = ' - ' + '; '.join(schedule_parts)
 
-                    next_text = f" - Próximo: {next_send}" if next_send else ''
+                    next_text = ''
+                    if next_send:
+                        parts = [p.strip() for p in re.split(r'[\n,]+', str(next_send)) if p.strip()]
+                        if parts:
+                            shown = ', '.join(parts[:2])
+                            if len(parts) > 2:
+                                shown += ' …'
+                            next_text = f" - Próximo: {shown}"
 
                     group_labels = []
                     if ids_text:
@@ -862,9 +878,18 @@ def in_adminka(chat_id, message_text, username, name_user):
                         callback_data='Volver a Marketing'
                     )
                 )
+
+                MAX_LEN = 3500
+                message_chunk = ''
+                for line in lines:
+                    if len(message_chunk) + len(line) + 1 > MAX_LEN:
+                        bot.send_message(chat_id, message_chunk, parse_mode='Markdown')
+                        message_chunk = line
+                    else:
+                        message_chunk += ('\n' if message_chunk else '') + line
                 bot.send_message(
                     chat_id,
-                    '\n'.join(lines),
+                    message_chunk,
                     reply_markup=markup,
                     parse_mode='Markdown'
                 )
