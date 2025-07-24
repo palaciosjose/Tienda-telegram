@@ -34,6 +34,12 @@ def clear_state(chat_id):
             del bd[key]
 
 
+def cancel_and_reset(chat_id):
+    """Clear user state and notify cancellation"""
+    clear_state(chat_id)
+    bot.send_message(chat_id, '❌ Operación cancelada.')
+
+
 def get_prev(chat_id):
     with shelve.open(files.sost_bd) as bd:
         return bd.get(f"{chat_id}_prev", 'main')
@@ -723,7 +729,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                         days = parts[1].split(',')
                         times = parts[2:4]
                     except ValueError:
-                        bot.send_message(chat_id, '❌ ID de campaña inválido')
+                        cancel_and_reset(chat_id)
                         return
 
                     groups = advertising.get_target_groups()
@@ -971,7 +977,7 @@ def in_adminka(chat_id, message_text, username, name_user):
                 try:
                     camp_id = int(params.split()[0])
                 except ValueError:
-                    bot.send_message(chat_id, '❌ ID de campaña inválido')
+                    cancel_and_reset(chat_id)
                     return
 
                 groups = advertising.get_target_groups()
@@ -1145,7 +1151,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                     message = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             if message == 'manual_delivery':
                 success = dop.save_message('manual_delivery', message_text)
@@ -1201,7 +1207,7 @@ def text_analytics(message_text, chat_id):
                 f'data/Temp/{chat_id}good_description.txt'
             ]
             if not all(os.path.exists(p) for p in required_files):
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             manual_flag = '1' if message_text == 'Sí' else '0'
@@ -1229,7 +1235,7 @@ def text_analytics(message_text, chat_id):
                 if stock_val < 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, '❌ Por favor ingrese una cantidad válida (0 o más).')
+                cancel_and_reset(chat_id)
                 return
 
             with open('data/Temp/' + str(chat_id) + 'good_manual_stock.txt', 'w', encoding='utf-8') as f:
@@ -1288,7 +1294,7 @@ def text_analytics(message_text, chat_id):
                 if duration_val < 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, '❌ Por favor ingrese una duración válida (0 o más días).')
+                cancel_and_reset(chat_id)
                 return
 
             with open('data/Temp/' + str(chat_id) + 'good_duration.txt', 'w', encoding='utf-8') as f:
@@ -1336,7 +1342,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + 'good_duration.txt', encoding='utf-8') as f:
                     duration_val = int(f.read())
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             duration_display = ''
@@ -1427,7 +1433,7 @@ def text_analytics(message_text, chat_id):
                     with open(temp_path, encoding='utf-8') as f:
                         cat_id = int(f.read())
                 except (FileNotFoundError, ValueError):
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
                 success = dop.update_category_name(cat_id, message_text.strip(), shop_id)
                 if success:
@@ -1479,7 +1485,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '.txt', encoding='utf-8') as f:
                     name_good = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             dop.update_product_description(name_good, message_text, shop_id)
@@ -1519,7 +1525,7 @@ def text_analytics(message_text, chat_id):
                     with open(temp_path, encoding='utf-8') as f:
                         name_good = f.read()
                 except FileNotFoundError:
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
                 try:
                     price = int(message_text)
@@ -1536,7 +1542,7 @@ def text_analytics(message_text, chat_id):
                         del bd[str(chat_id)]
                     os.remove(temp_path)
                 except ValueError:
-                    bot.send_message(chat_id, 'Error: ingrese un número válido')
+                    cancel_and_reset(chat_id)
 
         elif sost_num == 64:
             temp_path = f'data/Temp/{chat_id}_edit_cat.txt'
@@ -1591,7 +1597,7 @@ def text_analytics(message_text, chat_id):
                 with open(temp_path, encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             cat_id = dop.create_category(message_text.strip(), shop_id)
@@ -1643,7 +1649,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             action = message_text.strip().lower()
@@ -1704,7 +1710,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             file_path = f'data/goods/{shop_id}_{product}.txt'
             with open(file_path, 'a', encoding='utf-8') as f:
@@ -1719,7 +1725,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             file_path = f'data/goods/{shop_id}_{product}.txt'
             if not os.path.exists(file_path):
@@ -1752,7 +1758,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             file_path = f'data/goods/{shop_id}_{product}.txt'
             if not os.path.exists(file_path):
@@ -1764,7 +1770,7 @@ def text_analytics(message_text, chat_id):
             try:
                 indices = [int(i)-1 for i in message_text.replace(',', ' ').split()]
             except ValueError:
-                bot.send_message(chat_id, 'Formato incorrecto. Use números separados por espacios')
+                cancel_and_reset(chat_id)
                 return
             with open(file_path, 'r', encoding='utf-8') as f:
                 lines = [ln.rstrip('\n') for ln in f.readlines()]
@@ -1782,14 +1788,14 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             try:
                 qty = int(message_text)
                 if qty < 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, 'Cantidad inválida.')
+                cancel_and_reset(chat_id)
                 return
             dop.add_manual_stock(product, qty, shop_id)
             bot.send_message(chat_id, '¡Unidades añadidas con éxito!')
@@ -1802,14 +1808,14 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             try:
                 qty = int(message_text)
                 if qty < 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, 'Cantidad inválida.')
+                cancel_and_reset(chat_id)
                 return
             dop.set_manual_stock(product, qty, shop_id)
             bot.send_message(chat_id, '¡Unidades editadas con éxito!')
@@ -1822,14 +1828,14 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + '_product.txt', encoding='utf-8') as f:
                     product = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             try:
                 qty = int(message_text)
                 if qty < 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, 'Cantidad inválida.')
+                cancel_and_reset(chat_id)
                 return
             dop.decrement_manual_stock(product, qty, shop_id)
             bot.send_message(chat_id, '¡Unidades eliminadas con éxito!')
@@ -1843,7 +1849,7 @@ def text_analytics(message_text, chat_id):
                 with open(path, 'r', encoding='utf-8') as f:
                     schedule_id = int(f.read())
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             parts = message_text.split()
             if len(parts) < 2:
@@ -1908,7 +1914,7 @@ def text_analytics(message_text, chat_id):
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
             except Exception as e:
                 bot.send_message(chat_id, f'Error guardando credenciales: {e}')
 
@@ -1928,7 +1934,7 @@ def text_analytics(message_text, chat_id):
                 with open('data/Temp/' + str(chat_id) + 'binance_api.txt', encoding='utf-8') as f:
                     api_key = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             key = telebot.types.InlineKeyboardMarkup()
             key.add(telebot.types.InlineKeyboardButton(text='Cancelar', callback_data='Volver al menú principal de administración'))
@@ -1958,7 +1964,7 @@ def text_analytics(message_text, chat_id):
                 with shelve.open(files.sost_bd) as bd:
                     del bd[str(chat_id)]
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
             except Exception as e:
                 bot.send_message(chat_id, f'Error guardando credenciales: {e}')
 
@@ -1993,7 +1999,7 @@ def text_analytics(message_text, chat_id):
                 sid = int(parts[0])
                 aid = int(parts[1])
             except ValueError:
-                bot.send_message(chat_id, 'IDs inválidos')
+                cancel_and_reset(chat_id)
                 return
             if dop.assign_admin_to_shop(sid, aid):
                 dop.new_admin(aid)
@@ -2065,7 +2071,7 @@ def text_analytics(message_text, chat_id):
                     b1_url = f.readline().rstrip('\n')
                     b2_text = f.readline().rstrip('\n')
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             b2_url = '' if message_text.lower() == 'ninguno' else message_text
             shop_id = dop.get_shop_id(chat_id)
@@ -2082,7 +2088,7 @@ def text_analytics(message_text, chat_id):
             try:
                 shop_id_target = int(message_text)
             except ValueError:
-                bot.send_message(chat_id, '❌ ID inválido. Ingrese un número de tienda.')
+                cancel_and_reset(chat_id)
                 return
             limit = dop.get_campaign_limit(shop_id_target)
             with open(f'data/Temp/{chat_id}_camp_limit_shop.txt', 'w', encoding='utf-8') as f:
@@ -2097,7 +2103,7 @@ def text_analytics(message_text, chat_id):
                 if new_limit < 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, '❌ Por favor ingrese un número válido.')
+                cancel_and_reset(chat_id)
                 return
             if chat_id == config.admin_id:
                 try:
@@ -2226,7 +2232,7 @@ def text_analytics(message_text, chat_id):
                 else:
                     bot.send_message(chat_id, '❌ Error al actualizar la descripción adicional. Inténtelo de nuevo.')
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
             except Exception as e:
                 logging.error(f"Error en estado 29: {e}")
                 bot.send_message(chat_id, '❌ Error procesando la descripción adicional. Inténtelo de nuevo.')
@@ -2290,7 +2296,7 @@ def text_analytics(message_text, chat_id):
                 if amount <= 0:
                     raise ValueError
             except ValueError:
-                bot.send_message(chat_id, '❌ Por favor ingrese un número válido.')
+                cancel_and_reset(chat_id)
                 return
 
             with open('data/Temp/' + str(chat_id) + '.txt', 'a', encoding='utf-8') as f:
@@ -2320,7 +2326,7 @@ def text_analytics(message_text, chat_id):
                 amount = int(lines[1])
                 text = lines[2]
             except Exception:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             if message_text.lower().strip() in ('no', 'skip', 'sin archivo'):
@@ -2345,7 +2351,7 @@ def text_analytics(message_text, chat_id):
                 else:
                     bot.send_message(chat_id, '❌ Error actualizando porcentaje')
             except ValueError:
-                bot.send_message(chat_id, '❌ Porcentaje inválido. Use solo números enteros.')
+                cancel_and_reset(chat_id)
 
             with shelve.open(files.sost_bd) as bd:
                 del bd[str(chat_id)]
@@ -2355,7 +2361,7 @@ def text_analytics(message_text, chat_id):
             try:
                 percent = int(message_text)
             except ValueError:
-                bot.send_message(chat_id, '❌ Porcentaje inválido.')
+                cancel_and_reset(chat_id)
                 return
             with open(f'data/Temp/{chat_id}_discount.txt', 'w', encoding='utf-8') as f:
                 f.write(str(percent))
@@ -2368,7 +2374,7 @@ def text_analytics(message_text, chat_id):
             try:
                 hours = int(message_text)
             except ValueError:
-                bot.send_message(chat_id, '❌ Valor inválido.')
+                cancel_and_reset(chat_id)
                 return
             with open(f'data/Temp/{chat_id}_discount.txt', 'a', encoding='utf-8') as f:
                 f.write('\n' + str(hours))
@@ -2388,7 +2394,7 @@ def text_analytics(message_text, chat_id):
                 percent = int(lines[0])
                 hours = int(lines[1])
             except Exception:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
             os.remove(f'data/Temp/{chat_id}_discount.txt')
             category_id = None
@@ -2455,7 +2461,7 @@ def text_analytics(message_text, chat_id):
                             media_file_id = lines[0]
                             media_type = lines[1]
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             data = {
@@ -2499,7 +2505,7 @@ def text_analytics(message_text, chat_id):
                 with open(path, 'r', encoding='utf-8') as f:
                     _ = int(f.read())
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             os.makedirs('data/Temp', exist_ok=True)
@@ -2518,7 +2524,7 @@ def text_analytics(message_text, chat_id):
                 with open(data_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             if message_text.lower() not in ('no', 'sin botones'):
@@ -2545,7 +2551,7 @@ def text_analytics(message_text, chat_id):
                 with open(data_path, 'r', encoding='utf-8') as f:
                     data = json.load(f)
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
             if message_text.lower() not in ('no', 'sin botones'):
@@ -2595,7 +2601,7 @@ def text_analytics(message_text, chat_id):
                     with open(tmp, 'r', encoding='utf-8') as f:
                         groups = json.load(f)
                 except FileNotFoundError:
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
                 selected = next((g for g in groups if f"{g['title']} ({g['id']})" == message_text), None)
                 if not selected:
@@ -2676,7 +2682,7 @@ def text_analytics(message_text, chat_id):
                     with open(tmp, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                 except FileNotFoundError:
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
                 camp_id = data['camp_id']
                 groups = data['groups']
@@ -2718,7 +2724,7 @@ def text_analytics(message_text, chat_id):
                     with open(tmp, 'r', encoding='utf-8') as f:
                         data = json.load(f)
                 except FileNotFoundError:
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
 
                 ids = None
@@ -2887,7 +2893,7 @@ def ad_inline(callback_data, chat_id, message_id):
             with open(text_path, 'r', encoding='utf-8') as f:
                 start_text = f.read()
         except FileNotFoundError:
-            session_expired(chat_id)
+            cancel_and_reset(chat_id)
             return
         saved = dop.save_message('start', start_text)
         bot.edit_message_reply_markup(chat_id, message_id)
@@ -2909,7 +2915,7 @@ def ad_inline(callback_data, chat_id, message_id):
             amount = int(lines[1])
             text = lines[2]
         except Exception:
-            session_expired(chat_id)
+            cancel_and_reset(chat_id)
             return
 
         media = None
@@ -2954,7 +2960,7 @@ def ad_inline(callback_data, chat_id, message_id):
             except ValueError:
                 duration_days = 0
         except FileNotFoundError:
-            session_expired(chat_id)
+            cancel_and_reset(chat_id)
             bot.delete_message(chat_id, message_id)
             return
 
@@ -3075,7 +3081,7 @@ def handle_multimedia(message):
                 with open(temp_path, 'r', encoding='utf-8') as f:
                     product_name = f.read()
             except FileNotFoundError:
-                session_expired(chat_id)
+                cancel_and_reset(chat_id)
                 return
 
         file_id = None
@@ -3113,7 +3119,7 @@ def handle_multimedia(message):
                     amount = int(lines[1])
                     text = lines[2]
                 except (FileNotFoundError, ValueError, IndexError):
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
 
                 media_path = f"data/Temp/{chat_id}_broadcast_media.txt"
@@ -3150,7 +3156,7 @@ def handle_multimedia(message):
                     with open(path, 'r', encoding='utf-8') as f:
                         _ = int(f.read())
                 except FileNotFoundError:
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
 
                 data = {'media_file_id': file_id, 'media_type': media_type}
@@ -3176,7 +3182,7 @@ def handle_multimedia(message):
                     with open(text_path, 'r', encoding='utf-8') as f:
                         start_text = f.read()
                 except FileNotFoundError:
-                    session_expired(chat_id)
+                    cancel_and_reset(chat_id)
                     return
 
                 saved = dop.save_message('start', start_text, file_id, media_type)
