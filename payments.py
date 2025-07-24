@@ -506,8 +506,19 @@ def deliver_product(chat_id, username, first_name, name_good, amount, sum_amount
             except Exception as e:
                 logging.error(f"DEBUG: Error notificando admin {admin_id}: {e}")
         
-        # Registrar compra asociada a la tienda del usuario
-        dop.new_buy(chat_id, username, name_good, amount, sum_amount, shop_id)
+        # Registrar compra asociada a la tienda del usuario usando la versión
+        # mejorada que almacena información del método de pago y un ID único
+        payment_id = f"{payment_method}_{chat_id}_{int(time.time())}"
+        dop.new_buy_improved(
+            chat_id,
+            username,
+            name_good,
+            amount,
+            sum_amount,
+            payment_method,
+            payment_id,
+            shop_id,
+        )
         dop.new_buyer(chat_id, username, sum_amount, shop_id)
         
         logging.info(f"DEBUG: Producto entregado exitosamente a {chat_id}")
