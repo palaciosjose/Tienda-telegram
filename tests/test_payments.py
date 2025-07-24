@@ -14,6 +14,14 @@ def setup_payments(monkeypatch, tmp_path):
         "dotenv", types.SimpleNamespace(load_dotenv=lambda *a, **k: None)
     )
 
+    # Provide a minimal Binance SDK stub so payments detects availability
+    binance_mod = types.ModuleType("binance")
+    client_mod = types.ModuleType("binance.client")
+    client_mod.Client = object
+    binance_mod.client = client_mod
+    sys.modules.setdefault("binance", binance_mod)
+    sys.modules.setdefault("binance.client", client_mod)
+
     telebot_stub = types.SimpleNamespace(
         TeleBot=lambda *a, **k: types.SimpleNamespace(
             send_message=lambda *a, **k: None,
@@ -69,7 +77,6 @@ def setup_payments(monkeypatch, tmp_path):
 
 def test_creat_bill_binance_records_payment(tmp_path, monkeypatch):
     payments, _ = setup_payments(monkeypatch, tmp_path)
-    monkeypatch.setattr(payments, "BINANCE_AVAILABLE", True)
     monkeypatch.setattr(payments.dop, "get_binancedata", lambda shop_id=1: ("a", "b", "ID"))
 
     captured = {}

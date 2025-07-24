@@ -16,7 +16,12 @@ except ImportError:
     PAYPAL_AVAILABLE = False
     logging.info("Advertencia: paypalrestsdk no instalado. Los pagos PayPal no funcionarán.")
 
-BINANCE_AVAILABLE = False
+try:
+    from binance.client import Client
+    BINANCE_AVAILABLE = True
+except ImportError:
+    BINANCE_AVAILABLE = False
+    logging.info("Binance SDK no instalado. Binance Pay no funcionará.")
 
 def creat_bill_paypal(chat_id, callback_id, message_id, sum_amount, name_good, amount):
     """Crear factura PayPal - función sin cambios"""
