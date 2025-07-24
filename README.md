@@ -174,6 +174,25 @@ Asimismo están disponibles los comandos `/help` y `/report` (o `/reporte`).
 `/help` envía al usuario el texto de ayuda configurado, mientras que
 `/report` permite remitir incidencias o consultas directamente al administrador.
 
+## Configuración de pagos
+
+El bot admite pagos mediante PayPal y Binance. Para que los usuarios puedan
+utilizarlos debes registrar primero tus credenciales:
+
+1. **PayPal** – ejecuta `python config_paypal_simple.py` e introduce tu
+   `Client ID` y `Client Secret`. Después corre
+   `python reactivar_paypal_simple.py` para reactivar este método.
+2. **Binance / wallet** – ejecuta `python setup_binance_wallet.py` y sigue las
+   instrucciones para guardar la dirección de tu wallet y, opcionalmente,
+   las credenciales de API.
+
+En el panel de administración puedes activar o desactivar cada método desde
+**💰 Pagos**.
+
+> **Importante**: los botones de pago no se mostrarán a los usuarios a menos
+> que tengas instalados los SDK necesarios (`paypalrestsdk` y
+> `python-binance`).
+
 ## Múltiples tiendas
 
 El bot admite gestionar varias tiendas. El usuario cuyo ID figura en `TELEGRAM_ADMIN_ID` es el *super admin* y posee un menú adicional **🛍️ Gestionar tiendas** dentro de **⚙️ Otros**. Solo este super admin puede añadir o eliminar otros administradores.
