@@ -5,11 +5,12 @@ import sys
 import os
 from datetime import datetime
 
-# Cambiar al directorio del bot
-os.chdir('/home/telegram-bot')
+# Cambiar al directorio del script
+script_dir = os.path.dirname(os.path.abspath(__file__))
+os.chdir(script_dir)
 
 # Forzar logs al archivo directamente
-log_file = '/home/telegram-bot/advertising.log'
+log_file = os.path.join(script_dir, 'advertising.log')
 
 def log_message(msg):
     with open(log_file, 'a') as f:
@@ -25,9 +26,9 @@ while True:
         
         # Ejecutar advertising_cron.py
         result = subprocess.run([
-            '/usr/bin/python3', 
+            '/usr/bin/python3',
             'advertising_cron.py'
-        ], capture_output=True, text=True, cwd='/home/telegram-bot')
+        ], capture_output=True, text=True, cwd=script_dir)
         
         if result.returncode == 0:
             log_message(f"✅ Advertising ejecutado correctamente")

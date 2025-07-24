@@ -313,7 +313,9 @@ con comandos para gestionar campañas:
    confirmar.
 3. Para que los envíos permanezcan activos ejecuta `advertising_cron.py` de
    forma periódica (por ejemplo mediante `cron`) o deja corriendo
-   `advertising_daemon.py`, que invoca dicho script cada minuto.
+   `advertising_daemon.py`, que invoca dicho script cada minuto. El daemon ahora
+   detecta automáticamente su ubicación y escribe `advertising.log` en esa
+   carpeta, de modo que puedes ejecutarlo desde cualquier ruta.
 
 El campo `group_ids` de la tabla `campaign_schedules` guarda los identificadores
 de los grupos destino separados por comas; si se deja vacío se utilizarán todos
