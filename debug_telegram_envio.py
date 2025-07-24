@@ -6,9 +6,13 @@ load_dotenv()
 
 print("=== DEBUG ENVÍO TELEGRAM ===")
 
+token = os.getenv("TELEGRAM_TOKEN")
+if not token:
+    raise RuntimeError("Set TELEGRAM_TOKEN environment variable with your bot token")
+
 config = {
     'db_path': 'data/db/main_data.db',
-    'telegram_tokens': ['7275890221:AAHjeLMyikGG_pnjA1SXtn1bC1UJ-G3UXDg'],
+    'telegram_tokens': [token],
     'shop_id': 1
 }
 
