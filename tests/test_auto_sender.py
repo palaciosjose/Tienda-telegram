@@ -8,6 +8,7 @@ import types
 def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
     # Reload the real module in case previous tests inserted a stub
     sys.modules.pop('advertising_system.auto_sender', None)
+    monkeypatch.setitem(sys.modules, 'telebot', telebot_stub)
     auto_sender = importlib.import_module('advertising_system.auto_sender')
     AutoSender = auto_sender.AutoSender
 
@@ -21,7 +22,7 @@ def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
     monkeypatch.setattr(auto_sender.time, 'sleep', lambda x: None)
 
     calls = []
-    monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
+    monkeypatch.setattr(sender, '_send_telegram_campaign_corrected', lambda *a, **k: (calls.append('tg') or True))
 
     sender.scheduler.get_pending_sends = lambda: [(1, 2, None, None, None, 'telegram')]
     assert sender._check_and_send_campaigns() is True
@@ -35,6 +36,7 @@ def test_check_and_send_campaigns_returns_bool(tmp_path, monkeypatch):
 
 def test_check_and_send_campaigns_none_platforms(tmp_path, monkeypatch):
     sys.modules.pop('advertising_system.auto_sender', None)
+    monkeypatch.setitem(sys.modules, 'telebot', telebot_stub)
     auto_sender = importlib.import_module('advertising_system.auto_sender')
     AutoSender = auto_sender.AutoSender
 
@@ -46,7 +48,7 @@ def test_check_and_send_campaigns_none_platforms(tmp_path, monkeypatch):
 
     monkeypatch.setattr(auto_sender.time, 'sleep', lambda x: None)
     calls = []
-    monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
+    monkeypatch.setattr(sender, '_send_telegram_campaign_corrected', lambda *a, **k: (calls.append('tg') or True))
 
     sender.scheduler.get_pending_sends = lambda: [(1, 2, None, None, None, None)]
     assert sender._check_and_send_campaigns() is False
@@ -55,6 +57,7 @@ def test_check_and_send_campaigns_none_platforms(tmp_path, monkeypatch):
 
 def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
     sys.modules.pop('advertising_system.auto_sender', None)
+    monkeypatch.setitem(sys.modules, 'telebot', telebot_stub)
     auto_sender = importlib.import_module('advertising_system.auto_sender')
 
     class DummyScheduler:
@@ -90,7 +93,7 @@ def test_check_and_send_campaigns_with_mocked_dependencies(monkeypatch):
 
     monkeypatch.setattr(auto_sender.time, 'sleep', lambda x: None)
     calls = []
-    monkeypatch.setattr(sender, '_send_telegram_campaign', lambda *a, **k: calls.append('tg'))
+    monkeypatch.setattr(sender, '_send_telegram_campaign_corrected', lambda *a, **k: (calls.append('tg') or True))
 
     assert sender._check_and_send_campaigns() is True
     assert calls == ['tg']
@@ -182,6 +185,7 @@ def _init_db_no_gid(path):
     cur.execute(CREATE_SHOPS_TABLE)
     cur.execute(CREATE_CAMPAIGNS_TABLE)
     cur.execute(CREATE_TARGET_GROUPS_TABLE)
+    cur.execute("CREATE TABLE goods (name TEXT, description TEXT, price REAL, media_file_id TEXT, media_type TEXT, shop_id INTEGER DEFAULT 1)")
     cur.execute(CREATE_SCHEDULES_TABLE_NOGID)
     conn.commit()
     conn.close()
@@ -224,5 +228,5 @@ def test_send_without_group_ids_column(tmp_path, monkeypatch):
     sender = AutoSender({'db_path': str(db_path), 'telegram_tokens': ['t']})
     monkeypatch.setattr(sender.scheduler, 'update_next_send', lambda *a, **k: None)
 
-    sender._send_telegram_campaign(camp_id, schedule_id, row)
+    sender._send_telegram_campaign_corrected(camp_id, schedule_id, row)
     assert len(DummyTeleBot.calls) == 2

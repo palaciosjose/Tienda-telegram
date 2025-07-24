@@ -2,6 +2,7 @@ import importlib
 import sqlite3
 import sys
 import types
+import json
 
 # Minimal database schema copied from advertising tests
 CREATE_CAMPAIGNS_TABLE = """CREATE TABLE IF NOT EXISTS campaigns (
@@ -79,6 +80,7 @@ def init_ads_db(path):
     cur.execute(CREATE_CAMPAIGNS_TABLE)
     cur.execute(CREATE_SEND_LOGS_TABLE)
     cur.execute(CREATE_TARGET_GROUPS_TABLE)
+    cur.execute("CREATE TABLE goods (name TEXT, description TEXT, price REAL, media_file_id TEXT, media_type TEXT, shop_id INTEGER DEFAULT 1)")
     cur.execute(CREATE_SCHEDULES_TABLE)
     conn.commit()
     conn.close()
@@ -95,6 +97,24 @@ DummyTeleBot.calls = []
 
 telebot_stub = types.SimpleNamespace(
     TeleBot=DummyTeleBot,
+    types=types.SimpleNamespace(
+        InlineKeyboardMarkup=lambda *a, **k: None,
+        InlineKeyboardButton=lambda *a, **k: None,
+    ),
+)
+
+
+class DummyTeleBotWithGroup:
+    def __init__(self, token):
+        pass
+
+    def send_message(self, chat_id, text=None, **kw):
+        DummyTeleBotWithGroup.calls.append((chat_id, kw.get('message_thread_id')))
+
+DummyTeleBotWithGroup.calls = []
+
+telebot_stub_with_group = types.SimpleNamespace(
+    TeleBot=DummyTeleBotWithGroup,
     types=types.SimpleNamespace(
         InlineKeyboardMarkup=lambda *a, **k: None,
         InlineKeyboardButton=lambda *a, **k: None,
@@ -149,10 +169,55 @@ def test_auto_sender_topic_groups(tmp_path, monkeypatch):
     cur = conn.cursor()
     cur.execute('SELECT id FROM campaign_schedules')
     schedule_id = cur.fetchone()[0]
+    cur.execute(
+        "SELECT cs.*, c.name, c.message_text, c.media_file_id, c.media_type, c.button1_text, c.button1_url, c.button2_text, c.button2_url FROM campaign_schedules cs JOIN campaigns c ON cs.campaign_id = c.id WHERE cs.id = ?",
+        (schedule_id,),
+    )
+    row = cur.fetchone()
     conn.close()
 
     sender = AutoSender({'db_path': str(db_path), 'telegram_tokens': ['t']})
     monkeypatch.setattr(sender.scheduler, 'update_next_send', lambda *a, **k: None)
 
-    sender._send_telegram_campaign(camp_id, schedule_id, None)
+    sender._send_telegram_campaign_corrected(camp_id, schedule_id, row)
     assert DummyTeleBot.calls == [1, 2]
+
+
+def test_auto_sender_respects_group_ids(tmp_path, monkeypatch):
+    DummyTeleBotWithGroup.calls.clear()
+    monkeypatch.setitem(sys.modules, 'telebot', telebot_stub_with_group)
+    sys.modules.pop('advertising_system.telegram_multi', None)
+    sys.modules.pop('advertising_system.auto_sender', None)
+    auto_mod = importlib.import_module('advertising_system.auto_sender')
+    AutoSender = auto_mod.AutoSender
+
+    db_path = tmp_path / 'ads.db'
+    init_ads_db(db_path)
+    manager_mod = importlib.import_module('advertising_system.ad_manager')
+    manager = manager_mod.AdvertisingManager(str(db_path))
+    camp_id = manager.create_campaign({'name': 'Camp', 'message_text': 'Hi', 'created_by': 1})
+    manager.add_target_group('telegram', 'g1', topic_id=1)
+    manager.add_target_group('telegram', 'g2', topic_id=2)
+
+    conn = sqlite3.connect(db_path)
+    cur = conn.cursor()
+    cur.execute('SELECT id FROM target_groups WHERE group_id = ?', ('g2',))
+    g2_id = cur.fetchone()[0]
+    schedule_json = json.dumps({'lunes': ['10:00']})
+    cur.execute(
+        "INSERT INTO campaign_schedules (campaign_id, schedule_name, frequency, schedule_json, target_platforms, created_date, shop_id, group_ids) VALUES (?,?,?,?,?, 'now', 1, ?)",
+        (camp_id, 'auto', 'daily', schedule_json, 'telegram', str(g2_id)),
+    )
+    schedule_id = cur.lastrowid
+    cur.execute(
+        "SELECT cs.*, c.name, c.message_text, c.media_file_id, c.media_type, c.button1_text, c.button1_url, c.button2_text, c.button2_url FROM campaign_schedules cs JOIN campaigns c ON cs.campaign_id = c.id WHERE cs.id = ?",
+        (schedule_id,),
+    )
+    row = cur.fetchone()
+    conn.close()
+
+    sender = AutoSender({'db_path': str(db_path), 'telegram_tokens': ['t']})
+    monkeypatch.setattr(sender.scheduler, 'update_next_send', lambda *a, **k: None)
+
+    sender._send_telegram_campaign_corrected(camp_id, schedule_id, row)
+    assert DummyTeleBotWithGroup.calls == [('g2', 2)]

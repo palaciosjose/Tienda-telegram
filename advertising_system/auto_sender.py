@@ -3,6 +3,7 @@ import os
 import time
 import sqlite3
 import logging
+import re
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional, Tuple
 
@@ -90,7 +91,25 @@ class AutoSender:
             cursor = conn.cursor()
             
             # Obtener grupos
-            cursor.execute('SELECT group_id FROM target_groups WHERE status = "active" AND shop_id = ?', (self.shop_id,))
+            group_ids_str = None
+            if len(send_data) > 10:
+                potential = send_data[10]
+                if potential is None or re.fullmatch(r"[0-9,]+", str(potential)):
+                    group_ids_str = potential
+
+            if group_ids_str:
+                ids = [int(gid) for gid in group_ids_str.split(',') if gid.strip()]
+                placeholders = ','.join('?' for _ in ids)
+                query = (
+                    'SELECT group_id, topic_id FROM target_groups '
+                    'WHERE status = "active" AND shop_id = ? AND id IN (' + placeholders + ')'
+                )
+                cursor.execute(query, [self.shop_id, *ids])
+            else:
+                cursor.execute(
+                    'SELECT group_id, topic_id FROM target_groups WHERE status = "active" AND shop_id = ?',
+                    (self.shop_id,)
+                )
             groups = cursor.fetchall()
             
             if not groups:
@@ -161,14 +180,15 @@ class AutoSender:
             sent_count = 0
             for group in groups:
                 try:
-                    group_id = group[0]
-                    
+                    group_id, topic_id = group
+
                     success, result = telegram_bot.send_message(
                         group_id,
                         full_message,
                         media_file_id=media_file_id,
                         media_type=media_type,
-                        buttons=buttons
+                        buttons=buttons,
+                        topic_id=topic_id,
                     )
                     
                     if success:
