@@ -295,15 +295,17 @@ con comandos para gestionar campañas:
   de grupos objetivo para seleccionar. Si un destino corresponde a un topic
   específico aparecerá como `Nombre (ID) (topic <topic_id>)`.
 
-Para consultar desde la terminal qué grupos tiene asignados cada horario puedes
-ejecutar:
+Para consultar desde la terminal los horarios y grupos asignados a cada
+programación puedes ejecutar:
 
 ```bash
 python list_schedules.py
 ```
 
-El script imprimirá los pares `group_id/topic_id` correspondientes a cada
-programación registrada.
+El script ahora muestra los campos `schedule_json`, `frequency` y
+`next_send_telegram`, despliega los días y horas configurados (por ejemplo
+`lunes 10:00, 15:00`) e indica si la programación está activa junto con la
+próxima fecha de envío en Telegram, si existe.
 
 La *Campaña de producto* permite seleccionar uno de los artículos ya creados y
 enviar su información como anuncio. El bot añadirá automáticamente un botón que

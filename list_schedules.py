@@ -1,8 +1,20 @@
 #!/usr/bin/env python3
-"""Display campaign schedules and their target groups."""
+"""Display campaign schedules, their groups and timing info."""
 
 import sqlite3
+import json
 import files
+
+
+DAY_MAP = {
+    'monday': 'lunes',
+    'tuesday': 'martes',
+    'wednesday': 'miercoles',
+    'thursday': 'jueves',
+    'friday': 'viernes',
+    'saturday': 'sabado',
+    'sunday': 'domingo',
+}
 
 
 def main():
@@ -10,7 +22,9 @@ def main():
     cur = conn.cursor()
 
     cur.execute(
-        "SELECT id, schedule_name, group_ids FROM campaign_schedules ORDER BY id"
+        """SELECT id, schedule_name, frequency, schedule_json, is_active,
+                  next_send_telegram, group_ids
+           FROM campaign_schedules ORDER BY id"""
     )
     schedules = cur.fetchall()
 
@@ -18,8 +32,27 @@ def main():
         print("No hay programaciones registradas")
         return
 
-    for sched_id, name, group_ids in schedules:
-        print(f"\nProgramación {sched_id}: {name}")
+    for sched_id, name, freq, sched_json, active, next_send, group_ids in schedules:
+        estado = "activa" if active else "inactiva"
+        print(f"\nProgramación {sched_id}: {name} ({estado})")
+        if freq:
+            print(f"  Frecuencia: {freq}")
+
+        if sched_json:
+            try:
+                data = json.loads(sched_json)
+            except Exception:
+                data = {}
+            if data:
+                print("  Horarios:")
+                for day, hours in data.items():
+                    d = DAY_MAP.get(day.lower(), day)
+                    if hours:
+                        print(f"    {d} {', '.join(hours)}")
+
+        if next_send:
+            print(f"  Próximo envío Telegram: {next_send}")
+
         groups = []
         if group_ids:
             ids = [int(g) for g in str(group_ids).split(',') if g.strip()]
