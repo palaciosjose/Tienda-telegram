@@ -313,7 +313,18 @@ def message_send(message):
                         # Optimización: verificar pagos una sola vez
                         paypal_active = dop.check_vklpayments('paypal') == '✅'
                         binance_active = dop.check_vklpayments('binance') == '✅'
-                        
+
+                        if not (paypal_active or binance_active):
+                            key.add(telebot.types.InlineKeyboardButton(text='🔙 Inicio', callback_data='Volver al inicio'))
+                            bot.send_message(message.chat.id,
+                                             '💳 Los pagos están temporalmente desactivados.',
+                                             parse_mode='Markdown', reply_markup=key)
+                            with shelve.open(files.sost_bd) as bd:
+                                if str(message.chat.id) in bd:
+                                    del bd[str(message.chat.id)]
+                            send_main_menu(message.chat.id, message.chat.username, message.from_user.first_name)
+                            return
+
                         if paypal_active and binance_active:
                             b1 = telebot.types.InlineKeyboardButton(text='💳 PayPal', callback_data='PayPal')
                             b2 = telebot.types.InlineKeyboardButton(text='🟡 Binance Pay', callback_data='Binance')
