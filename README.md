@@ -290,10 +290,32 @@ con comandos para gestionar campañas:
 - `🎯 Gestionar grupos` para administrar los grupos objetivo.
 - `📊 Estadísticas hoy` para consultar el resumen diario.
 - `⚙️ Configuración` para ajustes adicionales.
-- `▶️ Envío manual <ID>` para disparar un envío inmediato indicando el
-  identificador de la campaña. Tras introducir el ID el bot mostrará una lista
-  de grupos objetivo para seleccionar. Si un destino corresponde a un topic
-  específico aparecerá como `Nombre (ID) (topic <topic_id>)`.
+  - `▶️ Envío manual <ID>` para disparar un envío inmediato indicando el
+    identificador de la campaña. Tras introducir el ID el bot mostrará una lista
+    de grupos objetivo para seleccionar. Si un destino corresponde a un topic
+    específico aparecerá como `Nombre (ID) (topic <topic_id>)`.
+
+### Crear y programar campañas
+
+1. Abre **📢 Marketing** y selecciona **🎯 Nueva campaña** para registrar el
+   mensaje y los botones opcionales. Si deseas usar un producto existente elige
+   **🛒 Campaña de producto**.
+2. Con la campaña creada ejecuta **⏰ Programar envíos &lt;ID&gt; &lt;días&gt;
+   &lt;HH:MM&gt; &lt;HH:MM&gt;** indicando el identificador, los días separados
+   por comas y una o más horas. Cuando existan grupos registrados el bot
+   permitirá elegir los destinos antes de confirmar.
+3. Para que los envíos permanezcan activos ejecuta `advertising_cron.py` de
+   forma periódica (por ejemplo mediante `cron`) o deja corriendo
+   `advertising_daemon.py`, que invoca dicho script cada minuto.
+
+El campo `group_ids` de la tabla `campaign_schedules` guarda los identificadores
+de los grupos destino separados por comas; si se deja vacío se utilizarán todos
+los grupos activos. Por su parte, `topic_id` en `target_groups` señala el topic
+específico dentro de un grupo cuando se emplean temas de Telegram.
+
+Para cancelar, reactivar, editar o eliminar programaciones ya creadas abre
+**📆 Programaciones**. El listado muestra cada ID junto con botones para
+`Cancelar`/`Reactivar`, `✏️ Editar` o `🗑️ Eliminar` la programación.
 
 Para consultar desde la terminal los horarios y grupos asignados a cada
 programación puedes ejecutar:
