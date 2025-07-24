@@ -773,7 +773,8 @@ def in_adminka(chat_id, message_text, username, name_user):
             }
 
             cur.execute(
-                """SELECT cs.id, c.name, cs.is_active, cs.group_ids
+                """SELECT cs.id, c.name, cs.is_active, cs.group_ids,
+                          cs.frequency, cs.schedule_json, cs.next_send_telegram
                    FROM campaign_schedules cs
                    JOIN campaigns c ON cs.campaign_id = c.id
                    WHERE cs.shop_id = ?""",
@@ -786,8 +787,35 @@ def in_adminka(chat_id, message_text, username, name_user):
                 markup = telebot.types.InlineKeyboardMarkup()
                 lines = ['📆 *Programaciones:*']
                 for r in rows:
-                    schedule_id, camp_name, is_active, ids_text = r
+                    schedule_id, camp_name, is_active, ids_text, frequency, sched_json, next_send = r
                     status = 'Activa ✅' if is_active else 'Inactiva ❌'
+                    freq_text = f' [{frequency}]' if frequency else ''
+
+                    day_map = {
+                        'monday': 'lunes',
+                        'tuesday': 'martes',
+                        'wednesday': 'miercoles',
+                        'thursday': 'jueves',
+                        'friday': 'viernes',
+                        'saturday': 'sabado',
+                        'sunday': 'domingo',
+                    }
+
+                    schedule_parts = []
+                    if sched_json:
+                        try:
+                            data = json.loads(sched_json)
+                        except Exception:
+                            data = {}
+                        for day, hours in data.items():
+                            if hours:
+                                d = day_map.get(day.lower(), day)
+                                schedule_parts.append(f"{d} {', '.join(hours)}")
+                    schedule_text = ''
+                    if schedule_parts:
+                        schedule_text = ' - ' + '; '.join(schedule_parts)
+
+                    next_text = f" - Próximo: {next_send}" if next_send else ''
 
                     group_labels = []
                     if ids_text:
@@ -808,7 +836,9 @@ def in_adminka(chat_id, message_text, username, name_user):
                     if group_labels:
                         groups_text = ' - ' + ', '.join(group_labels)
 
-                    lines.append(f"- {schedule_id} {camp_name} ({status}){groups_text}")
+                    lines.append(
+                        f"- {schedule_id} {camp_name}{freq_text} ({status}){schedule_text}{next_text}{groups_text}"
+                    )
                     toggle = 'Cancelar' if is_active else 'Reactivar'
 
                     # Nueva modificación: agregar botones de acción por programación
