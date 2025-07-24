@@ -228,5 +228,5 @@ def test_send_without_group_ids_column(tmp_path, monkeypatch):
     sender = AutoSender({'db_path': str(db_path), 'telegram_tokens': ['t']})
     monkeypatch.setattr(sender.scheduler, 'update_next_send', lambda *a, **k: None)
 
-    sender._send_telegram_campaign_corrected(camp_id, schedule_id, row)
+    sender._send_telegram_campaign(camp_id, schedule_id, row)
     assert len(DummyTeleBot.calls) == 2
