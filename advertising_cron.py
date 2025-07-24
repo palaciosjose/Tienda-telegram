@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 import sys
 import os
-sys.path.insert(0, '/home/telegram-bot')
+
+# Añade la carpeta del script al `sys.path` para poder importar los módulos
+# del proyecto sin depender de rutas absolutas.
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
 import config
 from bot_instance import bot
 import telebot

@@ -279,6 +279,11 @@ una entrada de `cron`:
 python advertising_cron.py
 ```
 
+El script determina su ubicación y la agrega al `PYTHONPATH`, por lo que no
+necesitas modificar rutas manualmente. Asegúrate de lanzarlo desde la carpeta
+del proyecto (o con el directorio de trabajo apuntando allí) para que pueda
+encontrar la base de datos.
+
 Desde el panel de administración aparecerá una nueva opción **📢 Marketing**
 con comandos para gestionar campañas:
 
