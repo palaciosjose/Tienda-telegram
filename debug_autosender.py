@@ -9,9 +9,14 @@ load_dotenv()
 print("=== DEBUG AUTOSENDER ===")
 print(f"Hora: {datetime.now()}")
 
+# Cargar token desde la variable de entorno.  Es obligatorio
+token = os.getenv("TELEGRAM_TOKEN")
+if not token:
+    raise RuntimeError("Set TELEGRAM_TOKEN environment variable with your bot token")
+
 config = {
     'db_path': 'data/db/main_data.db',
-    'telegram_tokens': ['7275890221:AAHjeLMyikGG_pnjA1SXtn1bC1UJ-G3UXDg']
+    'telegram_tokens': [token]
 }
 
 # Simular AutoSender pero con debug
