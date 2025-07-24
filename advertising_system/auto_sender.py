@@ -216,6 +216,10 @@ class AutoSender:
             print(f"❌ Error en _send_telegram_campaign_corrected: {e}")
             return False
 
+    def _send_telegram_campaign(self, campaign_id, schedule_id, send_data):
+        """Backward compatible wrapper for `_send_telegram_campaign_corrected`."""
+        return self._send_telegram_campaign_corrected(campaign_id, schedule_id, send_data)
+
     def start(self) -> bool:
         print(f"AutoSender iniciado: {datetime.now()}")
         return self.process_campaigns()

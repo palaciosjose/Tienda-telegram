@@ -179,7 +179,7 @@ def test_auto_sender_topic_groups(tmp_path, monkeypatch):
     sender = AutoSender({'db_path': str(db_path), 'telegram_tokens': ['t']})
     monkeypatch.setattr(sender.scheduler, 'update_next_send', lambda *a, **k: None)
 
-    sender._send_telegram_campaign_corrected(camp_id, schedule_id, row)
+    sender._send_telegram_campaign(camp_id, schedule_id, row)
     assert DummyTeleBot.calls == [1, 2]
 
 
@@ -219,5 +219,5 @@ def test_auto_sender_respects_group_ids(tmp_path, monkeypatch):
     sender = AutoSender({'db_path': str(db_path), 'telegram_tokens': ['t']})
     monkeypatch.setattr(sender.scheduler, 'update_next_send', lambda *a, **k: None)
 
-    sender._send_telegram_campaign_corrected(camp_id, schedule_id, row)
+    sender._send_telegram_campaign(camp_id, schedule_id, row)
     assert DummyTeleBotWithGroup.calls == [('g2', 2)]
