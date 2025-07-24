@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import sys
+import os
 sys.path.insert(0, '/home/telegram-bot')
 import config
 from bot_instance import bot
@@ -8,7 +9,7 @@ import sqlite3
 import json
 from datetime import datetime, timedelta
 
-def should_send_now():
+def should_send_now(shop_id=1):
     conn = sqlite3.connect('data/db/main_data.db')
     cursor = conn.cursor()
     now = datetime.now()
@@ -18,7 +19,10 @@ def should_send_now():
     for offset in [-1, 0, 1]:
         time_check = (now + timedelta(minutes=offset)).strftime('%H:%M')
         time_range.append(time_check)
-    cursor.execute('SELECT * FROM campaign_schedules WHERE is_active = 1')
+    cursor.execute(
+        'SELECT * FROM campaign_schedules WHERE is_active = 1 AND shop_id = ?',
+        (shop_id,)
+    )
     schedules = cursor.fetchall()
     for schedule in schedules:
         schedule_json = json.loads(schedule[4])
@@ -123,7 +127,18 @@ def send_campaign(campaign_id, group_ids=""):
 
 def main():
     print(f"AutoSender iniciado: {datetime.now()}")
-    should_send_now()
+
+    shop_id = None
+    if len(sys.argv) > 1:
+        try:
+            shop_id = int(sys.argv[1])
+        except ValueError:
+            print(f"❌ shop_id invalido: {sys.argv[1]}. Usando valor por defecto")
+
+    if shop_id is None:
+        shop_id = int(os.getenv("SHOP_ID", "1"))
+
+    should_send_now(shop_id)
 
 if __name__ == '__main__':
     main()
