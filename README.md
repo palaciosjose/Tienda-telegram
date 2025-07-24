@@ -343,6 +343,17 @@ al menú de marketing.
 necesitas repartir la carga entre diferentes bots.  Si la variable no está
 definida el script terminará con un error.
 
+Si deseas verificar manualmente que las campañas pendientes se procesan
+correctamente ejecuta:
+
+```bash
+python test_auto_sender.py
+```
+
+El script carga los tokens desde `.env` (o los aceptados mediante
+`--token`) y llama una vez a `AutoSender.process_campaigns()` mostrando por
+pantalla si hubo envíos.
+
 ## Expiración de compras
 
 Si defines la opción **duración en días** para un producto, las compras de ese
